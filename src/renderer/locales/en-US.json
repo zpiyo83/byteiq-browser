@@ -1,0 +1,113 @@
+{
+  "app": {
+    "title": "Byteiq Browser",
+    "version": "Version 0.1.0",
+    "communityDriven": "Community-driven AI Browser",
+    "basedOn": "Based on Chromium | Electron"
+  },
+  "toolbar": {
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "home": "Home",
+    "urlPlaceholder": "Enter URL or search...",
+    "go": "Go",
+    "history": "History",
+    "bookmarks": "Bookmarks",
+    "devtools": "DevTools",
+    "settings": "Settings",
+    "downloads": "Downloads",
+    "aiAssistant": "AI Assistant"
+  },
+  "tabs": {
+    "newTab": "New Tab",
+    "close": "Close"
+  },
+  "panels": {
+    "history": {
+      "title": "History",
+      "close": "Close",
+      "empty": "No history"
+    },
+    "bookmarks": {
+      "title": "My Bookmarks",
+      "close": "Close",
+      "empty": "No bookmarks"
+    },
+    "settings": {
+      "title": "Browser Settings",
+      "close": "Close",
+      "searchEngine": "Default Search Engine",
+      "startupPage": "Startup Page",
+      "startupPagePlaceholder": "Enter URL or leave blank for new tab",
+      "incognito": "Incognito Mode",
+      "incognitoToggle": "Toggle Incognito Mode",
+      "darkMode": "Dark Mode",
+      "darkModeToggle": "Toggle Dark/Light Mode",
+      "zoom": "Zoom Level",
+      "zoomReset": "Reset",
+      "language": "Interface Language",
+      "exportData": "Export Browser Data (JSON)",
+      "clearData": "Clear Browser Data (History/Bookmarks)",
+      "clearDataConfirm": "Are you sure you want to clear all history and bookmarks?",
+      "clearDataDone": "Data cleared",
+      "incognitoOn": "Incognito mode enabled (new tabs only)",
+      "incognitoOff": "Incognito mode disabled"
+    },
+    "downloads": {
+      "title": "Downloads",
+      "close": "Close",
+      "empty": "No downloads"
+    }
+  },
+  "find": {
+    "placeholder": "Find in page...",
+    "results": "{current}/{total}",
+    "prev": "Previous",
+    "next": "Next",
+    "close": "Close"
+  },
+  "contextMenu": {
+    "back": "Back",
+    "forward": "Forward",
+    "reload": "Reload",
+    "copy": "Copy",
+    "paste": "Paste",
+    "mute": "Mute/Unmute Tab",
+    "inspect": "Inspect Element"
+  },
+  "ai": {
+    "title": "Byteiq AI Assistant",
+    "placeholder": "Ask a question or give a command...",
+    "send": "Send",
+    "welcome": "Hello! I'm Byteiq AI Assistant. I can help you summarize web pages, answer questions, or assist with browsing.",
+    "summaryPrompt": "Attempting to read page content for summary... (This feature requires AI API)",
+    "noPage": "Please open a webpage first, then I can summarize it for you.",
+    "prototype": "Received! I'm currently a prototype version, soon I'll be able to connect to large models via API to serve you."
+  },
+  "newTab": {
+    "searchPlaceholder": "Search or enter URL...",
+    "title": "Community-driven AI Browser",
+    "subtitle": "Based on Chromium | Electron",
+    "version": "Version 0.1.0 | Open Source Community Driven"
+  },
+  "status": {
+    "loading": "Loading...",
+    "loaded": "Loaded",
+    "error": "Error",
+    "downloadProgress": "{percent}% ({received}MB / {total}MB)",
+    "downloadComplete": "Complete",
+    "downloadFailed": "Failed: {error}"
+  },
+  "zoom": {
+    "in": "Zoom In",
+    "out": "Zoom Out",
+    "reset": "Reset"
+  },
+  "bookmark": {
+    "add": "Add Bookmark",
+    "remove": "Remove Bookmark",
+    "empty": "No Title"
+  },
+  "delete": "Delete"
+}
