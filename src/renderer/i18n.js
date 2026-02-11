@@ -46,26 +46,39 @@ function getCurrentLocale() {
   return currentLocale;
 }
 
-function updateUIText() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
+function updateUIText(root = document) {
+  root.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    el.textContent = t(key);
+    const translation = t(key);
+    
+    // 如果元素内包含 SVG，则只在没有 SVG 的情况下更新 textContent
+    // 或者，如果翻译后的内容与当前内容不同且不是 key 本身
+    if (el.querySelector('svg')) {
+      // 保持 SVG，只更新 title（如果存在）
+      if (el.hasAttribute('data-i18n-title')) {
+        el.title = t(el.getAttribute('data-i18n-title'));
+      }
+    } else {
+      el.textContent = translation;
+    }
   });
   
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     el.placeholder = t(key);
   });
   
-  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+  root.querySelectorAll('[data-i18n-title]').forEach(el => {
     const key = el.getAttribute('data-i18n-title');
     el.title = t(key);
   });
 }
 
-function initI18n() {
-  loadLocale(currentLocale);
-  updateUIText();
+function initI18n(root = document) {
+  if (root === document) {
+    loadLocale(currentLocale);
+  }
+  updateUIText(root);
 }
 
 module.exports = {
