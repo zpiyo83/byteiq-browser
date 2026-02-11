@@ -38,6 +38,9 @@ desktop.ini
 .classpath
 .settings/
 
+# Windsurf
+.windsurfrules
+
 # Environment variables
 .env
 .env.local

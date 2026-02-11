@@ -13,16 +13,62 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: true
+      webSecurity: true,
+      webviewTag: true
     },
     title: 'Byteiq Browser',
-    icon: path.join(__dirname, 'assets/icon.png')
+    icon: path.join(app.getAppPath(), 'assets', 'icon.png')
   });
 
-  // Load the index.html
-  mainWindow.loadFile('index.html');
+  // Handle downloads
+  mainWindow.webContents.session.on('will-download', (event, item) => {
+    const fileName = item.getFilename();
+    const fileSize = item.getTotalBytes();
 
-  // Open DevTools in development mode
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        console.log('Download is interrupted but can be resumed');
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          console.log('Download is paused');
+        } else {
+          console.log(`Received bytes: ${item.getReceivedBytes()}`);
+          if (mainWindow) {
+            mainWindow.webContents.send('download-progress', {
+              fileName,
+              received: item.getReceivedBytes(),
+              total: fileSize,
+              state: 'progressing'
+            });
+          }
+        }
+      }
+    });
+
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        console.log('Download successfully');
+        if (mainWindow) {
+          mainWindow.webContents.send('download-progress', {
+            fileName,
+            state: 'completed'
+          });
+        }
+      } else {
+        console.log(`Download failed: ${state}`);
+        if (mainWindow) {
+          mainWindow.webContents.send('download-progress', {
+            fileName,
+            state: 'failed',
+            error: state
+          });
+        }
+      }
+    });
+  });
+
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+
   if (process.argv.includes('--dev')) {
     mainWindow.webContents.openDevTools();
   }
@@ -32,7 +78,6 @@ function createWindow() {
   });
 }
 
-// Create menu
 function createMenu() {
   const template = [
     {

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Byteiq Browser</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="tabs-container" id="tabs-bar">
+        <!-- Tabs will be added here -->
+        <div class="new-tab-btn" id="new-tab-btn">+</div>
+    </div>
+    <div class="toolbar">
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <button id="back-btn" title="后退">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M20,11H7.83l5.59-5.59L12,4l-8,8l8,8l1.41-1.41L7.83,13H20V11z"/></svg>
+        </button>
+        <button id="forward-btn" title="前进">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,4l-1.41,1.41L16.17,11H4v2h12.17l-5.58,5.59L12,20l8-8L12,4z"/></svg>
+        </button>
+        <button id="refresh-btn" title="刷新">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M17.65,6.35C16.2,4.9,14.21,4,12,4c-4.42,0-7.99,3.58-7.99,8s3.57,8,7.99,8c3.73,0,6.84-2.55,7.73-6h-2.08 c-0.82,2.33-3.07,4-5.65,4c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.66,0,3.14,0.69,4.22,1.78L13,11h7V4L17.65,6.35z"/></svg>
+        </button>
+        <button id="home-btn" title="主页">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
+        </button>
+        <div class="url-bar">
+            <input type="text" id="url-input" placeholder="输入网址或搜索...">
+            <button id="clear-url-btn" title="清除" style="display: none;">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+            </button>
+            <button id="bookmark-btn" title="加入书签">
+                <svg id="bookmark-svg" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z"/></svg>
+            </button>
+        </div>
+        <button id="go-btn">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,4l-1.41,1.41L16.17,11H4v2h12.17l-5.58,5.59L12,20l8-8L12,4z"/></svg>
+        </button>
+        <button id="history-btn" title="历史记录">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,3A9,9 0 0,0 4,12H1L4.89,15.89L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.13 8.11,16.73L6.7,18.14C8.25,19.87 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3M12,8V13L16.28,15.54L17,14.33L13.5,12.25V8H12Z"/></svg>
+        </button>
+        <button id="bookmarks-list-btn" title="书签栏">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M17,3H7A2,2 0 0,0 5,5V21L12,18L19,21V5C19,3.89 18.1,3 17,3Z"/></svg>
+        </button>
+        <button id="devtools-btn" title="开发者工具">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6Z"/></svg>
+        </button>
+        <button id="settings-btn" title="设置">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.35 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,5.95C16.04,5.58 15.47,5.27 14.87,5.05L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.05C8.53,5.27 7.96,5.58 7.44,5.95L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.35 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.04 4.95,18.95L7.44,18.05C7.96,18.42 8.53,18.73 9.13,18.95L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.95C15.47,18.73 16.04,18.42 16.56,18.05L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
+        </button>
+        <button id="downloads-btn" title="下载">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
+        </button>
+        <button id="toggle-ai-btn" title="AI 助手" style="display:none">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,2H5A2,2 0 0,0 3,4V19L7,15H19A2,2 0 0,0 21,13V4A2,2 0 0,0 19,2M19,13H6.17L5,14.17V4H19V13M12,5.5L10.5,8.5L7.5,10L10.5,11.5L12,14.5L13.5,11.5L16.5,10L13.5,8.5L12,5.5Z"/></svg>
+        </button>
+    </div>
+
+    <div class="main-container">
+        <div id="webviews-container">
+            <!-- Webviews will be added here -->
+        </div>
+
+        <div class="ai-sidebar collapsed" id="ai-sidebar">
+            <div class="ai-header">
+                <h3>Byteiq AI 助手</h3>
+                <button id="close-ai-btn">×</button>
+            </div>
+            <div class="ai-chat-area" id="ai-chat-area">
+                <div class="chat-message ai">
+                    你好！我是 Byteiq AI 助手。我可以帮你总结网页内容、回答问题或协助你浏览。
+                </div>
+            </div>
+            <div class="ai-input-area">
+                <input type="text" id="ai-input" placeholder="输入问题或指令...">
+                <button id="ai-send-btn">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template for New Tab Page -->
+    <template id="new-tab-template">
+        <div class="content">
+            <div class="logo">Byteiq <span>Browser</span></div>
+            <div class="search-box">
+                <input type="text" class="tab-search-input" placeholder="搜索或输入网址...">
+            </div>
+            <div class="info">
+                <h2>社区驱动的AI浏览器</h2>
+                <p>基于 Chromium 内核 | Electron 构建</p>
+                <p>版本 0.1.0 | 开源社区驱动</p>
+            </div>
+        </div>
+    </template>
+
+    <div id="history-panel" class="overlay-panel">
+        <div class="overlay-header">
+            <h2>历史记录</h2>
+            <button class="close-overlay">关闭</button>
+        </div>
+        <div id="history-list"></div>
+    </div>
+
+    <div id="settings-panel" class="overlay-panel">
+        <div class="overlay-header">
+            <h2>浏览器设置</h2>
+            <button class="close-overlay">关闭</button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-item">
+                <label>默认搜索引擎</label>
+                <select id="search-engine-select">
+                    <option value="bing">Bing</option>
+                    <option value="google">Google</option>
+                    <option value="baidu">Baidu</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>启动页</label>
+                <input type="text" id="startup-url-input" placeholder="输入 URL 或留空显示新标签页">
+            </div>
+            <div class="setting-item">
+                <label>隐身模式</label>
+                <button id="incognito-toggle-btn" style="padding: 6px 12px; cursor: pointer;">开启/关闭隐身模式</button>
+            </div>
+            <div class="setting-item">
+                <label>深色模式</label>
+                <button id="dark-mode-btn" style="padding: 6px 12px; cursor: pointer;">切换深色/浅色模式</button>
+            </div>
+            <div class="setting-item">
+                <label>缩放级别</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="zoom-out-btn" style="padding: 4px 8px;">-</button>
+                    <span id="zoom-level-text">100%</span>
+                    <button id="zoom-in-btn" style="padding: 4px 8px;">+</button>
+                    <button id="zoom-reset-btn" style="padding: 4px 8px;">重置</button>
+                </div>
+            </div>
+            <div class="setting-item">
+                <label>界面语言</label>
+                <select id="lang-select">
+                    <option value="zh-CN">简体中文</option>
+                    <option value="en-US">English</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <button id="export-data-btn" style="background:#4285f4; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">导出浏览器数据 (JSON)</button>
+                <button id="clear-data-btn" style="background:#ff4444; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">清除浏览器数据 (历史/书签)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bookmarks-panel" class="overlay-panel">
+        <div class="overlay-header">
+            <h2>我的书签</h2>
+            <button class="close-overlay">关闭</button>
+        </div>
+        <div id="bookmarks-list"></div>
+    </div>
+
+    <div id="downloads-panel" class="overlay-panel">
+        <div class="overlay-header">
+            <h2>下载管理</h2>
+            <button class="close-overlay">关闭</button>
+        </div>
+        <div id="downloads-list"></div>
+    </div>
+
+    <div id="find-box" class="find-in-page-box">
+        <input type="text" id="find-input" placeholder="在页面中查找...">
+        <span id="find-results">0/0</span>
+        <button id="find-prev">↑</button>
+        <button id="find-next">↓</button>
+        <button id="find-close">×</button>
+    </div>
+
+    <div id="context-menu" class="custom-context-menu">
+        <div class="context-menu-item" id="ctx-back">后退</div>
+        <div class="context-menu-item" id="ctx-forward">前进</div>
+        <div class="context-menu-item" id="ctx-reload">重新加载</div>
+        <hr style="border:none; border-top:1px solid #eee; margin:4px 0;">
+        <div class="context-menu-item" id="ctx-copy">复制</div>
+        <div class="context-menu-item" id="ctx-paste">粘贴</div>
+        <hr style="border:none; border-top:1px solid #eee; margin:4px 0;">
+        <div class="context-menu-item" id="ctx-mute">静音/取消静音标签页</div>
+        <div class="context-menu-item" id="ctx-inspect">审查元素</div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
