@@ -1,0 +1,113 @@
+{
+  "app": {
+    "title": "Byteiq Browser",
+    "version": "版本 0.1.0",
+    "communityDriven": "社区驱动的AI浏览器",
+    "basedOn": "基于 Chromium 内核 | Electron 构建"
+  },
+  "toolbar": {
+    "back": "后退",
+    "forward": "前进",
+    "refresh": "刷新",
+    "home": "主页",
+    "urlPlaceholder": "输入网址或搜索...",
+    "go": "前往",
+    "history": "历史记录",
+    "bookmarks": "书签",
+    "devtools": "开发者工具",
+    "settings": "设置",
+    "downloads": "下载",
+    "aiAssistant": "AI 助手"
+  },
+  "tabs": {
+    "newTab": "新标签页",
+    "close": "关闭"
+  },
+  "panels": {
+    "history": {
+      "title": "历史记录",
+      "close": "关闭",
+      "empty": "暂无历史记录"
+    },
+    "bookmarks": {
+      "title": "我的书签",
+      "close": "关闭",
+      "empty": "暂无书签"
+    },
+    "settings": {
+      "title": "浏览器设置",
+      "close": "关闭",
+      "searchEngine": "默认搜索引擎",
+      "startupPage": "启动页",
+      "startupPagePlaceholder": "输入 URL 或留空显示新标签页",
+      "incognito": "隐身模式",
+      "incognitoToggle": "开启/关闭隐身模式",
+      "darkMode": "深色模式",
+      "darkModeToggle": "切换深色/浅色模式",
+      "zoom": "缩放级别",
+      "zoomReset": "重置",
+      "language": "界面语言",
+      "exportData": "导出浏览器数据 (JSON)",
+      "clearData": "清除浏览器数据 (历史/书签)",
+      "clearDataConfirm": "确定要清除所有历史记录和书签吗？",
+      "clearDataDone": "数据已清除",
+      "incognitoOn": "已进入隐身模式（仅对新标签页有效）",
+      "incognitoOff": "已退出隐身模式"
+    },
+    "downloads": {
+      "title": "下载管理",
+      "close": "关闭",
+      "empty": "暂无下载"
+    }
+  },
+  "find": {
+    "placeholder": "在页面中查找...",
+    "results": "{current}/{total}",
+    "prev": "上一个",
+    "next": "下一个",
+    "close": "关闭"
+  },
+  "contextMenu": {
+    "back": "后退",
+    "forward": "前进",
+    "reload": "重新加载",
+    "copy": "复制",
+    "paste": "粘贴",
+    "mute": "静音/取消静音标签页",
+    "inspect": "审查元素"
+  },
+  "ai": {
+    "title": "Byteiq AI 助手",
+    "placeholder": "输入问题或指令...",
+    "send": "发送",
+    "welcome": "你好！我是 Byteiq AI 助手。我可以帮你总结网页内容、回答问题或协助你浏览。",
+    "summaryPrompt": "正在尝试读取页面内容进行总结... (此功能需要接入 AI API)",
+    "noPage": "请先打开一个网页，我才能为您进行总结。",
+    "prototype": "收到！目前我还是原型版本，很快我将能通过 API 连接到大模型来为您服务。"
+  },
+  "newTab": {
+    "searchPlaceholder": "搜索或输入网址...",
+    "title": "社区驱动的AI浏览器",
+    "subtitle": "基于 Chromium 内核 | Electron 构建",
+    "version": "版本 0.1.0 | 开源社区驱动"
+  },
+  "status": {
+    "loading": "加载中...",
+    "loaded": "加载完成",
+    "error": "加载失败",
+    "downloadProgress": "{percent}% ({received}MB / {total}MB)",
+    "downloadComplete": "完成",
+    "downloadFailed": "失败: {error}"
+  },
+  "zoom": {
+    "in": "放大",
+    "out": "缩小",
+    "reset": "重置"
+  },
+  "bookmark": {
+    "add": "加入书签",
+    "remove": "移除书签",
+    "empty": "无标题"
+  },
+  "delete": "删除"
+}

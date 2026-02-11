@@ -1,6 +1,7 @@
 const { ipcRenderer } = require('electron');
 const Store = require('electron-store');
 const store = new Store();
+const { initI18n, t, setLocale } = require('./i18n');
 
 const urlInput = document.getElementById('url-input');
 const goBtn = document.getElementById('go-btn');
@@ -56,6 +57,18 @@ const contextMenu = document.getElementById('context-menu');
 let tabs = [];
 let activeTabId = null;
 
+// Initialize i18n
+initI18n();
+
+// Language selection
+const langSelect = document.getElementById('lang-select');
+if (langSelect) {
+    langSelect.value = store.get('settings.language', 'zh-CN');
+    langSelect.addEventListener('change', () => {
+        setLocale(langSelect.value);
+    });
+}
+
 // AI Sidebar Logic
 toggleAiBtn.addEventListener('click', () => {
     aiSidebar.classList.toggle('collapsed');
@@ -83,13 +96,13 @@ function handleAISend() {
     // Simulate AI response
     setTimeout(() => {
         const currentWv = document.getElementById(`webview-${activeTabId}`);
-        let response = "收到！目前我还是原型版本，很快我将能通过 API 连接到大模型来为您服务。";
+        let response = t('ai.prototype');
         
         if (text.includes('总结') || text.includes('summary')) {
             if (currentWv && currentWv.tagName === 'WEBVIEW') {
-                response = "正在尝试读取页面内容进行总结... (此功能需要接入 AI API)";
+                response = t('ai.summaryPrompt');
             } else {
-                response = "请先打开一个网页，我才能为您进行总结。";
+                response = t('ai.noPage');
             }
         }
         
@@ -331,7 +344,7 @@ let isIncognito = false;
 function toggleIncognito() {
     isIncognito = !isIncognito;
     document.body.classList.toggle('incognito-mode', isIncognito);
-    alert(isIncognito ? '已进入隐身模式（仅对新标签页有效）' : '已退出隐身模式');
+    alert(isIncognito ? t('panels.settings.incognitoOn') : t('panels.settings.incognitoOff'));
 }
 
 // Bookmarks Logic
@@ -366,17 +379,18 @@ bookmarkBtn.addEventListener('click', () => {
 // Overlay Panels Logic
 function showPanel(panel, listContainer, dataKey) {
     const data = store.get(dataKey, []);
-    listContainer.innerHTML = data.length === 0 ? '<p style="text-align:center;color:#999;padding:20px;">暂无数据</p>' : '';
+    const emptyKey = dataKey === 'history' ? 'panels.history.empty' : dataKey === 'bookmarks' ? 'panels.bookmarks.empty' : 'panels.downloads.empty';
+    listContainer.innerHTML = data.length === 0 ? `<p style="text-align:center;color:#999;padding:20px;">${t(emptyKey)}</p>` : '';
     
     data.forEach((item, index) => {
         const itemEl = document.createElement('div');
         itemEl.className = 'list-item';
         itemEl.innerHTML = `
             <a href="#" onclick="createTab('${item.url}'); return false;">
-                <strong>${item.title || '无标题'}</strong><br>
+                <strong>${item.title || t('bookmark.empty')}</strong><br>
                 <small style="color:#999">${item.url}</small>
             </a>
-            <span class="delete-btn" data-index="${index}">删除</span>
+            <span class="delete-btn" data-index="${index}">${t('delete')}</span>
         `;
         itemEl.querySelector('.delete-btn').addEventListener('click', (e) => {
             const idx = e.target.dataset.index;
@@ -469,9 +483,9 @@ ipcRenderer.on('download-progress', (event, data) => {
             </div>
         `;
     } else if (data.state === 'completed') {
-        item.innerHTML = `<strong>${data.fileName}</strong> <span style="color:green">完成</span>`;
+        item.innerHTML = `<strong>${data.fileName}</strong> <span style="color:green">${t('download.completed')}</span>`;
     } else if (data.state === 'failed') {
-        item.innerHTML = `<strong>${data.fileName}</strong> <span style="color:red">失败: ${data.error}</span>`;
+        item.innerHTML = `<strong>${data.fileName}</strong> <span style="color:red">${t('download.failed')} ${data.error}</span>`;
     }
 });
 
@@ -484,10 +498,10 @@ startupUrlInput.addEventListener('change', () => {
 });
 
 clearDataBtn.addEventListener('click', () => {
-    if (confirm('确定要清除所有历史记录和书签吗？')) {
+    if (confirm(t('panels.settings.clearDataConfirm'))) {
         store.set('history', []);
         store.set('bookmarks', []);
-        alert('数据已清除');
+        alert(t('panels.settings.clearDataDone'));
     }
 });
 
