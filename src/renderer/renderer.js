@@ -162,7 +162,7 @@ function createTab(url = null) {
         // New Tab Page Content
         const content = newTabTemplate.content.cloneNode(true);
         const container = document.createElement('div');
-        container.className = 'webview-mock active';
+        container.className = 'webview-mock';
         container.id = `webview-${id}`;
         container.appendChild(content);
         
@@ -177,6 +177,11 @@ function createTab(url = null) {
         });
         
         webviewsContainer.appendChild(container);
+        
+        // Update text for new tab
+        if (typeof initI18n === 'function') {
+            initI18n(container);
+        }
     }
 
     switchTab(id);
@@ -185,7 +190,6 @@ function createTab(url = null) {
 function setupWebviewEvents(webview, id) {
     webview.addEventListener('did-start-loading', () => {
         if (id === activeTabId) {
-            refreshBtn.innerText = '✕';
             progressBar.style.opacity = '1';
             progressBar.style.width = '30%';
         }
@@ -193,7 +197,6 @@ function setupWebviewEvents(webview, id) {
 
     webview.addEventListener('did-stop-loading', () => {
         if (id === activeTabId) {
-            refreshBtn.innerText = '↻';
             urlInput.value = webview.getURL();
             progressBar.style.width = '100%';
             setTimeout(() => {
@@ -252,10 +255,12 @@ function switchTab(id) {
     const activeTabEl = document.getElementById(`tab-${id}`);
     if (activeTabEl) activeTabEl.classList.add('active');
 
-    document.querySelectorAll('#webviews-container > *').forEach(w => w.style.display = 'none');
+    document.querySelectorAll('#webviews-container > *').forEach(w => {
+        w.classList.remove('active');
+    });
     const activeWebview = document.getElementById(`webview-${id}`);
     if (activeWebview) {
-        activeWebview.style.display = 'block';
+        activeWebview.classList.add('active');
         
         if (activeWebview.tagName === 'WEBVIEW') {
             const url = activeWebview.getURL();
@@ -332,7 +337,7 @@ function navigateTo(url, id = activeTabId) {
         container.replaceWith(webview);
         setupWebviewEvents(webview, id);
         if (id === activeTabId) {
-            webview.style.display = 'block';
+            webview.classList.add('active');
             urlInput.value = formattedUrl;
         }
     } else {
