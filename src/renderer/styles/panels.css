@@ -1,0 +1,75 @@
+.overlay-panel {
+    position: fixed;
+    top: 85px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.98);
+    z-index: 1000;
+    display: none;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+.overlay-panel.active {
+    display: block;
+}
+
+.overlay-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 12px;
+}
+
+.settings-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.setting-item label {
+    font-weight: bold;
+    color: #333;
+}
+
+.setting-item select,
+.setting-item input {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    font-size: 13px;
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+}
+
+.list-item:hover {
+    background: #f9f9f9;
+}
+
+.list-item a {
+    text-decoration: none;
+    color: #4285f4;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 20px;
+}

@@ -1,0 +1,177 @@
+.toolbar {
+    background: #ffffff;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #e0e0e0;
+    position: relative;
+}
+
+.progress-container {
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: transparent;
+    z-index: 100;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #5f6368;
+    transition: width 0.2s, opacity 0.5s;
+    opacity: 0;
+}
+
+.tabs-container {
+    background: #eaebed;
+    display: flex;
+    padding: 6px 6px 0 6px;
+    gap: 3px;
+    overflow-x: auto;
+    user-select: none;
+    align-items: flex-end;
+}
+
+.tab {
+    background: #f1f3f4;
+    padding: 8px 14px;
+    border-radius: 10px 10px 0 0;
+    font-size: 13px;
+    min-width: 130px;
+    max-width: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    border: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    top: 1px;
+}
+
+.tab.active {
+    background: #ffffff;
+    color: #202124;
+    z-index: 2;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+    border-bottom: 1px solid #ffffff;
+}
+
+.tab.muted .tab-title::after {
+    content: ' 馃攪';
+    font-size: 10px;
+}
+
+.tab:hover:not(.active) {
+    background: #e8eaed;
+}
+
+.tab .tab-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+    flex: 1;
+}
+
+.tab .close-tab {
+    font-size: 14px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: #5f6368;
+}
+
+.tab:hover .close-tab {
+    opacity: 1;
+}
+
+.tab .close-tab:hover {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.new-tab-btn {
+    padding: 6px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #5f6368;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    transition: all 0.2s ease;
+}
+
+.new-tab-btn:hover {
+    background: rgba(0,0,0,0.08);
+    transform: scale(1.1);
+}
+
+.toolbar button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: #5f6368;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.toolbar button:hover {
+    background: #e8eaed;
+    transform: translateY(-1px);
+}
+
+.toolbar button svg {
+    display: block;
+}
+
+.toolbar button:active {
+    transform: translateY(0);
+}
+
+.url-bar #bookmark-btn {
+    padding: 4px;
+    margin-left: 4px;
+}
+
+#bookmark-svg.active {
+    color: #fbbc05;
+}
+
+.url-bar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: #f1f3f4;
+    border-radius: 22px;
+    padding: 6px 16px;
+    transition: all 0.2s ease;
+}
+
+.url-bar:focus-within {
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+}
+
+.url-bar input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    outline: none;
+    padding: 6px 0;
+    color: #202124;
+}

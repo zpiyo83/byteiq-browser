@@ -1,0 +1,58 @@
+.custom-context-menu {
+    position: fixed;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 6px 0;
+    z-index: 10000;
+    display: none;
+    min-width: 160px;
+    border-radius: 8px;
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.context-menu-item:hover {
+    background: #f1f3f4;
+}
+
+.find-in-page-box {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    background: #ffffff;
+    padding: 8px 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    z-index: 1000;
+}
+
+.find-in-page-box input {
+    border: 1px solid #ddd;
+    padding: 4px 8px;
+    border-radius: 6px;
+    outline: none;
+}
+
+.find-in-page-box span {
+    font-size: 12px;
+    color: #666;
+    min-width: 40px;
+}
+
+.status-bar {
+    background: #f0f0f0;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #666;
+    border-top: 1px solid #e0e0e0;
+}
