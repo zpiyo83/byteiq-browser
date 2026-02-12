@@ -1,10 +1,38 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
 const store = new Store();
 
 let mainWindow;
+
+function setupWebviewWindowHandler() {
+  app.on('web-contents-created', (event, contents) => {
+    if (contents.getType() !== 'webview') {
+      return;
+    }
+
+    contents.setWindowOpenHandler(({ url }) => {
+      try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+          const ownerWindow = contents.getOwnerBrowserWindow();
+          if (ownerWindow) {
+            ownerWindow.webContents.send('open-new-tab', url);
+          } else {
+            contents.loadURL(url);
+          }
+        } else {
+          shell.openExternal(url);
+        }
+      } catch (error) {
+        console.error('Invalid popup URL:', url, error);
+      }
+
+      return { action: 'deny' };
+    });
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -126,7 +154,12 @@ function createMenu() {
         {
           label: 'About',
           click: () => {
-            // Create about dialog
+            dialog.showMessageBox({
+              type: 'info',
+              title: 'About Byteiq Browser',
+              message: 'Byteiq Browser',
+              detail: 'Version 0.1.0\nBuilt with Electron + Chromium.'
+            });
           }
         }
       ]
@@ -138,6 +171,7 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
+  setupWebviewWindowHandler();
   createWindow();
   createMenu();
 
