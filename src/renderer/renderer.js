@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, clipboard } = require('electron');
 const Store = require('electron-store');
 const store = new Store();
 const { initI18n, t, setLocale } = require('./i18n');
@@ -59,6 +59,8 @@ let activeTabId = null;
 
 // Initialize i18n
 initI18n();
+
+toggleAiBtn.style.display = 'flex';
 
 // Language selection
 const langSelect = document.getElementById('lang-select');
@@ -187,6 +189,12 @@ function createTab(url = null) {
     switchTab(id);
 }
 
+ipcRenderer.on('open-new-tab', (event, url) => {
+    if (url) {
+        createTab(url);
+    }
+});
+
 function setupWebviewEvents(webview, id) {
     webview.addEventListener('did-start-loading', () => {
         if (id === activeTabId) {
@@ -229,7 +237,7 @@ function setupWebviewEvents(webview, id) {
     });
 
     webview.addEventListener('new-window', (e) => {
-        createTab(e.url);
+        e.preventDefault();
     });
 }
 
@@ -384,39 +392,172 @@ bookmarkBtn.addEventListener('click', () => {
 // Overlay Panels Logic
 function showPanel(panel, listContainer, dataKey) {
     const data = store.get(dataKey, []);
-    const emptyKey = dataKey === 'history' ? 'panels.history.empty' : dataKey === 'bookmarks' ? 'panels.bookmarks.empty' : 'panels.downloads.empty';
-    listContainer.innerHTML = data.length === 0 ? `<p style="text-align:center;color:#999;padding:20px;">${t(emptyKey)}</p>` : '';
-    
+    const emptyKey = dataKey === 'history'
+        ? 'panels.history.empty'
+        : 'panels.bookmarks.empty';
+    listContainer.innerHTML = '';
+
+    if (data.length === 0) {
+        listContainer.innerHTML =
+            `<p style="text-align:center;color:#999;padding:20px;">` +
+            `${t(emptyKey)}</p>`;
+    }
+
     data.forEach((item, index) => {
         const itemEl = document.createElement('div');
         itemEl.className = 'list-item';
-        itemEl.innerHTML = `
-            <a href="#" onclick="createTab('${item.url}'); return false;">
-                <strong>${item.title || t('bookmark.empty')}</strong><br>
-                <small style="color:#999">${item.url}</small>
-            </a>
-            <span class="delete-btn" data-index="${index}">${t('delete')}</span>
-        `;
-        itemEl.querySelector('.delete-btn').addEventListener('click', (e) => {
-            const idx = e.target.dataset.index;
+
+        const openLink = document.createElement('a');
+        openLink.href = '#';
+        openLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (item.url) {
+                createTab(item.url);
+            }
+        });
+
+        const title = document.createElement('strong');
+        title.innerText = item.title || t('bookmark.empty');
+        openLink.appendChild(title);
+        openLink.appendChild(document.createElement('br'));
+
+        const urlText = document.createElement('small');
+        urlText.style.color = '#999';
+        urlText.innerText = item.url || '';
+        openLink.appendChild(urlText);
+
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.dataset.index = index;
+        deleteBtn.innerText = t('delete');
+        deleteBtn.addEventListener('click', (e) => {
+            const idx = Number(e.target.dataset.index);
             data.splice(idx, 1);
             store.set(dataKey, data);
             showPanel(panel, listContainer, dataKey);
         });
+
+        itemEl.appendChild(openLink);
+        itemEl.appendChild(deleteBtn);
         listContainer.appendChild(itemEl);
     });
-    
+
     panel.classList.add('active');
+}
+
+function updateDownloadStore(data) {
+    let downloads = store.get('downloads', []);
+    const index = downloads.findIndex((item) => item.fileName === data.fileName);
+    const current = index > -1 ? downloads[index] : {};
+
+    const nextItem = {
+        fileName: data.fileName,
+        received: data.received !== undefined
+            ? data.received
+            : (current.received || 0),
+        total: data.total !== undefined ? data.total : (current.total || 0),
+        state: data.state || current.state || 'progressing',
+        error: data.error || '',
+        time: current.time || new Date().toISOString()
+    };
+
+    if (index > -1) {
+        downloads[index] = nextItem;
+    } else {
+        downloads.unshift(nextItem);
+    }
+
+    if (downloads.length > 200) {
+        downloads = downloads.slice(0, 200);
+    }
+
+    store.set('downloads', downloads);
+}
+
+function renderDownloadsPanel() {
+    const downloads = store.get('downloads', []);
+    downloadsList.innerHTML = '';
+
+    if (downloads.length === 0) {
+        downloadsList.innerHTML =
+            `<p style="text-align:center;color:#999;padding:20px;">` +
+            `${t('panels.downloads.empty')}</p>`;
+        return;
+    }
+
+    downloads.forEach((item, index) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'list-item';
+
+        const content = document.createElement('div');
+        content.style.flex = '1';
+
+        const title = document.createElement('strong');
+        title.innerText = item.fileName;
+        content.appendChild(title);
+        content.appendChild(document.createElement('br'));
+
+        if (item.state === 'progressing' && item.total > 0) {
+            const percent = Math.round((item.received / item.total) * 100);
+            const progress = document.createElement('progress');
+            progress.value = percent;
+            progress.max = 100;
+            progress.style.width = '100%';
+            content.appendChild(progress);
+
+            const detail = document.createElement('small');
+            detail.innerText = t('status.downloadProgress', {
+                percent,
+                received: (item.received / 1024 / 1024).toFixed(2),
+                total: (item.total / 1024 / 1024).toFixed(2)
+            });
+            content.appendChild(detail);
+        } else {
+            const stateText = document.createElement('small');
+
+            if (item.state === 'completed') {
+                stateText.style.color = 'green';
+                stateText.innerText = t('status.downloadComplete');
+            } else if (item.state === 'failed') {
+                stateText.style.color = 'red';
+                stateText.innerText = t('status.downloadFailed', {
+                    error: item.error || 'unknown'
+                });
+            } else {
+                stateText.innerText = item.state;
+            }
+
+            content.appendChild(stateText);
+        }
+
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerText = t('delete');
+        deleteBtn.addEventListener('click', () => {
+            const nextDownloads = store.get('downloads', []);
+            nextDownloads.splice(index, 1);
+            store.set('downloads', nextDownloads);
+            renderDownloadsPanel();
+        });
+
+        itemEl.appendChild(content);
+        itemEl.appendChild(deleteBtn);
+        downloadsList.appendChild(itemEl);
+    });
 }
 
 historyBtn.addEventListener('click', () => showPanel(historyPanel, historyList, 'history'));
 bookmarksListBtn.addEventListener('click', () => showPanel(bookmarksPanel, bookmarksList, 'bookmarks'));
 downloadsBtn.addEventListener('click', () => {
+    renderDownloadsPanel();
     downloadsPanel.classList.add('active');
 });
 settingsBtn.addEventListener('click', () => {
     searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
     startupUrlInput.value = store.get('settings.startupUrl', '');
+    if (langSelect) {
+        langSelect.value = store.get('settings.language', 'zh-CN');
+    }
     settingsPanel.classList.add('active');
 });
 
@@ -470,27 +611,9 @@ zoomResetBtn.addEventListener('click', () => {
 
 // Download Progress Handling
 ipcRenderer.on('download-progress', (event, data) => {
-    let item = document.getElementById(`download-${data.fileName}`);
-    if (!item) {
-        item = document.createElement('div');
-        item.id = `download-${data.fileName}`;
-        item.className = 'list-item';
-        downloadsList.appendChild(item);
-    }
-
-    if (data.state === 'progressing') {
-        const percent = Math.round((data.received / data.total) * 100);
-        item.innerHTML = `
-            <div style="flex:1">
-                <strong>${data.fileName}</strong><br>
-                <progress value="${percent}" max="100" style="width:100%"></progress>
-                <small>${percent}% (${(data.received/1024/1024).toFixed(2)}MB / ${(data.total/1024/1024).toFixed(2)}MB)</small>
-            </div>
-        `;
-    } else if (data.state === 'completed') {
-        item.innerHTML = `<strong>${data.fileName}</strong> <span style="color:green">${t('download.completed')}</span>`;
-    } else if (data.state === 'failed') {
-        item.innerHTML = `<strong>${data.fileName}</strong> <span style="color:red">${t('download.failed')} ${data.error}</span>`;
+    updateDownloadStore(data);
+    if (downloadsPanel.classList.contains('active')) {
+        renderDownloadsPanel();
     }
 });
 
@@ -584,12 +707,19 @@ refreshBtn.addEventListener('click', () => {
 
 // Additional Controls
 homeBtn.addEventListener('click', () => {
-    const wv = document.getElementById(`webview-${activeTabId}`);
-    if (wv && wv.tagName === 'WEBVIEW') {
-        wv.src = 'about:blank';
-    } else {
-        createTab();
+    const startupUrl = store.get('settings.startupUrl', '').trim();
+    if (startupUrl) {
+        navigateTo(startupUrl);
+        return;
     }
+
+    const engine = store.get('settings.searchEngine', 'bing');
+    const homePages = {
+        bing: 'https://www.bing.com',
+        google: 'https://www.google.com',
+        baidu: 'https://www.baidu.com'
+    };
+    navigateTo(homePages[engine] || homePages.bing);
 });
 
 // Find in Page Logic
@@ -664,10 +794,36 @@ document.getElementById('ctx-reload').addEventListener('click', () => {
     if (wv) wv.reload();
 });
 document.getElementById('ctx-copy').addEventListener('click', () => {
-    document.execCommand('copy');
+    const activeEl = document.activeElement;
+    if (activeEl && typeof activeEl.value === 'string') {
+        const selected = activeEl.value.slice(
+            activeEl.selectionStart,
+            activeEl.selectionEnd
+        );
+        clipboard.writeText(selected || activeEl.value);
+        return;
+    }
+
+    const selectedText = window.getSelection().toString();
+    if (selectedText) {
+        clipboard.writeText(selectedText);
+    }
 });
 document.getElementById('ctx-paste').addEventListener('click', () => {
-    document.execCommand('paste');
+    const activeEl = document.activeElement;
+    const text = clipboard.readText();
+
+    if (!activeEl || typeof activeEl.value !== 'string') {
+        return;
+    }
+
+    const start = activeEl.selectionStart || 0;
+    const end = activeEl.selectionEnd || 0;
+    const value = activeEl.value;
+    activeEl.value = value.slice(0, start) + text + value.slice(end);
+    const cursorPos = start + text.length;
+    activeEl.setSelectionRange(cursorPos, cursorPos);
+    activeEl.dispatchEvent(new Event('input'));
 });
 document.getElementById('ctx-inspect').addEventListener('click', () => {
     const wv = document.getElementById(`webview-${activeTabId}`);
