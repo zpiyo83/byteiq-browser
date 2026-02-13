@@ -26,6 +26,8 @@ const bookmarksList = document.getElementById('bookmarks-list');
 const downloadsList = document.getElementById('downloads-list');
 const historySearchInput = document.getElementById('history-search-input');
 const bookmarksSearchInput = document.getElementById('bookmarks-search-input');
+const downloadsSearchInput = document.getElementById('downloads-search-input');
+const downloadsFilters = document.getElementById('downloads-filters');
 const downloadsClearAllBtn = document.getElementById('downloads-clear-all-btn');
 const searchEngineSelect = document.getElementById('search-engine-select');
 const startupUrlInput = document.getElementById('startup-url-input');
@@ -59,6 +61,8 @@ const findClose = document.getElementById('find-close');
 const contextMenu = document.getElementById('context-menu');
 const tabContextMenu = document.getElementById('tab-context-menu');
 
+const overlayBackdrop = document.getElementById('overlay-backdrop');
+
 let tabs = [];
 let activeTabId = null;
 let isRestoringSession = false;
@@ -75,6 +79,43 @@ if (langSelect) {
     langSelect.value = store.get('settings.language', 'zh-CN');
     langSelect.addEventListener('change', () => {
         setLocale(langSelect.value);
+    });
+}
+
+function getActiveOverlayPanel() {
+    return document.querySelector('.overlay-panel.active');
+}
+
+function setOverlayBackdropActive(active) {
+    if (!overlayBackdrop) return;
+    overlayBackdrop.classList.toggle('active', active);
+}
+
+function closeAllOverlays() {
+    document.querySelectorAll('.overlay-panel').forEach(p => {
+        p.classList.remove('active');
+    });
+    setOverlayBackdropActive(false);
+}
+
+function openOverlay(panelEl) {
+    if (!panelEl) return;
+    document.querySelectorAll('.overlay-panel').forEach(p => {
+        if (p !== panelEl) p.classList.remove('active');
+    });
+    panelEl.classList.add('active');
+    setOverlayBackdropActive(true);
+
+    requestAnimationFrame(() => {
+        const search = panelEl.querySelector('.panel-search input');
+        if (search) {
+            search.focus();
+            return;
+        }
+        const firstInput = panelEl.querySelector('input');
+        if (firstInput) {
+            firstInput.focus();
+        }
     });
 }
 
@@ -743,18 +784,52 @@ function showPanel(panel, listContainer, dataKey, filterText = '') {
 
 function updateDownloadStore(data) {
     let downloads = store.get('downloads', []);
-    const index = downloads.findIndex((item) => item.fileName === data.fileName);
+    const downloadId = data.id || '';
+    const index = downloadId
+        ? downloads.findIndex((item) => item.id === downloadId)
+        : downloads.findIndex((item) => item.fileName === data.fileName);
     const current = index > -1 ? downloads[index] : {};
 
+    const now = Date.now();
+    const lastUpdateAt = current.lastUpdateAt || 0;
+    const lastReceived = current.lastReceived || 0;
+    const received = data.received !== undefined
+        ? data.received
+        : (current.received || 0);
+    const total = data.total !== undefined ? data.total : (current.total || 0);
+
+    let speedBps = current.speedBps || 0;
+    let etaSeconds = current.etaSeconds || 0;
+    if (
+        data.state === 'progressing' &&
+        received >= 0 &&
+        total > 0 &&
+        lastUpdateAt > 0 &&
+        now > lastUpdateAt
+    ) {
+        const deltaBytes = Math.max(0, received - lastReceived);
+        const deltaSeconds = Math.max(0.001, (now - lastUpdateAt) / 1000);
+        const instant = deltaBytes / deltaSeconds;
+        speedBps = speedBps ? (speedBps * 0.75 + instant * 0.25) : instant;
+        const remaining = Math.max(0, total - received);
+        etaSeconds = speedBps > 1 ? Math.round(remaining / speedBps) : 0;
+    }
+
     const nextItem = {
+        id: downloadId || current.id || '',
         fileName: data.fileName,
-        received: data.received !== undefined
-            ? data.received
-            : (current.received || 0),
-        total: data.total !== undefined ? data.total : (current.total || 0),
+        received,
+        total,
         state: data.state || current.state || 'progressing',
         error: data.error || '',
         savePath: data.savePath || current.savePath || '',
+        url: data.url || current.url || '',
+        mimeType: data.mimeType || current.mimeType || '',
+        paused: data.paused !== undefined ? data.paused : (current.paused || false),
+        speedBps,
+        etaSeconds,
+        lastUpdateAt: now,
+        lastReceived: received,
         time: current.time || new Date().toISOString()
     };
 
@@ -773,16 +848,36 @@ function updateDownloadStore(data) {
 
 function renderDownloadsPanel() {
     const downloads = store.get('downloads', []);
+    const query = (downloadsSearchInput?.value || '').trim().toLowerCase();
+    const activeFilter = store.get('ui.downloadsFilter', 'all');
+    const filtered = downloads.filter((item) => {
+        if (activeFilter && activeFilter !== 'all') {
+            const state = (item.state || '');
+            if (activeFilter === 'failed') {
+                if (state !== 'failed' && state !== 'cancelled' && state !== 'interrupted') {
+                    return false;
+                }
+            } else if (state !== activeFilter) {
+                return false;
+            }
+        }
+        if (!query) return true;
+        const name = (item.fileName || '').toLowerCase();
+        const url = (item.url || '').toLowerCase();
+        const path = (item.savePath || '').toLowerCase();
+        return name.includes(query) || url.includes(query) || path.includes(query);
+    });
     downloadsList.innerHTML = '';
 
-    if (downloads.length === 0) {
+    if (filtered.length === 0) {
         downloadsList.innerHTML =
             `<p style="text-align:center;color:#999;padding:20px;">` +
             `${t('panels.downloads.empty')}</p>`;
         return;
     }
 
-    downloads.forEach((item, index) => {
+    filtered.forEach((item) => {
+        const index = downloads.indexOf(item);
         const itemEl = document.createElement('div');
         itemEl.className = 'list-item';
 
@@ -793,6 +888,14 @@ function renderDownloadsPanel() {
         title.innerText = item.fileName;
         content.appendChild(title);
         content.appendChild(document.createElement('br'));
+
+        if (item.url || item.savePath) {
+            const sub = document.createElement('small');
+            sub.style.color = '#999';
+            sub.innerText = item.savePath || item.url;
+            content.appendChild(sub);
+            content.appendChild(document.createElement('br'));
+        }
 
         if (item.state === 'progressing' && item.total > 0) {
             const percent = Math.round((item.received / item.total) * 100);
@@ -809,17 +912,38 @@ function renderDownloadsPanel() {
                 total: (item.total / 1024 / 1024).toFixed(2)
             });
             content.appendChild(detail);
+
+            const meta = document.createElement('small');
+            meta.style.display = 'block';
+            meta.style.color = '#999';
+            const speedText = item.speedBps
+                ? `${(item.speedBps / 1024 / 1024).toFixed(2)} MB/s`
+                : '';
+            const etaText = item.etaSeconds
+                ? `${item.etaSeconds}s`
+                : '';
+            const pausedText = item.paused ? (t('status.paused') || 'Paused') : '';
+            meta.innerText = [speedText, etaText, pausedText].filter(Boolean).join(' | ');
+            if (meta.innerText) {
+                content.appendChild(meta);
+            }
         } else {
             const stateText = document.createElement('small');
 
             if (item.state === 'completed') {
                 stateText.style.color = 'green';
                 stateText.innerText = t('status.downloadComplete');
+            } else if (item.state === 'cancelled') {
+                stateText.style.color = '#666';
+                stateText.innerText = t('status.downloadCancelled') || 'Cancelled';
+            } else if (item.state === 'interrupted') {
+                stateText.style.color = '#b26a00';
+                stateText.innerText = t('status.downloadInterrupted') || 'Interrupted';
             } else if (item.state === 'failed') {
                 stateText.style.color = 'red';
-                stateText.innerText = t('status.downloadFailed', {
-                    error: item.error || 'unknown'
-                });
+                const err = item.error || 'unknown';
+                const label = t('status.downloadFailed', { error: err });
+                stateText.innerText = label || `Failed: ${err}`;
             } else {
                 stateText.innerText = item.state;
             }
@@ -829,6 +953,54 @@ function renderDownloadsPanel() {
 
         const actions = document.createElement('div');
         actions.className = 'download-actions';
+
+        if (item.state === 'progressing' && item.id) {
+            if (item.paused) {
+                const resumeBtn = document.createElement('button');
+                resumeBtn.className = 'download-resume-btn';
+                resumeBtn.innerText = t('panels.downloads.resume') || 'Resume';
+                resumeBtn.addEventListener('click', () => {
+                    ipcRenderer.send('download-resume', item.id);
+                });
+                actions.appendChild(resumeBtn);
+            } else {
+                const pauseBtn = document.createElement('button');
+                pauseBtn.className = 'download-pause-btn';
+                pauseBtn.innerText = t('panels.downloads.pause') || 'Pause';
+                pauseBtn.addEventListener('click', () => {
+                    ipcRenderer.send('download-pause', item.id);
+                });
+                actions.appendChild(pauseBtn);
+            }
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'download-cancel-btn';
+            cancelBtn.innerText = t('panels.downloads.cancel') || 'Cancel';
+            cancelBtn.addEventListener('click', () => {
+                ipcRenderer.send('download-cancel', item.id);
+            });
+            actions.appendChild(cancelBtn);
+        }
+
+        if (item.state === 'failed' && item.url) {
+            const retryBtn = document.createElement('button');
+            retryBtn.className = 'download-retry-btn';
+            retryBtn.innerText = t('panels.downloads.retry') || 'Retry';
+            retryBtn.addEventListener('click', () => {
+                ipcRenderer.send('download-retry', item.url);
+            });
+            actions.appendChild(retryBtn);
+        }
+
+        if (item.state === 'completed' && item.savePath) {
+            const openFileBtn = document.createElement('button');
+            openFileBtn.className = 'download-open-file-btn';
+            openFileBtn.innerText = t('panels.downloads.openFile') || 'Open';
+            openFileBtn.addEventListener('click', () => {
+                ipcRenderer.send('open-download-file', item.savePath);
+            });
+            actions.appendChild(openFileBtn);
+        }
 
         if (item.savePath) {
             const openBtn = document.createElement('button');
@@ -859,13 +1031,16 @@ function renderDownloadsPanel() {
 
 historyBtn.addEventListener('click', () => {
     showPanel(historyPanel, historyList, 'history', historySearchInput?.value || '');
+    openOverlay(historyPanel);
 });
 bookmarksListBtn.addEventListener('click', () => {
     showPanel(bookmarksPanel, bookmarksList, 'bookmarks', bookmarksSearchInput?.value || '');
+    openOverlay(bookmarksPanel);
 });
 downloadsBtn.addEventListener('click', () => {
+    updateDownloadsFilterUI();
     renderDownloadsPanel();
-    downloadsPanel.classList.add('active');
+    openOverlay(downloadsPanel);
 });
 settingsBtn.addEventListener('click', () => {
     searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
@@ -876,7 +1051,7 @@ settingsBtn.addEventListener('click', () => {
     if (langSelect) {
         langSelect.value = store.get('settings.language', 'zh-CN');
     }
-    settingsPanel.classList.add('active');
+    openOverlay(settingsPanel);
 });
 
 if (historySearchInput) {
@@ -903,7 +1078,35 @@ if (bookmarksSearchInput) {
 
 if (downloadsClearAllBtn) {
     downloadsClearAllBtn.addEventListener('click', () => {
+        const msg = t('panels.downloads.clearAllConfirm') || 'Clear all downloads?';
+        if (!confirm(msg)) return;
         store.set('downloads', []);
+        renderDownloadsPanel();
+    });
+}
+
+function updateDownloadsFilterUI() {
+    if (!downloadsFilters) return;
+    const active = store.get('ui.downloadsFilter', 'all');
+    downloadsFilters.querySelectorAll('.downloads-filter-btn').forEach((btn) => {
+        const key = btn.getAttribute('data-filter') || 'all';
+        btn.classList.toggle('active', key === active);
+    });
+}
+
+if (downloadsFilters) {
+    downloadsFilters.addEventListener('click', (e) => {
+        const btn = e.target.closest('.downloads-filter-btn');
+        if (!btn) return;
+        const key = btn.getAttribute('data-filter') || 'all';
+        store.set('ui.downloadsFilter', key);
+        updateDownloadsFilterUI();
+        renderDownloadsPanel();
+    });
+}
+
+if (downloadsSearchInput) {
+    downloadsSearchInput.addEventListener('input', () => {
         renderDownloadsPanel();
     });
 }
@@ -962,9 +1165,13 @@ zoomResetBtn.addEventListener('click', () => {
 // Download Progress Handling
 ipcRenderer.on('download-progress', (event, data) => {
     updateDownloadStore(data);
-    if (downloadsPanel.classList.contains('active')) {
+    if (!downloadsPanel.classList.contains('active')) return;
+    if (window.__downloadsRaf) return;
+    window.__downloadsRaf = requestAnimationFrame(() => {
+        window.__downloadsRaf = null;
+        updateDownloadsFilterUI();
         renderDownloadsPanel();
-    }
+    });
 });
 
 searchEngineSelect.addEventListener('change', () => {
@@ -1000,8 +1207,35 @@ exportDataBtn.addEventListener('click', () => {
 
 document.querySelectorAll('.close-overlay').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.overlay-panel').forEach(p => p.classList.remove('active'));
+        closeAllOverlays();
     });
+});
+
+if (overlayBackdrop) {
+    overlayBackdrop.addEventListener('click', () => {
+        closeAllOverlays();
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea') return;
+    if (getActiveOverlayPanel()) {
+        closeAllOverlays();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+    if (!isCmdOrCtrl) return;
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea') return;
+    if (String(e.key).toLowerCase() !== 'j') return;
+    e.preventDefault();
+    updateDownloadsFilterUI();
+    renderDownloadsPanel();
+    openOverlay(downloadsPanel);
 });
 
 // URL Input Controls
