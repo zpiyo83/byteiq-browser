@@ -1,17 +1,40 @@
 .overlay-panel {
     position: fixed;
     top: 85px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255,255,255,0.98);
+    right: 16px;
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 105px);
+    background: rgba(255, 255, 255, 0.98);
     z-index: 1000;
     display: none;
-    padding: 40px;
+    padding: 16px;
     overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transform: translateY(-6px);
+    opacity: 0;
+    transition: opacity 120ms ease, transform 120ms ease;
 }
 
 .overlay-panel.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.overlay-backdrop {
+    position: fixed;
+    top: 85px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.18);
+    z-index: 999;
+    display: none;
+}
+
+.overlay-backdrop.active {
     display: block;
 }
 
@@ -49,6 +72,29 @@
     padding: 6px 12px;
     border-radius: 16px;
     cursor: pointer;
+}
+
+.downloads-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.downloads-filter-btn {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #333;
+}
+
+.downloads-filter-btn.active {
+    background: #4285f4;
+    border-color: #4285f4;
+    color: #ffffff;
 }
 
 .toggle-switch {
@@ -158,4 +204,13 @@
     border-radius: 12px;
     cursor: pointer;
     font-size: 12px;
+}
+
+@media (max-width: 680px) {
+    .overlay-panel {
+        right: 8px;
+        left: 8px;
+        width: auto;
+        max-height: calc(100vh - 105px);
+    }
 }
