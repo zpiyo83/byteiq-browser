@@ -141,6 +141,8 @@
         </div>
     </div>
 
+    <div id="overlay-backdrop" class="overlay-backdrop"></div>
+
     <!-- Template for New Tab Page -->
     <template id="new-tab-template">
         <div class="content">
@@ -279,6 +281,21 @@
             <h2 data-i18n="panels.downloads.title">Downloads</h2>
             <button class="close-overlay"
                 data-i18n="panels.downloads.close">Close</button>
+        </div>
+        <div class="panel-search">
+            <input type="text" id="downloads-search-input"
+                data-i18n-placeholder="panels.downloads.search"
+                placeholder="Search downloads...">
+        </div>
+        <div class="downloads-filters" id="downloads-filters">
+            <button class="downloads-filter-btn" data-filter="all"
+                data-i18n="panels.downloads.filterAll">All</button>
+            <button class="downloads-filter-btn" data-filter="progressing"
+                data-i18n="panels.downloads.filterProgressing">Downloading</button>
+            <button class="downloads-filter-btn" data-filter="completed"
+                data-i18n="panels.downloads.filterCompleted">Completed</button>
+            <button class="downloads-filter-btn" data-filter="failed"
+                data-i18n="panels.downloads.filterFailed">Failed</button>
         </div>
         <div class="panel-actions">
             <button id="downloads-clear-all-btn"

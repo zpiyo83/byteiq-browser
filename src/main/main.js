@@ -6,9 +6,60 @@ const store = new Store();
 
 let mainWindow;
 
+let downloadSeq = 0;
+const downloadItemsById = new Map();
+
 ipcMain.on('open-download-path', (event, filePath) => {
   if (filePath) {
     shell.showItemInFolder(filePath);
+  }
+});
+
+ipcMain.on('open-download-file', async (event, filePath) => {
+  if (!filePath) return;
+  try {
+    await shell.openPath(filePath);
+  } catch (error) {
+    console.error('Failed to open downloaded file:', error);
+  }
+});
+
+ipcMain.on('download-pause', (event, downloadId) => {
+  const item = downloadItemsById.get(downloadId);
+  if (!item) return;
+  try {
+    item.pause();
+  } catch (error) {
+    console.error('Failed to pause download:', error);
+  }
+});
+
+ipcMain.on('download-resume', (event, downloadId) => {
+  const item = downloadItemsById.get(downloadId);
+  if (!item) return;
+  try {
+    item.resume();
+  } catch (error) {
+    console.error('Failed to resume download:', error);
+  }
+});
+
+ipcMain.on('download-cancel', (event, downloadId) => {
+  const item = downloadItemsById.get(downloadId);
+  if (!item) return;
+  try {
+    item.cancel();
+  } catch (error) {
+    console.error('Failed to cancel download:', error);
+  }
+});
+
+ipcMain.on('download-retry', (event, url) => {
+  if (!url || !mainWindow) return;
+  try {
+    mainWindow.webContents.downloadURL(url);
+  } catch (error) {
+    console.error('Failed to retry download:', error);
   }
 });
 
@@ -56,24 +107,71 @@ function createWindow() {
 
   // Handle downloads
   mainWindow.webContents.session.on('will-download', (event, item) => {
+    const downloadId = `d_${Date.now()}_${downloadSeq++}`;
     const fileName = item.getFilename();
     const fileSize = item.getTotalBytes();
+
+    downloadItemsById.set(downloadId, item);
+
+    if (mainWindow) {
+      mainWindow.webContents.send('download-progress', {
+        id: downloadId,
+        fileName,
+        received: item.getReceivedBytes(),
+        total: fileSize,
+        state: 'progressing',
+        savePath: item.getSavePath(),
+        url: item.getURL(),
+        mimeType: item.getMimeType(),
+        paused: item.isPaused()
+      });
+    }
 
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
         console.log('Download is interrupted but can be resumed');
+        if (mainWindow) {
+          mainWindow.webContents.send('download-progress', {
+            id: downloadId,
+            fileName,
+            received: item.getReceivedBytes(),
+            total: fileSize,
+            state: 'interrupted',
+            savePath: item.getSavePath(),
+            url: item.getURL(),
+            mimeType: item.getMimeType(),
+            paused: item.isPaused()
+          });
+        }
       } else if (state === 'progressing') {
         if (item.isPaused()) {
           console.log('Download is paused');
-        } else {
-          console.log(`Received bytes: ${item.getReceivedBytes()}`);
           if (mainWindow) {
             mainWindow.webContents.send('download-progress', {
+              id: downloadId,
               fileName,
               received: item.getReceivedBytes(),
               total: fileSize,
               state: 'progressing',
-              savePath: item.getSavePath()
+              savePath: item.getSavePath(),
+              url: item.getURL(),
+              mimeType: item.getMimeType(),
+              paused: true
+            });
+          }
+        } else {
+          console.log(`Received bytes: ${item.getReceivedBytes()}`);
+          if (mainWindow) {
+            mainWindow.webContents.send('download-progress', {
+              id: downloadId,
+              fileName,
+              received: item.getReceivedBytes(),
+              total: fileSize,
+              state: 'progressing',
+              savePath: item.getSavePath(),
+              url: item.getURL(),
+              mimeType: item.getMimeType(),
+              paused: false
             });
           }
         }
@@ -85,22 +183,51 @@ function createWindow() {
         console.log('Download successfully');
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
+            id: downloadId,
             fileName,
             state: 'completed',
-            savePath: item.getSavePath()
+            savePath: item.getSavePath(),
+            url: item.getURL(),
+            mimeType: item.getMimeType(),
+            received: item.getReceivedBytes(),
+            total: fileSize,
+            paused: item.isPaused()
+          });
+        }
+      } else if (state === 'cancelled') {
+        console.log('Download cancelled');
+        if (mainWindow) {
+          mainWindow.webContents.send('download-progress', {
+            id: downloadId,
+            fileName,
+            state: 'cancelled',
+            savePath: item.getSavePath(),
+            url: item.getURL(),
+            mimeType: item.getMimeType(),
+            received: item.getReceivedBytes(),
+            total: fileSize,
+            paused: item.isPaused()
           });
         }
       } else {
         console.log(`Download failed: ${state}`);
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
+            id: downloadId,
             fileName,
             state: 'failed',
             error: state,
-            savePath: item.getSavePath()
+            savePath: item.getSavePath(),
+            url: item.getURL(),
+            mimeType: item.getMimeType(),
+            received: item.getReceivedBytes(),
+            total: fileSize,
+            paused: item.isPaused()
           });
         }
       }
+
+      downloadItemsById.delete(downloadId);
     });
   });
 
@@ -112,6 +239,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    downloadItemsById.clear();
   });
 }
 
