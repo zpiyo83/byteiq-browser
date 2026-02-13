@@ -1,8 +1,8 @@
 {
   "app": {
     "title": "Byteiq Browser",
-    "version": "版本 0.1.0",
-    "communityDriven": "社区驱动的AI浏览器",
+    "version": "版本 0.1.1",
+    "communityDriven": "社区驱动的 AI 浏览器",
     "basedOn": "基于 Chromium 内核 | Electron 构建"
   },
   "toolbar": {
@@ -21,43 +21,53 @@
   },
   "tabs": {
     "newTab": "新标签页",
-    "close": "关闭"
+    "close": "关闭",
+    "duplicate": "复制标签页",
+    "pin": "固定标签页",
+    "unpin": "取消固定",
+    "closeOthers": "关闭其他标签页",
+    "closeRight": "关闭右侧标签页"
   },
   "panels": {
     "history": {
       "title": "历史记录",
       "close": "关闭",
-      "empty": "暂无历史记录"
+      "empty": "暂无历史记录",
+      "search": "搜索历史..."
     },
     "bookmarks": {
       "title": "我的书签",
       "close": "关闭",
-      "empty": "暂无书签"
+      "empty": "暂无书签",
+      "search": "搜索书签..."
     },
     "settings": {
       "title": "浏览器设置",
       "close": "关闭",
       "searchEngine": "默认搜索引擎",
       "startupPage": "启动页",
-      "startupPagePlaceholder": "输入 URL 或留空显示新标签页",
-      "incognito": "隐身模式",
-      "incognitoToggle": "开启/关闭隐身模式",
+      "startupPagePlaceholder": "输入 URL，或留空打开新标签页",
+      "incognito": "无痕模式",
+      "incognitoToggle": "开启/关闭无痕模式",
       "darkMode": "深色模式",
       "darkModeToggle": "切换深色/浅色模式",
       "zoom": "缩放级别",
       "zoomReset": "重置",
+      "restoreSession": "恢复上次会话",
       "language": "界面语言",
       "exportData": "导出浏览器数据 (JSON)",
-      "clearData": "清除浏览器数据 (历史/书签)",
-      "clearDataConfirm": "确定要清除所有历史记录和书签吗？",
+      "clearData": "清除浏览器数据（历史/书签）",
+      "clearDataConfirm": "确定要清除所有历史和书签吗？",
       "clearDataDone": "数据已清除",
-      "incognitoOn": "已进入隐身模式（仅对新标签页有效）",
-      "incognitoOff": "已退出隐身模式"
+      "incognitoOn": "已启用无痕模式（仅新标签页生效）",
+      "incognitoOff": "已关闭无痕模式"
     },
     "downloads": {
       "title": "下载管理",
       "close": "关闭",
-      "empty": "暂无下载"
+      "empty": "暂无下载",
+      "clearAll": "清空下载",
+      "showInFolder": "在文件夹中显示"
     }
   },
   "find": {
@@ -74,27 +84,27 @@
     "copy": "复制",
     "paste": "粘贴",
     "mute": "静音/取消静音标签页",
-    "inspect": "审查元素"
+    "inspect": "检查元素"
   },
   "ai": {
     "title": "Byteiq AI 助手",
-    "placeholder": "输入问题或指令...",
+    "placeholder": "输入问题或命令...",
     "send": "发送",
-    "welcome": "你好！我是 Byteiq AI 助手。我可以帮你总结网页内容、回答问题或协助你浏览。",
-    "summaryPrompt": "正在尝试读取页面内容进行总结... (此功能需要接入 AI API)",
-    "noPage": "请先打开一个网页，我才能为您进行总结。",
-    "prototype": "收到！目前我还是原型版本，很快我将能通过 API 连接到大模型来为您服务。"
+    "welcome": "你好！我是 Byteiq AI 助手。我可以帮你总结网页内容、回答问题，或辅助浏览。",
+    "summaryPrompt": "正在尝试读取页面内容并生成摘要...（该功能需要配置 AI API）",
+    "noPage": "请先打开一个网页，我才能为你总结。",
+    "prototype": "收到！我目前还是原型版本，后续将可通过 API 连接大模型为你服务。"
   },
   "newTab": {
-    "searchPlaceholder": "搜索或输入网址...",
-    "title": "社区驱动的AI浏览器",
+    "searchPlaceholder": "搜索或输入 URL...",
+    "title": "社区驱动的 AI 浏览器",
     "subtitle": "基于 Chromium 内核 | Electron 构建",
-    "version": "版本 0.1.0 | 开源社区驱动"
+    "version": "版本 0.1.1 | 开源社区驱动"
   },
   "status": {
     "loading": "加载中...",
-    "loaded": "加载完成",
-    "error": "加载失败",
+    "loaded": "已加载",
+    "error": "错误",
     "downloadProgress": "{percent}% ({received}MB / {total}MB)",
     "downloadComplete": "完成",
     "downloadFailed": "失败: {error}"
@@ -105,7 +115,7 @@
     "reset": "重置"
   },
   "bookmark": {
-    "add": "加入书签",
+    "add": "添加书签",
     "remove": "移除书签",
     "empty": "无标题"
   },

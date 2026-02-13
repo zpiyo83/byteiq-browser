@@ -24,6 +24,78 @@
     padding-bottom: 12px;
 }
 
+.panel-search {
+    margin-bottom: 16px;
+}
+
+.panel-search input {
+    width: 100%;
+    padding: 8px 14px;
+    border-radius: 18px;
+    border: 1px solid #ddd;
+    font-size: 13px;
+    outline: none;
+}
+
+.panel-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+}
+
+.panel-actions button {
+    background: #f1f3f4;
+    border: 1px solid #e0e0e0;
+    padding: 6px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.2s;
+    border-radius: 24px;
+}
+
+.toggle-slider::before {
+    position: absolute;
+    content: '';
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #ffffff;
+    transition: 0.2s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #4285f4;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
+
 .settings-content {
     max-width: 600px;
     margin: 0 auto;
@@ -72,4 +144,18 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-right: 20px;
+}
+
+.download-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.download-actions button {
+    background: #f1f3f4;
+    border: 1px solid #e0e0e0;
+    padding: 4px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
 }
