@@ -1,4 +1,4 @@
-const { ipcRenderer, clipboard } = require('electron');
+﻿const { ipcRenderer, clipboard } = require('electron');
 const Store = require('electron-store');
 const store = new Store();
 const { initI18n, t, setLocale } = require('./i18n');
@@ -24,6 +24,9 @@ const downloadsPanel = document.getElementById('downloads-panel');
 const historyList = document.getElementById('history-list');
 const bookmarksList = document.getElementById('bookmarks-list');
 const downloadsList = document.getElementById('downloads-list');
+const historySearchInput = document.getElementById('history-search-input');
+const bookmarksSearchInput = document.getElementById('bookmarks-search-input');
+const downloadsClearAllBtn = document.getElementById('downloads-clear-all-btn');
 const searchEngineSelect = document.getElementById('search-engine-select');
 const startupUrlInput = document.getElementById('startup-url-input');
 const incognitoToggleBtn = document.getElementById('incognito-toggle-btn');
@@ -34,6 +37,7 @@ const zoomResetBtn = document.getElementById('zoom-reset-btn');
 const zoomLevelText = document.getElementById('zoom-level-text');
 const clearDataBtn = document.getElementById('clear-data-btn');
 const exportDataBtn = document.getElementById('export-data-btn');
+const restoreSessionToggle = document.getElementById('restore-session-toggle');
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
 
@@ -53,9 +57,12 @@ const findPrev = document.getElementById('find-prev');
 const findNext = document.getElementById('find-next');
 const findClose = document.getElementById('find-close');
 const contextMenu = document.getElementById('context-menu');
+const tabContextMenu = document.getElementById('tab-context-menu');
 
 let tabs = [];
 let activeTabId = null;
+let isRestoringSession = false;
+let tabContextTargetId = null;
 
 // Initialize i18n
 initI18n();
@@ -68,6 +75,13 @@ if (langSelect) {
     langSelect.value = store.get('settings.language', 'zh-CN');
     langSelect.addEventListener('change', () => {
         setLocale(langSelect.value);
+    });
+}
+
+if (restoreSessionToggle) {
+    restoreSessionToggle.checked = store.get('settings.restoreSession', true);
+    restoreSessionToggle.addEventListener('change', () => {
+        store.set('settings.restoreSession', restoreSessionToggle.checked);
     });
 }
 
@@ -100,7 +114,11 @@ function handleAISend() {
         const currentWv = document.getElementById(`webview-${activeTabId}`);
         let response = t('ai.prototype');
         
-        if (text.includes('总结') || text.includes('summary')) {
+        if (
+            text.includes('总结') ||
+            text.includes('總結') ||
+            text.includes('summary')
+        ) {
             if (currentWv && currentWv.tagName === 'WEBVIEW') {
                 response = t('ai.summaryPrompt');
             } else {
@@ -117,27 +135,259 @@ aiInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleAISend();
 });
 
-function createTab(url = null) {
-    const startupUrl = store.get('settings.startupUrl', '');
+function getTabById(id) {
+    return tabs.find((tab) => tab.id === id);
+}
+
+function updateTabUrl(id, url) {
+    const tab = getTabById(id);
+    if (!tab) return;
+    tab.url = url;
+    saveSession();
+}
+
+function saveSession() {
+    if (isRestoringSession) return;
+    const sessionTabs = tabs.map((tab) => ({
+        url: tab.url || '',
+        pinned: !!tab.pinned
+    }));
+    const activeIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+    store.set('session.tabs', sessionTabs);
+    store.set('session.activeIndex', activeIndex);
+}
+
+function restoreSession() {
+    const shouldRestore = store.get('settings.restoreSession', true);
+    if (!shouldRestore) {
+        createTab();
+        return;
+    }
+
+    const sessionTabs = store.get('session.tabs', []);
+    if (!Array.isArray(sessionTabs) || sessionTabs.length === 0) {
+        createTab();
+        return;
+    }
+
+    isRestoringSession = true;
+    sessionTabs.forEach((tabInfo) => {
+        const tabUrl = typeof tabInfo === 'string' ? tabInfo : tabInfo.url;
+        const pinned = typeof tabInfo === 'object' && tabInfo.pinned;
+        createTab(tabUrl || null, {
+            activate: false,
+            useStartup: false,
+            skipSession: true,
+            pinned
+        });
+    });
+
+    const activeIndex = store.get('session.activeIndex', 0);
+    const targetTab = tabs[activeIndex] || tabs[0];
+    if (targetTab) {
+        switchTab(targetTab.id);
+    }
+    isRestoringSession = false;
+    saveSession();
+}
+
+function renderTabOrder() {
+    const pinnedTabs = tabs.filter((tab) => tab.pinned);
+    const normalTabs = tabs.filter((tab) => !tab.pinned);
+    const orderedTabs = pinnedTabs.concat(normalTabs);
+
+    orderedTabs.forEach((tab, index) => {
+        const tabEl = document.getElementById(`tab-${tab.id}`);
+        if (tabEl) {
+            tabEl.style.order = index;
+        }
+    });
+
+    if (newTabBtn) {
+        newTabBtn.style.order = orderedTabs.length + 1;
+    }
+}
+
+function setTabPinned(id, pinned) {
+    const tab = getTabById(id);
+    if (!tab) return;
+    tab.pinned = pinned;
+
+    const tabEl = document.getElementById(`tab-${id}`);
+    if (tabEl) {
+        tabEl.classList.toggle('pinned', pinned);
+    }
+    renderTabOrder();
+    saveSession();
+}
+
+function setTabLoading(id, isLoading) {
+    const tab = getTabById(id);
+    if (tab) {
+        tab.loading = isLoading;
+    }
+    const tabEl = document.getElementById(`tab-${id}`);
+    if (tabEl) {
+        tabEl.classList.toggle('loading', isLoading);
+    }
+}
+
+function setTabIcon(id, iconUrl) {
+    const tabEl = document.getElementById(`tab-${id}`);
+    if (!tabEl) return;
+    const iconEl = tabEl.querySelector('.tab-icon');
+    if (!iconEl) return;
+
+    if (iconUrl) {
+        iconEl.src = iconUrl;
+        iconEl.classList.add('visible');
+    } else {
+        iconEl.removeAttribute('src');
+        iconEl.classList.remove('visible');
+    }
+}
+
+function getHostFromUrl(url) {
+    try {
+        return new URL(url).host;
+    } catch (error) {
+        return '';
+    }
+}
+
+function getZoomForUrl(url) {
+    const host = getHostFromUrl(url);
+    if (!host) return null;
+    const zoomByHost = store.get('zoomByHost', {});
+    return zoomByHost[host] || null;
+}
+
+function setZoomForUrl(url, factor) {
+    const host = getHostFromUrl(url);
+    if (!host) return;
+    const zoomByHost = store.get('zoomByHost', {});
+    zoomByHost[host] = factor;
+    store.set('zoomByHost', zoomByHost);
+}
+
+function syncZoomUI(webview) {
+    if (!webview || webview.tagName !== 'WEBVIEW') return;
+    webview.getZoomFactor((factor) => {
+        updateZoomUI(factor);
+    });
+}
+
+function applyStoredZoom(webview) {
+    if (!webview || webview.tagName !== 'WEBVIEW') return;
+    const storedZoom = getZoomForUrl(webview.getURL());
+    if (storedZoom) {
+        webview.setZoomFactor(storedZoom);
+        if (webview.id === `webview-${activeTabId}`) {
+            updateZoomUI(storedZoom);
+        }
+        return;
+    }
+    if (webview.id === `webview-${activeTabId}`) {
+        syncZoomUI(webview);
+    }
+}
+
+function openDownloadPath(path) {
+    if (path) {
+        ipcRenderer.send('open-download-path', path);
+    }
+}
+
+function hideContextMenus() {
+    if (contextMenu) {
+        contextMenu.style.display = 'none';
+    }
+    if (tabContextMenu) {
+        tabContextMenu.style.display = 'none';
+    }
+}
+
+function showTabContextMenu(x, y, id) {
+    if (!tabContextMenu) return;
+    const tab = getTabById(id);
+    if (!tab) return;
+
+    tabContextTargetId = id;
+    const pinItem = tabContextMenu.querySelector('[data-action="pin"]');
+    const unpinItem = tabContextMenu.querySelector('[data-action="unpin"]');
+    if (pinItem) {
+        pinItem.style.display = tab.pinned ? 'none' : 'block';
+    }
+    if (unpinItem) {
+        unpinItem.style.display = tab.pinned ? 'block' : 'none';
+    }
+
+    tabContextMenu.style.top = `${y}px`;
+    tabContextMenu.style.left = `${x}px`;
+    tabContextMenu.style.display = 'block';
+}
+
+function getOrderedTabIds() {
+    return Array.from(tabsBar.querySelectorAll('.tab')).map((tabEl) => {
+        return tabEl.id.replace('tab-', '');
+    });
+}
+
+function duplicateTab(id) {
+    const wv = document.getElementById(`webview-${id}`);
+    const url = wv && wv.tagName === 'WEBVIEW' ? wv.getURL() : '';
+    createTab(url || null);
+}
+
+function closeOtherTabs(id) {
+    const idsToClose = tabs
+        .map((tab) => tab.id)
+        .filter((tabId) => tabId !== id);
+    idsToClose.forEach((tabId) => closeTab(tabId));
+}
+
+function closeTabsToRight(id) {
+    const orderedIds = getOrderedTabIds();
+    const index = orderedIds.indexOf(id);
+    if (index === -1) return;
+    const idsToClose = orderedIds.slice(index + 1);
+    idsToClose.forEach((tabId) => closeTab(tabId));
+}
+
+function createTab(url = null, options = {}) {
+    const {
+        activate = true,
+        useStartup = true,
+        skipSession = false,
+        pinned = false
+    } = options;
+    const startupUrl = useStartup ? store.get('settings.startupUrl', '') : '';
     const targetUrl = url || startupUrl || null;
-    
-    const id = Date.now().toString();
+    const formattedUrl = targetUrl ? formatUrl(targetUrl) : null;
+
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
     const tab = {
         id,
-        url: url,
-        title: '新标签页'
+        url: formattedUrl,
+        title: t('tabs.newTab'),
+        pinned: !!pinned,
+        loading: false
     };
 
     tabs.push(tab);
 
-    // Create Tab Element
     const tabEl = document.createElement('div');
     tabEl.className = 'tab';
     tabEl.id = `tab-${id}`;
     tabEl.innerHTML = `
-        <span class="tab-title">${tab.title}</span>
-        <span class="close-tab">×</span>
+        <span class="tab-content">
+            <img class="tab-icon" alt="">
+            <span class="tab-spinner"></span>
+            <span class="tab-title">${tab.title}</span>
+        </span>
+        <span class="close-tab">x</span>
     `;
+    tabEl.classList.toggle('pinned', tab.pinned);
     tabEl.addEventListener('click', (e) => {
         if (e.target.classList.contains('close-tab')) {
             closeTab(id);
@@ -145,13 +395,18 @@ function createTab(url = null) {
             switchTab(id);
         }
     });
+    tabEl.addEventListener('auxclick', (e) => {
+        if (e.button === 1) {
+            closeTab(id);
+        }
+    });
     tabsBar.insertBefore(tabEl, newTabBtn);
+    renderTabOrder();
 
-    // Create Webview or New Tab Page
-    if (targetUrl) {
+    if (formattedUrl) {
         const webview = document.createElement('webview');
         webview.id = `webview-${id}`;
-        webview.src = formatUrl(targetUrl);
+        webview.src = formattedUrl;
         webview.setAttribute('allowpopups', '');
         
         if (isIncognito) {
@@ -161,7 +416,6 @@ function createTab(url = null) {
         webviewsContainer.appendChild(webview);
         setupWebviewEvents(webview, id);
     } else {
-        // New Tab Page Content
         const content = newTabTemplate.content.cloneNode(true);
         const container = document.createElement('div');
         container.className = 'webview-mock';
@@ -180,13 +434,18 @@ function createTab(url = null) {
         
         webviewsContainer.appendChild(container);
         
-        // Update text for new tab
         if (typeof initI18n === 'function') {
             initI18n(container);
         }
     }
 
-    switchTab(id);
+    if (activate) {
+        switchTab(id);
+    }
+    if (!skipSession) {
+        saveSession();
+    }
+    return id;
 }
 
 ipcRenderer.on('open-new-tab', (event, url) => {
@@ -194,9 +453,9 @@ ipcRenderer.on('open-new-tab', (event, url) => {
         createTab(url);
     }
 });
-
 function setupWebviewEvents(webview, id) {
     webview.addEventListener('did-start-loading', () => {
+        setTabLoading(id, true);
         if (id === activeTabId) {
             progressBar.style.opacity = '1';
             progressBar.style.width = '30%';
@@ -204,6 +463,7 @@ function setupWebviewEvents(webview, id) {
     });
 
     webview.addEventListener('did-stop-loading', () => {
+        setTabLoading(id, false);
         if (id === activeTabId) {
             urlInput.value = webview.getURL();
             progressBar.style.width = '100%';
@@ -212,6 +472,8 @@ function setupWebviewEvents(webview, id) {
                 setTimeout(() => progressBar.style.width = '0%', 200);
             }, 300);
         }
+        updateTabUrl(id, webview.getURL());
+        applyStoredZoom(webview);
         updateBookmarkIcon(webview.getURL());
     });
 
@@ -222,12 +484,30 @@ function setupWebviewEvents(webview, id) {
         }
     });
 
+    webview.addEventListener('page-favicon-updated', (e) => {
+        const icon = e.favicons && e.favicons.length > 0 ? e.favicons[0] : '';
+        setTabIcon(id, icon);
+    });
+
     webview.addEventListener('page-title-updated', (e) => {
         const tabEl = document.getElementById(`tab-${id}`);
         if (tabEl) {
             tabEl.querySelector('.tab-title').innerText = e.title;
         }
+        const tab = getTabById(id);
+        if (tab) {
+            tab.title = e.title;
+        }
         saveHistory(webview.getURL(), e.title);
+    });
+
+    webview.addEventListener('did-navigate', (e) => {
+        updateTabUrl(id, e.url);
+        applyStoredZoom(webview);
+    });
+
+    webview.addEventListener('did-navigate-in-page', (e) => {
+        updateTabUrl(id, e.url);
     });
 
     webview.addEventListener('did-fail-load', (e) => {
@@ -274,11 +554,14 @@ function switchTab(id) {
             const url = activeWebview.getURL();
             urlInput.value = url;
             updateBookmarkIcon(url);
+            applyStoredZoom(activeWebview);
         } else {
             urlInput.value = '';
             updateBookmarkIcon('');
+            updateZoomUI(1.0);
         }
     }
+    saveSession();
 }
 
 function closeTab(id) {
@@ -304,6 +587,8 @@ function closeTab(id) {
             createTab();
         }
     }
+    renderTabOrder();
+    saveSession();
 }
 
 function restoreLastTab() {
@@ -348,8 +633,10 @@ function navigateTo(url, id = activeTabId) {
             webview.classList.add('active');
             urlInput.value = formattedUrl;
         }
+        updateTabUrl(id, formattedUrl);
     } else {
         container.src = formattedUrl;
+        updateTabUrl(id, formattedUrl);
     }
 }
 
@@ -390,20 +677,28 @@ bookmarkBtn.addEventListener('click', () => {
 });
 
 // Overlay Panels Logic
-function showPanel(panel, listContainer, dataKey) {
+function showPanel(panel, listContainer, dataKey, filterText = '') {
     const data = store.get(dataKey, []);
     const emptyKey = dataKey === 'history'
         ? 'panels.history.empty'
         : 'panels.bookmarks.empty';
+    const query = filterText.trim().toLowerCase();
+    const filteredData = query
+        ? data.filter((item) => {
+            const title = (item.title || '').toLowerCase();
+            const url = (item.url || '').toLowerCase();
+            return title.includes(query) || url.includes(query);
+        })
+        : data;
     listContainer.innerHTML = '';
 
-    if (data.length === 0) {
+    if (filteredData.length === 0) {
         listContainer.innerHTML =
             `<p style="text-align:center;color:#999;padding:20px;">` +
             `${t(emptyKey)}</p>`;
     }
 
-    data.forEach((item, index) => {
+    filteredData.forEach((item) => {
         const itemEl = document.createElement('div');
         itemEl.className = 'list-item';
 
@@ -428,13 +723,14 @@ function showPanel(panel, listContainer, dataKey) {
 
         const deleteBtn = document.createElement('span');
         deleteBtn.className = 'delete-btn';
-        deleteBtn.dataset.index = index;
+        const dataIndex = data.indexOf(item);
+        deleteBtn.dataset.index = dataIndex;
         deleteBtn.innerText = t('delete');
         deleteBtn.addEventListener('click', (e) => {
             const idx = Number(e.target.dataset.index);
             data.splice(idx, 1);
             store.set(dataKey, data);
-            showPanel(panel, listContainer, dataKey);
+            showPanel(panel, listContainer, dataKey, filterText);
         });
 
         itemEl.appendChild(openLink);
@@ -458,6 +754,7 @@ function updateDownloadStore(data) {
         total: data.total !== undefined ? data.total : (current.total || 0),
         state: data.state || current.state || 'progressing',
         error: data.error || '',
+        savePath: data.savePath || current.savePath || '',
         time: current.time || new Date().toISOString()
     };
 
@@ -530,8 +827,21 @@ function renderDownloadsPanel() {
             content.appendChild(stateText);
         }
 
-        const deleteBtn = document.createElement('span');
-        deleteBtn.className = 'delete-btn';
+        const actions = document.createElement('div');
+        actions.className = 'download-actions';
+
+        if (item.savePath) {
+            const openBtn = document.createElement('button');
+            openBtn.className = 'download-open-btn';
+            openBtn.innerText = t('panels.downloads.showInFolder');
+            openBtn.addEventListener('click', () => {
+                openDownloadPath(item.savePath);
+            });
+            actions.appendChild(openBtn);
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'download-delete-btn';
         deleteBtn.innerText = t('delete');
         deleteBtn.addEventListener('click', () => {
             const nextDownloads = store.get('downloads', []);
@@ -539,15 +849,20 @@ function renderDownloadsPanel() {
             store.set('downloads', nextDownloads);
             renderDownloadsPanel();
         });
+        actions.appendChild(deleteBtn);
 
         itemEl.appendChild(content);
-        itemEl.appendChild(deleteBtn);
+        itemEl.appendChild(actions);
         downloadsList.appendChild(itemEl);
     });
 }
 
-historyBtn.addEventListener('click', () => showPanel(historyPanel, historyList, 'history'));
-bookmarksListBtn.addEventListener('click', () => showPanel(bookmarksPanel, bookmarksList, 'bookmarks'));
+historyBtn.addEventListener('click', () => {
+    showPanel(historyPanel, historyList, 'history', historySearchInput?.value || '');
+});
+bookmarksListBtn.addEventListener('click', () => {
+    showPanel(bookmarksPanel, bookmarksList, 'bookmarks', bookmarksSearchInput?.value || '');
+});
 downloadsBtn.addEventListener('click', () => {
     renderDownloadsPanel();
     downloadsPanel.classList.add('active');
@@ -555,11 +870,43 @@ downloadsBtn.addEventListener('click', () => {
 settingsBtn.addEventListener('click', () => {
     searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
     startupUrlInput.value = store.get('settings.startupUrl', '');
+    if (restoreSessionToggle) {
+        restoreSessionToggle.checked = store.get('settings.restoreSession', true);
+    }
     if (langSelect) {
         langSelect.value = store.get('settings.language', 'zh-CN');
     }
     settingsPanel.classList.add('active');
 });
+
+if (historySearchInput) {
+    historySearchInput.addEventListener('input', () => {
+        showPanel(
+            historyPanel,
+            historyList,
+            'history',
+            historySearchInput.value
+        );
+    });
+}
+
+if (bookmarksSearchInput) {
+    bookmarksSearchInput.addEventListener('input', () => {
+        showPanel(
+            bookmarksPanel,
+            bookmarksList,
+            'bookmarks',
+            bookmarksSearchInput.value
+        );
+    });
+}
+
+if (downloadsClearAllBtn) {
+    downloadsClearAllBtn.addEventListener('click', () => {
+        store.set('downloads', []);
+        renderDownloadsPanel();
+    });
+}
 
 incognitoToggleBtn.addEventListener('click', () => {
     toggleIncognito();
@@ -586,6 +933,7 @@ zoomInBtn.addEventListener('click', () => {
             const newFactor = factor + 0.1;
             wv.setZoomFactor(newFactor);
             updateZoomUI(newFactor);
+            setZoomForUrl(wv.getURL(), newFactor);
         });
     }
 });
@@ -597,6 +945,7 @@ zoomOutBtn.addEventListener('click', () => {
             const newFactor = Math.max(0.2, factor - 0.1);
             wv.setZoomFactor(newFactor);
             updateZoomUI(newFactor);
+            setZoomForUrl(wv.getURL(), newFactor);
         });
     }
 });
@@ -606,6 +955,7 @@ zoomResetBtn.addEventListener('click', () => {
     if (wv && wv.tagName === 'WEBVIEW') {
         wv.setZoomFactor(1.0);
         updateZoomUI(1.0);
+        setZoomForUrl(wv.getURL(), 1.0);
     }
 });
 
@@ -771,6 +1121,17 @@ findClose.addEventListener('click', () => {
 // Context Menu Logic
 window.addEventListener('contextmenu', (e) => {
     e.preventDefault();
+    const tabEl = e.target.closest('.tab');
+    if (tabEl) {
+        const tabId = tabEl.id.replace('tab-', '');
+        showTabContextMenu(e.clientX, e.clientY, tabId);
+        if (contextMenu) {
+            contextMenu.style.display = 'none';
+        }
+        return;
+    }
+
+    hideContextMenus();
     const { clientX: x, clientY: y } = e;
     contextMenu.style.top = `${y}px`;
     contextMenu.style.left = `${x}px`;
@@ -778,8 +1139,37 @@ window.addEventListener('contextmenu', (e) => {
 });
 
 window.addEventListener('click', () => {
-    contextMenu.style.display = 'none';
+    hideContextMenus();
 });
+
+if (tabContextMenu) {
+    tabContextMenu.addEventListener('click', (e) => {
+        const action = e.target.dataset.action;
+        if (!action || !tabContextTargetId) return;
+
+        if (action === 'duplicate') {
+            duplicateTab(tabContextTargetId);
+        }
+        if (action === 'pin') {
+            setTabPinned(tabContextTargetId, true);
+        }
+        if (action === 'unpin') {
+            setTabPinned(tabContextTargetId, false);
+        }
+        if (action === 'close') {
+            closeTab(tabContextTargetId);
+        }
+        if (action === 'close-others') {
+            closeOtherTabs(tabContextTargetId);
+        }
+        if (action === 'close-right') {
+            closeTabsToRight(tabContextTargetId);
+        }
+
+        tabContextTargetId = null;
+        hideContextMenus();
+    });
+}
 
 document.getElementById('ctx-back').addEventListener('click', () => {
     const wv = document.getElementById(`webview-${activeTabId}`);
@@ -847,6 +1237,29 @@ window.addEventListener('keydown', (e) => {
         e.preventDefault();
         toggleFind();
     }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'l' || e.key === 'k')) {
+        e.preventDefault();
+        urlInput.focus();
+        urlInput.select();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        showPanel(historyPanel, historyList, 'history', historySearchInput?.value || '');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        renderDownloadsPanel();
+        downloadsPanel.classList.add('active');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        showPanel(
+            bookmarksPanel,
+            bookmarksList,
+            'bookmarks',
+            bookmarksSearchInput?.value || ''
+        );
+    }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
         e.preventDefault();
         restoreLastTab();
@@ -864,6 +1277,18 @@ window.addEventListener('keydown', (e) => {
         const wv = document.getElementById(`webview-${activeTabId}`);
         if (wv && wv.tagName === 'WEBVIEW') wv.print();
     }
+    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const wv = document.getElementById(`webview-${activeTabId}`);
+        if (!wv || wv.tagName !== 'WEBVIEW') return;
+        if (e.key === 'ArrowLeft' && wv.canGoBack()) {
+            e.preventDefault();
+            wv.goBack();
+        }
+        if (e.key === 'ArrowRight' && wv.canGoForward()) {
+            e.preventDefault();
+            wv.goForward();
+        }
+    }
 });
 
 devtoolsBtn.addEventListener('click', () => {
@@ -874,6 +1299,12 @@ devtoolsBtn.addEventListener('click', () => {
 });
 
 newTabBtn.addEventListener('click', () => createTab());
+tabsBar.addEventListener('dblclick', (e) => {
+    if (e.target === tabsBar) {
+        createTab();
+    }
+});
 
 // Initialize first tab
-createTab();
+restoreSession();
+

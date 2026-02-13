@@ -142,6 +142,41 @@ body.dark-mode .ai-input-area button:hover {
     background: #aecbfa;
 }
 
+body.dark-mode .panel-search input {
+    background: #202124;
+    border-color: #3c4043;
+    color: #fff;
+}
+
+body.dark-mode .panel-actions button {
+    background: #35363a;
+    border-color: #3c4043;
+    color: #e8eaed;
+}
+
+body.dark-mode .download-actions button {
+    background: #35363a;
+    border-color: #3c4043;
+    color: #e8eaed;
+}
+
+body.dark-mode .toggle-slider {
+    background-color: #5f6368;
+}
+
+body.dark-mode .toggle-switch input:checked + .toggle-slider {
+    background-color: #8ab4f8;
+}
+
+body.dark-mode .tab-context-menu {
+    background: #2d2e31;
+    border-color: #3c4043;
+}
+
+body.dark-mode .context-menu-item:hover {
+    background: #3c4043;
+}
+
 body.incognito-mode .tabs-container {
     background: #202124;
 }

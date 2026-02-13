@@ -10,6 +10,18 @@
     border-radius: 8px;
 }
 
+.tab-context-menu {
+    position: fixed;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 6px 0;
+    z-index: 10001;
+    display: none;
+    min-width: 180px;
+    border-radius: 8px;
+}
+
 .context-menu-item {
     padding: 8px 16px;
     cursor: pointer;

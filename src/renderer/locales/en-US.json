@@ -21,18 +21,25 @@
   },
   "tabs": {
     "newTab": "New Tab",
-    "close": "Close"
+    "close": "Close",
+    "duplicate": "Duplicate Tab",
+    "pin": "Pin Tab",
+    "unpin": "Unpin Tab",
+    "closeOthers": "Close Others",
+    "closeRight": "Close Tabs to Right"
   },
   "panels": {
     "history": {
       "title": "History",
       "close": "Close",
-      "empty": "No history"
+      "empty": "No history",
+      "search": "Search history..."
     },
     "bookmarks": {
       "title": "My Bookmarks",
       "close": "Close",
-      "empty": "No bookmarks"
+      "empty": "No bookmarks",
+      "search": "Search bookmarks..."
     },
     "settings": {
       "title": "Browser Settings",
@@ -46,6 +53,7 @@
       "darkModeToggle": "Toggle Dark/Light Mode",
       "zoom": "Zoom Level",
       "zoomReset": "Reset",
+      "restoreSession": "Restore Previous Session",
       "language": "Interface Language",
       "exportData": "Export Browser Data (JSON)",
       "clearData": "Clear Browser Data (History/Bookmarks)",
@@ -57,7 +65,9 @@
     "downloads": {
       "title": "Downloads",
       "close": "Close",
-      "empty": "No downloads"
+      "empty": "No downloads",
+      "clearAll": "Clear Downloads",
+      "showInFolder": "Show in Folder"
     }
   },
   "find": {
