@@ -23,16 +23,16 @@ function loadLocale(locale) {
 function t(key, params = {}) {
   const keys = key.split('.');
   let value = translations;
-  
+
   for (const k of keys) {
     value = value[k];
     if (value === undefined) return key;
   }
-  
+
   if (typeof value === 'string') {
     return value.replace(/\{(\w+)\}/g, (match, param) => params[param] || match);
   }
-  
+
   return value;
 }
 
@@ -50,11 +50,8 @@ function updateUIText(root = document) {
   root.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     const translation = t(key);
-    
-    // 如果元素内包含 SVG，则只在没有 SVG 的情况下更新 textContent
-    // 或者，如果翻译后的内容与当前内容不同且不是 key 本身
+
     if (el.querySelector('svg')) {
-      // 保持 SVG，只更新 title（如果存在）
       if (el.hasAttribute('data-i18n-title')) {
         el.title = t(el.getAttribute('data-i18n-title'));
       }
@@ -62,12 +59,12 @@ function updateUIText(root = document) {
       el.textContent = translation;
     }
   });
-  
+
   root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
     el.placeholder = t(key);
   });
-  
+
   root.querySelectorAll('[data-i18n-title]').forEach(el => {
     const key = el.getAttribute('data-i18n-title');
     el.title = t(key);

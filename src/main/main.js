@@ -1,10 +1,16 @@
-const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
 const store = new Store();
 
 let mainWindow;
+
+ipcMain.on('open-download-path', (event, filePath) => {
+  if (filePath) {
+    shell.showItemInFolder(filePath);
+  }
+});
 
 function setupWebviewWindowHandler() {
   app.on('web-contents-created', (event, contents) => {
@@ -66,7 +72,8 @@ function createWindow() {
               fileName,
               received: item.getReceivedBytes(),
               total: fileSize,
-              state: 'progressing'
+              state: 'progressing',
+              savePath: item.getSavePath()
             });
           }
         }
@@ -79,7 +86,8 @@ function createWindow() {
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
             fileName,
-            state: 'completed'
+            state: 'completed',
+            savePath: item.getSavePath()
           });
         }
       } else {
@@ -88,7 +96,8 @@ function createWindow() {
           mainWindow.webContents.send('download-progress', {
             fileName,
             state: 'failed',
-            error: state
+            error: state,
+            savePath: item.getSavePath()
           });
         }
       }
