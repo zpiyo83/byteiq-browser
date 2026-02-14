@@ -67,7 +67,22 @@
       "close": "关闭",
       "empty": "暂无下载",
       "clearAll": "清空下载",
-      "showInFolder": "在文件夹中显示"
+      "clearAllConfirm": "确定要清空所有下载记录吗？",
+      "clearCompleted": "仅清空已完成",
+      "clearFailed": "仅清空失败",
+      "showInFolder": "在文件夹中显示",
+      "openFile": "打开文件",
+      "pause": "暂停",
+      "resume": "继续",
+      "cancel": "取消",
+      "retry": "重试",
+      "copyPath": "复制路径",
+      "copyUrl": "复制URL",
+      "filterAll": "全部",
+      "filterProgressing": "下载中",
+      "filterCompleted": "已完成",
+      "filterFailed": "失败",
+      "search": "搜索下载..."
     }
   },
   "find": {
@@ -90,6 +105,7 @@
     "title": "Byteiq AI 助手",
     "placeholder": "输入问题或命令...",
     "send": "发送",
+    "close": "关闭",
     "welcome": "你好！我是 Byteiq AI 助手。我可以帮你总结网页内容、回答问题，或辅助浏览。",
     "summaryPrompt": "正在尝试读取页面内容并生成摘要...（该功能需要配置 AI API）",
     "noPage": "请先打开一个网页，我才能为你总结。",
@@ -105,9 +121,13 @@
     "loading": "加载中...",
     "loaded": "已加载",
     "error": "错误",
+    "paused": "已暂停",
     "downloadProgress": "{percent}% ({received}MB / {total}MB)",
     "downloadComplete": "完成",
-    "downloadFailed": "失败: {error}"
+    "downloadCancelled": "已取消",
+    "downloadInterrupted": "网络中断，可重试",
+    "downloadFailed": "下载失败: {error}",
+    "completedAt": "完成于 {time}"
   },
   "zoom": {
     "in": "放大",
@@ -119,5 +139,38 @@
     "remove": "移除书签",
     "empty": "无标题"
   },
-  "delete": "删除"
+  "placeholder": {
+    "url": "输入网址或搜索...",
+    "find": "查找...",
+    "search": "搜索..."
+  },
+  "url": {
+    "clear": "清除输入"
+  },
+  "title": {
+    "back": "后退",
+    "forward": "前进",
+    "refresh": "刷新",
+    "home": "主页",
+    "go": "前往",
+    "newTab": "新建标签页",
+    "closeTab": "关闭标签页",
+    "findClose": "关闭查找"
+  },
+  "delete": "删除",
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "分钟前",
+    "hoursAgo": "小时前"
+  },
+  "toast": {
+    "tabRestored": "标签页已恢复",
+    "noClosedTabs": "没有可恢复的标签页",
+    "loadStopped": "已停止加载",
+    "refreshing": "正在刷新...",
+    "loadFailed": "页面加载失败",
+    "downloadComplete": "下载完成",
+    "downloadFailed": "下载失败",
+    "downloadCancelled": "下载已取消"
+  }
 }

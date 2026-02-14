@@ -67,7 +67,22 @@
       "close": "Close",
       "empty": "No downloads",
       "clearAll": "Clear Downloads",
-      "showInFolder": "Show in Folder"
+      "clearAllConfirm": "Are you sure you want to clear all downloads?",
+      "clearCompleted": "Clear Completed",
+      "clearFailed": "Clear Failed",
+      "showInFolder": "Show in Folder",
+      "openFile": "Open File",
+      "pause": "Pause",
+      "resume": "Resume",
+      "cancel": "Cancel",
+      "retry": "Retry",
+      "copyPath": "Copy Path",
+      "copyUrl": "Copy URL",
+      "filterAll": "All",
+      "filterProgressing": "Downloading",
+      "filterCompleted": "Completed",
+      "filterFailed": "Failed",
+      "search": "Search downloads..."
     }
   },
   "find": {
@@ -90,6 +105,7 @@
     "title": "Byteiq AI Assistant",
     "placeholder": "Ask a question or give a command...",
     "send": "Send",
+    "close": "Close",
     "welcome": "Hello! I'm Byteiq AI Assistant. I can help you summarize web pages, answer questions, or assist with browsing.",
     "summaryPrompt": "Attempting to read page content for summary... (This feature requires AI API)",
     "noPage": "Please open a webpage first, then I can summarize it for you.",
@@ -105,9 +121,13 @@
     "loading": "Loading...",
     "loaded": "Loaded",
     "error": "Error",
+    "paused": "Paused",
     "downloadProgress": "{percent}% ({received}MB / {total}MB)",
     "downloadComplete": "Complete",
-    "downloadFailed": "Failed: {error}"
+    "downloadCancelled": "Cancelled",
+    "downloadInterrupted": "Network interrupted, retry available",
+    "downloadFailed": "Download failed: {error}",
+    "completedAt": "Completed at {time}"
   },
   "zoom": {
     "in": "Zoom In",
@@ -119,5 +139,38 @@
     "remove": "Remove Bookmark",
     "empty": "No Title"
   },
-  "delete": "Delete"
+  "placeholder": {
+    "url": "Enter URL or search...",
+    "find": "Find...",
+    "search": "Search..."
+  },
+  "url": {
+    "clear": "Clear input"
+  },
+  "title": {
+    "back": "Back",
+    "forward": "Forward",
+    "refresh": "Refresh",
+    "home": "Home",
+    "go": "Go",
+    "newTab": "New Tab",
+    "closeTab": "Close Tab",
+    "findClose": "Close Find"
+  },
+  "delete": "Delete",
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": " min ago",
+    "hoursAgo": " hours ago"
+  },
+  "toast": {
+    "tabRestored": "Tab restored",
+    "noClosedTabs": "No closed tabs to restore",
+    "loadStopped": "Loading stopped",
+    "refreshing": "Refreshing...",
+    "loadFailed": "Page failed to load",
+    "downloadComplete": "Download complete",
+    "downloadFailed": "Download failed",
+    "downloadCancelled": "Download cancelled"
+  }
 }

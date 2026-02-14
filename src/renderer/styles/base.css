@@ -14,3 +14,19 @@ body {
     background: #f8f9fa;
     overflow: hidden;
 }
+
+/* 焦点轮廓样式 - 键盘无障碍访问 */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+    outline: 2px solid #4285f4;
+    outline-offset: 2px;
+}
+
+body.dark-mode button:focus-visible,
+body.dark-mode input:focus-visible,
+body.dark-mode select:focus-visible,
+body.dark-mode a:focus-visible {
+    outline-color: #6aa0ff;
+}
