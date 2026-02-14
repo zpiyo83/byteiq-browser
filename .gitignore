@@ -74,3 +74,6 @@ appData/
 *.msi
 *.msix
 *.snap
+
+# Local planning workspace
+plans/
