@@ -82,6 +82,22 @@ if (langSelect) {
     });
 }
 
+// Toast 通知系统
+function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+}
+
 function getActiveOverlayPanel() {
     return document.querySelector('.overlay-panel.active');
 }
@@ -554,6 +570,10 @@ function setupWebviewEvents(webview, id) {
     webview.addEventListener('did-fail-load', (e) => {
         if (e.errorCode !== -3) {
             console.error('Failed to load:', e);
+            showToast(
+                t('toast.loadFailed') || `页面加载失败: ${e.errorDescription || '未知错误'}`,
+                'error'
+            );
         }
     });
 
@@ -636,6 +656,64 @@ function restoreLastTab() {
     if (lastClosedTabs.length > 0) {
         const last = lastClosedTabs.pop();
         createTab(last.url);
+        showToast(t('toast.tabRestored') || '标签页已恢复', 'success');
+    } else {
+        showToast(t('toast.noClosedTabs') || '没有可恢复的标签页', 'warning');
+    }
+}
+
+// 切换到下一个标签页
+function switchToNextTab() {
+    const orderedIds = getOrderedTabIds();
+    if (orderedIds.length <= 1) return;
+    
+    const currentIndex = orderedIds.indexOf(activeTabId);
+    const nextIndex = (currentIndex + 1) % orderedIds.length;
+    switchTab(orderedIds[nextIndex]);
+}
+
+// 切换到上一个标签页
+function switchToPrevTab() {
+    const orderedIds = getOrderedTabIds();
+    if (orderedIds.length <= 1) return;
+    
+    const currentIndex = orderedIds.indexOf(activeTabId);
+    const prevIndex = (currentIndex - 1 + orderedIds.length) % orderedIds.length;
+    switchTab(orderedIds[prevIndex]);
+}
+
+// 关闭所有面板、菜单、查找框
+function closeAllPanels() {
+    // 关闭所有 overlay 面板
+    closeAllOverlays();
+    
+    // 关闭查找框
+    if (findBox && findBox.style.display === 'flex') {
+        const wv = document.getElementById(`webview-${activeTabId}`);
+        if (wv) wv.stopFindInPage('clearSelection');
+        findBox.style.display = 'none';
+    }
+    
+    // 关闭上下文菜单
+    hideContextMenus();
+    
+    // 折叠 AI 侧边栏
+    if (aiSidebar && !aiSidebar.classList.contains('collapsed')) {
+        aiSidebar.classList.add('collapsed');
+    }
+}
+
+// 刷新当前页面
+function refreshCurrentPage() {
+    const wv = document.getElementById(`webview-${activeTabId}`);
+    if (wv && wv.tagName === 'WEBVIEW') {
+        if (wv.isLoading()) {
+            wv.stop();
+            showToast(t('toast.loadStopped') || '已停止加载', 'info');
+        } else {
+            wv.reload();
+            showToast(t('toast.refreshing') || '正在刷新...', 'info');
+        }
     }
 }
 
@@ -850,7 +928,17 @@ function renderDownloadsPanel() {
     const downloads = store.get('downloads', []);
     const query = (downloadsSearchInput?.value || '').trim().toLowerCase();
     const activeFilter = store.get('ui.downloadsFilter', 'all');
-    const filtered = downloads.filter((item) => {
+    
+    // 排序：下载中置顶，其他按时间倒序
+    const sortedDownloads = [...downloads].sort((a, b) => {
+        const aProgressing = a.state === 'progressing';
+        const bProgressing = b.state === 'progressing';
+        if (aProgressing && !bProgressing) return -1;
+        if (!aProgressing && bProgressing) return 1;
+        return new Date(b.time || 0) - new Date(a.time || 0);
+    });
+    
+    const filtered = sortedDownloads.filter((item) => {
         if (activeFilter && activeFilter !== 'all') {
             const state = (item.state || '');
             if (activeFilter === 'failed') {
@@ -879,33 +967,39 @@ function renderDownloadsPanel() {
     filtered.forEach((item) => {
         const index = downloads.indexOf(item);
         const itemEl = document.createElement('div');
-        itemEl.className = 'list-item';
+        itemEl.className = 'list-item download-item';
 
         const content = document.createElement('div');
-        content.style.flex = '1';
+        content.className = 'download-content';
 
-        const title = document.createElement('strong');
-        title.innerText = item.fileName;
-        content.appendChild(title);
-        content.appendChild(document.createElement('br'));
+        // 紧凑展示文件名和路径
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'download-file-info';
+        
+        const fileName = document.createElement('span');
+        fileName.className = 'download-filename';
+        fileName.innerText = item.fileName || 'Unknown';
+        fileInfo.appendChild(fileName);
 
-        if (item.url || item.savePath) {
-            const sub = document.createElement('small');
-            sub.style.color = '#999';
-            sub.innerText = item.savePath || item.url;
-            content.appendChild(sub);
-            content.appendChild(document.createElement('br'));
+        if (item.savePath) {
+            const pathEl = document.createElement('span');
+            pathEl.className = 'download-path';
+            pathEl.innerText = item.savePath;
+            fileInfo.appendChild(pathEl);
         }
+        content.appendChild(fileInfo);
 
+        // 下载进度或状态
         if (item.state === 'progressing' && item.total > 0) {
             const percent = Math.round((item.received / item.total) * 100);
             const progress = document.createElement('progress');
             progress.value = percent;
             progress.max = 100;
-            progress.style.width = '100%';
+            progress.className = 'download-progress';
             content.appendChild(progress);
 
-            const detail = document.createElement('small');
+            const detail = document.createElement('div');
+            detail.className = 'download-detail';
             detail.innerText = t('status.downloadProgress', {
                 percent,
                 received: (item.received / 1024 / 1024).toFixed(2),
@@ -913,120 +1007,230 @@ function renderDownloadsPanel() {
             });
             content.appendChild(detail);
 
-            const meta = document.createElement('small');
-            meta.style.display = 'block';
-            meta.style.color = '#999';
+            const meta = document.createElement('div');
+            meta.className = 'download-meta';
             const speedText = item.speedBps
                 ? `${(item.speedBps / 1024 / 1024).toFixed(2)} MB/s`
                 : '';
             const etaText = item.etaSeconds
                 ? `${item.etaSeconds}s`
                 : '';
-            const pausedText = item.paused ? (t('status.paused') || 'Paused') : '';
+            const pausedText = item.paused ? t('status.paused') : '';
             meta.innerText = [speedText, etaText, pausedText].filter(Boolean).join(' | ');
             if (meta.innerText) {
                 content.appendChild(meta);
             }
         } else {
-            const stateText = document.createElement('small');
+            const stateInfo = document.createElement('div');
+            stateInfo.className = 'download-state-info';
 
             if (item.state === 'completed') {
-                stateText.style.color = 'green';
-                stateText.innerText = t('status.downloadComplete');
+                stateInfo.className += ' state-completed';
+                stateInfo.innerText = t('status.downloadComplete');
+                // 显示完成时间
+                if (item.time) {
+                    const timeStr = formatDownloadTime(item.time);
+                    const timeEl = document.createElement('span');
+                    timeEl.className = 'download-time';
+                    timeEl.innerText = t('status.completedAt', { time: timeStr });
+                    stateInfo.appendChild(document.createElement('br'));
+                    stateInfo.appendChild(timeEl);
+                }
             } else if (item.state === 'cancelled') {
-                stateText.style.color = '#666';
-                stateText.innerText = t('status.downloadCancelled') || 'Cancelled';
+                stateInfo.className += ' state-cancelled';
+                stateInfo.innerText = t('status.downloadCancelled');
             } else if (item.state === 'interrupted') {
-                stateText.style.color = '#b26a00';
-                stateText.innerText = t('status.downloadInterrupted') || 'Interrupted';
+                stateInfo.className += ' state-interrupted';
+                stateInfo.innerText = t('status.downloadInterrupted');
             } else if (item.state === 'failed') {
-                stateText.style.color = 'red';
+                stateInfo.className += ' state-failed';
                 const err = item.error || 'unknown';
-                const label = t('status.downloadFailed', { error: err });
-                stateText.innerText = label || `Failed: ${err}`;
+                stateInfo.innerText = t('status.downloadFailed', { error: err });
             } else {
-                stateText.innerText = item.state;
+                stateInfo.innerText = item.state;
             }
 
-            content.appendChild(stateText);
+            content.appendChild(stateInfo);
+        }
+
+        // 显示URL（紧凑）
+        if (item.url) {
+            const urlEl = document.createElement('div');
+            urlEl.className = 'download-url';
+            urlEl.innerText = item.url;
+            content.appendChild(urlEl);
         }
 
         const actions = document.createElement('div');
         actions.className = 'download-actions';
 
+        // SVG图标定义
+        const icons = {
+            // 复制图标
+            copy: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/>' +
+                '</svg>',
+            // 暂停图标
+            pause: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"/>' +
+                '</svg>',
+            // 继续/播放图标
+            resume: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"/>' +
+                '</svg>',
+            // 取消/关闭图标
+            cancel: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>' +
+                '</svg>',
+            // 重试/刷新图标
+            retry: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M17.65,6.35C16.2,4.9,14.21,4,12,4c-4.42,0-7.99,3.58-7.99,8s3.57,8,7.99,8c3.73,0,6.84-2.55,7.73-6h-2.08c-0.82,2.33-3.07,4-5.65,4c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.66,0,3.14,0.69,4.22,1.78L13,11h7V4L17.65,6.35z"/>' +
+                '</svg>',
+            // 打开文件图标
+            openFile: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z"/>' +
+                '</svg>',
+            // 在文件夹中显示图标
+            showInFolder: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4M13,10H15V13H18V15H15V18H13V15H10V13H13V10Z"/>' +
+                '</svg>',
+            // 删除图标
+            delete: '<svg viewBox="0 0 24 24" width="16" height="16">' +
+                '<path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>' +
+                '</svg>'
+        };
+
+        // 创建图标按钮的辅助函数
+        function createIconButton(className, iconKey, titleText, clickHandler) {
+            const btn = document.createElement('button');
+            btn.className = className + ' icon-btn';
+            btn.innerHTML = icons[iconKey];
+            btn.title = titleText;
+            btn.addEventListener('click', clickHandler);
+            return btn;
+        }
+
+        // 复制路径按钮
+        if (item.savePath) {
+            const copyPathBtn = createIconButton(
+                'download-copy-path-btn',
+                'copy',
+                t('panels.downloads.copyPath'),
+                () => { clipboard.writeText(item.savePath); }
+            );
+            actions.appendChild(copyPathBtn);
+        }
+
+        // 复制URL按钮
+        if (item.url) {
+            const copyUrlBtn = createIconButton(
+                'download-copy-url-btn',
+                'copy',
+                t('panels.downloads.copyUrl'),
+                () => { clipboard.writeText(item.url); }
+            );
+            actions.appendChild(copyUrlBtn);
+        }
+
         if (item.state === 'progressing' && item.id) {
             if (item.paused) {
-                const resumeBtn = document.createElement('button');
-                resumeBtn.className = 'download-resume-btn';
-                resumeBtn.innerText = t('panels.downloads.resume') || 'Resume';
-                resumeBtn.addEventListener('click', () => {
-                    ipcRenderer.send('download-resume', item.id);
-                });
+                const resumeBtn = createIconButton(
+                    'download-resume-btn',
+                    'resume',
+                    t('panels.downloads.resume'),
+                    () => { ipcRenderer.send('download-resume', item.id); }
+                );
                 actions.appendChild(resumeBtn);
             } else {
-                const pauseBtn = document.createElement('button');
-                pauseBtn.className = 'download-pause-btn';
-                pauseBtn.innerText = t('panels.downloads.pause') || 'Pause';
-                pauseBtn.addEventListener('click', () => {
-                    ipcRenderer.send('download-pause', item.id);
-                });
+                const pauseBtn = createIconButton(
+                    'download-pause-btn',
+                    'pause',
+                    t('panels.downloads.pause'),
+                    () => { ipcRenderer.send('download-pause', item.id); }
+                );
                 actions.appendChild(pauseBtn);
             }
 
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'download-cancel-btn';
-            cancelBtn.innerText = t('panels.downloads.cancel') || 'Cancel';
-            cancelBtn.addEventListener('click', () => {
-                ipcRenderer.send('download-cancel', item.id);
-            });
+            const cancelBtn = createIconButton(
+                'download-cancel-btn',
+                'cancel',
+                t('panels.downloads.cancel'),
+                () => { ipcRenderer.send('download-cancel', item.id); }
+            );
             actions.appendChild(cancelBtn);
         }
 
         if (item.state === 'failed' && item.url) {
-            const retryBtn = document.createElement('button');
-            retryBtn.className = 'download-retry-btn';
-            retryBtn.innerText = t('panels.downloads.retry') || 'Retry';
-            retryBtn.addEventListener('click', () => {
-                ipcRenderer.send('download-retry', item.url);
-            });
+            const retryBtn = createIconButton(
+                'download-retry-btn',
+                'retry',
+                t('panels.downloads.retry'),
+                () => { ipcRenderer.send('download-retry', item.url); }
+            );
             actions.appendChild(retryBtn);
         }
 
         if (item.state === 'completed' && item.savePath) {
-            const openFileBtn = document.createElement('button');
-            openFileBtn.className = 'download-open-file-btn';
-            openFileBtn.innerText = t('panels.downloads.openFile') || 'Open';
-            openFileBtn.addEventListener('click', () => {
-                ipcRenderer.send('open-download-file', item.savePath);
-            });
+            const openFileBtn = createIconButton(
+                'download-open-file-btn',
+                'openFile',
+                t('panels.downloads.openFile'),
+                () => { ipcRenderer.send('open-download-file', item.savePath); }
+            );
             actions.appendChild(openFileBtn);
         }
 
         if (item.savePath) {
-            const openBtn = document.createElement('button');
-            openBtn.className = 'download-open-btn';
-            openBtn.innerText = t('panels.downloads.showInFolder');
-            openBtn.addEventListener('click', () => {
-                openDownloadPath(item.savePath);
-            });
+            const openBtn = createIconButton(
+                'download-open-btn',
+                'showInFolder',
+                t('panels.downloads.showInFolder'),
+                () => { openDownloadPath(item.savePath); }
+            );
             actions.appendChild(openBtn);
         }
 
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'download-delete-btn';
-        deleteBtn.innerText = t('delete');
-        deleteBtn.addEventListener('click', () => {
-            const nextDownloads = store.get('downloads', []);
-            nextDownloads.splice(index, 1);
-            store.set('downloads', nextDownloads);
-            renderDownloadsPanel();
-        });
+        const deleteBtn = createIconButton(
+            'download-delete-btn',
+            'delete',
+            t('delete'),
+            () => {
+                const nextDownloads = store.get('downloads', []);
+                nextDownloads.splice(index, 1);
+                store.set('downloads', nextDownloads);
+                renderDownloadsPanel();
+            }
+        );
         actions.appendChild(deleteBtn);
 
         itemEl.appendChild(content);
         itemEl.appendChild(actions);
         downloadsList.appendChild(itemEl);
     });
+}
+
+// 格式化下载时间显示
+function formatDownloadTime(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+    
+    // 小于1分钟
+    if (diff < 60000) {
+        return t('time.justNow') || '刚刚';
+    }
+    // 小于1小时
+    if (diff < 3600000) {
+        const mins = Math.floor(diff / 60000);
+        return `${mins}${t('time.minutesAgo') || '分钟前'}`;
+    }
+    // 小于24小时
+    if (diff < 86400000) {
+        const hours = Math.floor(diff / 3600000);
+        return `${hours}${t('time.hoursAgo') || '小时前'}`;
+    }
+    // 超过24小时显示具体日期
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 historyBtn.addEventListener('click', () => {
@@ -1085,10 +1289,41 @@ if (downloadsClearAllBtn) {
     });
 }
 
+// 清空已完成下载
+const downloadsClearCompletedBtn = document.getElementById('downloads-clear-completed-btn');
+if (downloadsClearCompletedBtn) {
+    downloadsClearCompletedBtn.addEventListener('click', () => {
+        const downloads = store.get('downloads', []);
+        const filtered = downloads.filter(item => item.state !== 'completed');
+        if (filtered.length === downloads.length) {
+            return; // 没有已完成的下载
+        }
+        store.set('downloads', filtered);
+        renderDownloadsPanel();
+    });
+}
+
+// 清空失败下载
+const downloadsClearFailedBtn = document.getElementById('downloads-clear-failed-btn');
+if (downloadsClearFailedBtn) {
+    downloadsClearFailedBtn.addEventListener('click', () => {
+        const downloads = store.get('downloads', []);
+        const filtered = downloads.filter(item => {
+            const state = item.state || '';
+            return state !== 'failed' && state !== 'cancelled' && state !== 'interrupted';
+        });
+        if (filtered.length === downloads.length) {
+            return; // 没有失败的下载
+        }
+        store.set('downloads', filtered);
+        renderDownloadsPanel();
+    });
+}
+
 function updateDownloadsFilterUI() {
     if (!downloadsFilters) return;
     const active = store.get('ui.downloadsFilter', 'all');
-    downloadsFilters.querySelectorAll('.downloads-filter-btn').forEach((btn) => {
+    downloadsFilters.querySelectorAll('.filter-btn').forEach((btn) => {
         const key = btn.getAttribute('data-filter') || 'all';
         btn.classList.toggle('active', key === active);
     });
@@ -1096,7 +1331,7 @@ function updateDownloadsFilterUI() {
 
 if (downloadsFilters) {
     downloadsFilters.addEventListener('click', (e) => {
-        const btn = e.target.closest('.downloads-filter-btn');
+        const btn = e.target.closest('.filter-btn');
         if (!btn) return;
         const key = btn.getAttribute('data-filter') || 'all';
         store.set('ui.downloadsFilter', key);
@@ -1164,7 +1399,27 @@ zoomResetBtn.addEventListener('click', () => {
 
 // Download Progress Handling
 ipcRenderer.on('download-progress', (event, data) => {
+    const prevState = store.get('downloads', []).find(d => d.id === data.id)?.state;
     updateDownloadStore(data);
+    
+    // 显示下载状态变化的 toast 通知
+    if (data.state === 'completed' && prevState !== 'completed') {
+        showToast(
+            t('toast.downloadComplete') || `下载完成: ${data.fileName}`,
+            'success'
+        );
+    } else if (data.state === 'failed' && prevState !== 'failed') {
+        showToast(
+            t('toast.downloadFailed') || `下载失败: ${data.fileName}`,
+            'error'
+        );
+    } else if (data.state === 'cancelled' && prevState !== 'cancelled') {
+        showToast(
+            t('toast.downloadCancelled') || `下载已取消: ${data.fileName}`,
+            'warning'
+        );
+    }
+    
     if (!downloadsPanel.classList.contains('active')) return;
     if (window.__downloadsRaf) return;
     window.__downloadsRaf = requestAnimationFrame(() => {
@@ -1216,15 +1471,6 @@ if (overlayBackdrop) {
         closeAllOverlays();
     });
 }
-
-document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-    if (tag === 'input' || tag === 'textarea') return;
-    if (getActiveOverlayPanel()) {
-        closeAllOverlays();
-    }
-});
 
 document.addEventListener('keydown', (e) => {
     const isCmdOrCtrl = e.metaKey || e.ctrlKey;
@@ -1467,25 +1713,80 @@ document.getElementById('ctx-mute').addEventListener('click', () => {
 
 // Global shortcuts
 window.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    const isInputFocused = tag === 'input' || tag === 'textarea';
+    
+    // Escape - 关闭所有面板/菜单/查找框
+    if (e.key === 'Escape') {
+        closeAllPanels();
+        return;
+    }
+    
+    // Ctrl+Tab - 切换到下一个标签页
+    if (isCmdOrCtrl && e.key === 'Tab' && !e.shiftKey) {
+        e.preventDefault();
+        switchToNextTab();
+        return;
+    }
+    
+    // Ctrl+Shift+Tab - 切换到上一个标签页
+    if (isCmdOrCtrl && e.shiftKey && e.key === 'Tab') {
+        e.preventDefault();
+        switchToPrevTab();
+        return;
+    }
+    
+    // Ctrl+W - 关闭当前标签页
+    if (isCmdOrCtrl && e.key === 'w') {
+        e.preventDefault();
+        closeTab(activeTabId);
+        return;
+    }
+    
+    // Ctrl+Shift+T - 恢复关闭的标签页
+    if (isCmdOrCtrl && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        restoreLastTab();
+        return;
+    }
+    
+    // Ctrl+T - 新建标签页
+    if (isCmdOrCtrl && e.key === 't') {
+        e.preventDefault();
+        createTab();
+        return;
+    }
+    
+    // Ctrl+R 或 F5 - 刷新当前页面
+    if ((isCmdOrCtrl && e.key === 'r') || e.key === 'F5') {
+        e.preventDefault();
+        refreshCurrentPage();
+        return;
+    }
+    
+    // 以下快捷键在输入框中不触发
+    if (isInputFocused) return;
+    
+    if (isCmdOrCtrl && e.key === 'f') {
         e.preventDefault();
         toggleFind();
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'l' || e.key === 'k')) {
+    if (isCmdOrCtrl && (e.key === 'l' || e.key === 'k')) {
         e.preventDefault();
         urlInput.focus();
         urlInput.select();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') {
+    if (isCmdOrCtrl && e.key.toLowerCase() === 'h') {
         e.preventDefault();
         showPanel(historyPanel, historyList, 'history', historySearchInput?.value || '');
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+    if (isCmdOrCtrl && e.key.toLowerCase() === 'j') {
         e.preventDefault();
         renderDownloadsPanel();
         downloadsPanel.classList.add('active');
     }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
+    if (isCmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         showPanel(
             bookmarksPanel,
@@ -1494,19 +1795,7 @@ window.addEventListener('keydown', (e) => {
             bookmarksSearchInput?.value || ''
         );
     }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
-        e.preventDefault();
-        restoreLastTab();
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 't') {
-        e.preventDefault();
-        createTab();
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
-        e.preventDefault();
-        closeTab(activeTabId);
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+    if (isCmdOrCtrl && e.key === 'p') {
         e.preventDefault();
         const wv = document.getElementById(`webview-${activeTabId}`);
         if (wv && wv.tagName === 'WEBVIEW') wv.print();
