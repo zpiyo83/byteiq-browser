@@ -63,15 +63,36 @@
 .panel-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
     margin-bottom: 16px;
 }
 
 .panel-actions button {
     background: #f1f3f4;
     border: 1px solid #e0e0e0;
-    padding: 6px 12px;
+    padding: 8px;
     border-radius: 16px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.panel-actions button:hover {
+    background: #e8eaed;
+}
+
+.panel-actions button:active {
+    background: #dadce0;
+    transform: scale(0.95);
+}
+
+.panel-actions button svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
 }
 
 .downloads-filters {
@@ -79,22 +100,6 @@
     gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 12px;
-}
-
-.downloads-filter-btn {
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    padding: 6px 10px;
-    border-radius: 999px;
-    cursor: pointer;
-    font-size: 12px;
-    color: #333;
-}
-
-.downloads-filter-btn.active {
-    background: #4285f4;
-    border-color: #4285f4;
-    color: #ffffff;
 }
 
 .toggle-switch {
@@ -175,7 +180,7 @@
     justify-content: space-between;
     padding: 12px;
     border-bottom: 1px solid #eee;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .list-item:hover {
@@ -192,18 +197,141 @@
     margin-right: 20px;
 }
 
+/* 下载条目样式 */
+.download-item {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.download-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.download-file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.download-filename {
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.download-path {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.download-progress {
+    width: 100%;
+    height: 6px;
+    margin: 4px 0;
+}
+
+.download-detail {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 2px;
+}
+
+.download-meta {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.download-state-info {
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.download-state-info.state-completed {
+    color: #28a745;
+}
+
+.download-state-info.state-cancelled {
+    color: #6c757d;
+}
+
+.download-state-info.state-interrupted {
+    color: #fd7e14;
+}
+
+.download-state-info.state-failed {
+    color: #dc3545;
+}
+
+.download-time {
+    font-size: 11px;
+    color: #888;
+}
+
+.download-url {
+    font-size: 10px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
 .download-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-self: flex-start;
 }
 
 .download-actions button {
     background: #f1f3f4;
     border: 1px solid #e0e0e0;
-    padding: 4px 10px;
+    padding: 4px 8px;
     border-radius: 12px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
+    white-space: nowrap;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.download-actions button:hover {
+    background: #e8eaed;
+}
+
+.download-actions button:active {
+    background: #dadce0;
+}
+
+/* 图标按钮样式 */
+.download-actions button.icon-btn {
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+}
+
+.download-actions button.icon-btn svg {
+    display: block;
+}
+
+.download-actions button.icon-btn:hover {
+    background: #e8eaed;
+    transform: scale(1.05);
+}
+
+.download-actions button.icon-btn:active {
+    background: #dadce0;
+    transform: scale(0.95);
 }
 
 @media (max-width: 680px) {
@@ -213,4 +341,67 @@
         width: auto;
         max-height: calc(100vh - 105px);
     }
+}
+
+/* Find Box 样式 */
+#find-box {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: var(--bg, #fff);
+    padding: 8px 12px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    display: none;
+    z-index: 1000;
+    gap: 8px;
+    align-items: center;
+}
+
+#find-box.visible {
+    display: flex;
+}
+
+#find-box input {
+    border: 1px solid var(--border, #ddd);
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--bg, #fff);
+    color: var(--text, #333);
+}
+
+/* Context Menu 样式 */
+.custom-context-menu,
+.tab-context-menu {
+    position: fixed;
+    background: var(--bg, #fff);
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px 0;
+    min-width: 150px;
+    z-index: 2000;
+    display: none;
+}
+
+.custom-context-menu.visible,
+.tab-context-menu.visible {
+    display: block;
+}
+
+.custom-context-menu button,
+.tab-context-menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 16px;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text, #333);
+}
+
+.custom-context-menu button:hover,
+.tab-context-menu button:hover {
+    background: var(--hover-bg, #f1f3f4);
 }
