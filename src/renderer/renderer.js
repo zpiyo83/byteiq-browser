@@ -10,6 +10,7 @@ const { createListPanelManager } = require('./modules/ui/list-panel-manager');
 const { createOverlayManager } = require('./modules/ui/overlay-manager');
 const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
+const { createExtensionsManager } = require('./modules/extensions/extensions-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
 
@@ -57,6 +58,10 @@ const zoomLevelText = document.getElementById('zoom-level-text');
 const clearDataBtn = document.getElementById('clear-data-btn');
 const exportDataBtn = document.getElementById('export-data-btn');
 const restoreSessionToggle = document.getElementById('restore-session-toggle');
+const extensionsList = document.getElementById('extensions-list');
+const extensionsAddBtn = document.getElementById('extensions-add-btn');
+const extensionsRefreshBtn = document.getElementById('extensions-refresh-btn');
+const extensionsEmpty = document.getElementById('extensions-empty');
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
 const webviewsContainer = document.getElementById('webviews-container');
@@ -235,6 +240,19 @@ const listPanelManager = createListPanelManager({
   t
 });
 
+const extensionsManager = createExtensionsManager({
+  documentRef: document,
+  ipcRenderer,
+  modalManager,
+  showToast,
+  listEl: extensionsList,
+  addBtn: extensionsAddBtn,
+  refreshBtn: extensionsRefreshBtn,
+  emptyEl: extensionsEmpty
+});
+
+extensionsManager.init();
+
 const shortcutsManager = createShortcutsManager({
   actions: {
     closeActiveTab: () => {
@@ -364,6 +382,7 @@ settingsBtn.addEventListener('click', () => {
     if (nodeVersionEl) nodeVersionEl.textContent = versions.nodeVersion;
     if (v8VersionEl) v8VersionEl.textContent = versions.v8Version;
   });
+  extensionsManager.refresh();
   overlayManager.openOverlay(settingsPanel);
 });
 
