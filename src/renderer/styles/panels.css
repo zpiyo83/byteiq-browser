@@ -625,3 +625,89 @@
 .tab-context-menu button:hover {
     background: var(--hover-bg, #f1f3f4);
 }
+
+/* 开发者工具侧边栏 */
+.devtools-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 100%;
+    background: #fff;
+    border-left: 1px solid #e0e0e0;
+    display: none;
+    flex-direction: column;
+    z-index: 100;
+    overflow: hidden;
+}
+
+.devtools-sidebar.active {
+    display: flex;
+    width: 400px;
+}
+
+.devtools-resize-handle {
+    position: absolute;
+    left: -4px;
+    top: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 10;
+}
+
+.devtools-resize-handle:hover {
+    background: rgba(66, 133, 244, 0.3);
+}
+
+.devtools-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 12px;
+    font-weight: 500;
+    color: #202124;
+}
+
+.devtools-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    font-size: 13px;
+}
+
+.devtools-placeholder p {
+    margin: 4px 0;
+}
+
+.devtools-hint {
+    font-size: 11px;
+    color: #9aa0a6;
+}
+
+/* 深色模式 */
+body.dark-mode .devtools-sidebar {
+    background: #202124;
+    border-left-color: #3c4043;
+}
+
+body.dark-mode .devtools-header {
+    background: #2d2e31;
+    border-bottom-color: #3c4043;
+    color: #e8eaed;
+}
+
+body.dark-mode .devtools-placeholder {
+    color: #9aa0a6;
+}
+
+body.dark-mode .devtools-hint {
+    color: #5f6368;
+}
