@@ -1,10 +1,12 @@
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, BrowserView, Menu, dialog, shell, ipcMain } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 
 const store = new Store();
 
 let mainWindow;
+let devtoolsView = null;
+let devtoolsWebContentsId = null;
 
 let downloadSeq = 0;
 const downloadItemsById = new Map();
@@ -240,6 +242,29 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
     downloadItemsById.clear();
+    // 关闭开发者工具视图
+    if (devtoolsView) {
+      devtoolsView.webContents.destroy();
+      devtoolsView = null;
+    }
+  });
+
+  // 窗口大小改变时更新开发者工具位置
+  mainWindow.on('resize', () => {
+    if (!devtoolsView) return;
+
+    const [windowWidth, windowHeight] = mainWindow.getSize();
+    const sidebarWidth = devtoolsView.getBounds().width;
+    const toolbarHeight = 72;
+
+    const devtoolsHeaderHeight = 36;
+
+    devtoolsView.setBounds({
+      x: windowWidth - sidebarWidth,
+      y: toolbarHeight + devtoolsHeaderHeight,
+      width: sidebarWidth,
+      height: windowHeight - toolbarHeight - devtoolsHeaderHeight
+    });
   });
 }
 
@@ -247,6 +272,89 @@ function createMenu() {
   // 隐藏菜单栏
   Menu.setApplicationMenu(null);
 }
+
+// 开发者工具侧边栏管理
+ipcMain.on('toggle-devtools-sidebar', (event, { webContentsId, width }) => {
+  if (!mainWindow) return;
+
+  if (devtoolsView) {
+    // 关闭开发者工具
+    mainWindow.removeBrowserView(devtoolsView);
+    devtoolsView.webContents.destroy();
+    devtoolsView = null;
+    devtoolsWebContentsId = null;
+    mainWindow.webContents.send('devtools-sidebar-closed');
+    return;
+  }
+
+  // 打开开发者工具
+  devtoolsView = new BrowserView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      devtools: true
+    }
+  });
+
+  mainWindow.addBrowserView(devtoolsView);
+
+  const [windowWidth, windowHeight] = mainWindow.getSize();
+  const sidebarWidth = width || 400;
+  const toolbarHeight = 72; // tabs + toolbar
+  const devtoolsHeaderHeight = 36; // 开发者工具标题栏高度
+
+  devtoolsView.setBounds({
+    x: windowWidth - sidebarWidth,
+    y: toolbarHeight + devtoolsHeaderHeight,
+    width: sidebarWidth,
+    height: windowHeight - toolbarHeight - devtoolsHeaderHeight
+  });
+
+  devtoolsView.setAutoResize({ width: false, height: true });
+
+  // 获取目标webview的webContents
+  const webContents = webContentsId ? require('electron').webContents.fromId(webContentsId) : null;
+
+  if (webContents) {
+    devtoolsWebContentsId = webContentsId;
+    webContents.setDevToolsWebContents(devtoolsView.webContents);
+    webContents.openDevTools();
+  }
+
+  mainWindow.webContents.send('devtools-sidebar-opened', { width: sidebarWidth });
+});
+
+// 更新开发者工具侧边栏宽度
+ipcMain.on('resize-devtools-sidebar', (event, { width }) => {
+  if (!mainWindow || !devtoolsView) return;
+
+  const [windowWidth, windowHeight] = mainWindow.getSize();
+  const toolbarHeight = 72;
+  const devtoolsHeaderHeight = 36;
+
+  devtoolsView.setBounds({
+    x: windowWidth - width,
+    y: toolbarHeight + devtoolsHeaderHeight,
+    width: width,
+    height: windowHeight - toolbarHeight - devtoolsHeaderHeight
+  });
+});
+
+// 窗口大小改变时更新开发者工具位置
+ipcMain.on('window-resized', (event, { width, height }) => {
+  if (!mainWindow || !devtoolsView) return;
+
+  const sidebarWidth = devtoolsView.getBounds().width;
+  const toolbarHeight = 72;
+  const devtoolsHeaderHeight = 36;
+
+  devtoolsView.setBounds({
+    x: width - sidebarWidth,
+    y: toolbarHeight + devtoolsHeaderHeight,
+    width: sidebarWidth,
+    height: height - toolbarHeight - devtoolsHeaderHeight
+  });
+});
 
 app.whenReady().then(() => {
   setupWebviewWindowHandler();

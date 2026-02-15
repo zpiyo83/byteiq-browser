@@ -120,6 +120,23 @@
             <!-- Webviews will be added here -->
         </div>
 
+        <!-- 开发者工具侧边栏 -->
+        <div id="devtools-sidebar" class="devtools-sidebar">
+            <div class="devtools-resize-handle" id="devtools-resize-handle"></div>
+            <div class="devtools-header">
+                <span>开发者工具</span>
+                <button id="close-devtools-btn" class="icon-btn" aria-label="关闭开发者工具">
+                    <svg viewBox="0 0 24 24" width="16" height="16" role="img" aria-hidden="true">
+                        <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="devtools-placeholder">
+                <p>开发者工具已打开</p>
+                <p class="devtools-hint">使用上方面板检查页面元素</p>
+            </div>
+        </div>
+
         <div class="ai-sidebar collapsed" id="ai-sidebar" role="complementary" aria-label="AI助手面板">
             <div class="ai-header">
                 <h3 data-i18n="ai.title">Byteiq AI Assistant</h3>
