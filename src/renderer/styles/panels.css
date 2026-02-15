@@ -2,17 +2,17 @@
     position: fixed;
     top: 85px;
     right: 16px;
-    width: min(520px, calc(100vw - 32px));
+    width: min(420px, calc(100vw - 32px));
     max-height: calc(100vh - 105px);
     background: rgba(255, 255, 255, 0.98);
     z-index: 1000;
     display: none;
-    padding: 16px;
+    padding: 12px;
     overflow-y: auto;
-    border-radius: 12px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    transform: translateY(-6px);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transform: translateY(-4px);
     opacity: 0;
     transition: opacity 120ms ease, transform 120ms ease;
 }
@@ -42,36 +42,42 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+
+.overlay-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
 }
 
 .panel-search {
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .panel-search input {
     width: 100%;
-    padding: 8px 14px;
-    border-radius: 18px;
+    padding: 6px 10px;
+    border-radius: 14px;
     border: 1px solid #ddd;
-    font-size: 13px;
+    font-size: 12px;
     outline: none;
 }
 
 .panel-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
-    margin-bottom: 16px;
+    gap: 6px;
+    margin-bottom: 10px;
 }
 
 .panel-actions button {
     background: #f1f3f4;
     border: 1px solid #e0e0e0;
-    padding: 8px;
-    border-radius: 16px;
+    padding: 5px;
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -90,16 +96,50 @@
 
 .panel-actions button svg {
     display: block;
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
 }
 
 .downloads-filters {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+}
+
+.downloads-filters .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    padding: 4px 8px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #555;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.downloads-filters .filter-btn:hover {
+    background: #e8eaed;
+}
+
+.downloads-filters .filter-btn.active {
+    background: #e3f2fd;
+    border-color: #90caf9;
+    color: #1976d2;
+}
+
+.downloads-filters .filter-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.downloads-filters .filter-btn span {
+    white-space: nowrap;
 }
 
 .toggle-switch {
@@ -152,34 +192,210 @@
     margin: 0 auto;
 }
 
-.setting-item {
-    margin-bottom: 20px;
+/* 全屏设置页面样式 */
+#settings-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 100vh;
+    background: #f8f9fa;
+    z-index: 2000;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    transform: none;
+    opacity: 1;
+    display: none;
+    flex-direction: column;
+}
+
+#settings-panel.active {
+    display: flex;
+}
+
+#settings-panel .settings-header {
+    background: #fff;
+    padding: 12px 20px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 6px;
+}
+
+#settings-panel .settings-header h2 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #202124;
+}
+
+#settings-panel .settings-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+#settings-panel .settings-sidebar {
+    width: 200px;
+    background: #fff;
+    border-right: 1px solid #e0e0e0;
+    padding: 12px 0;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    color: #5f6368;
+    transition: background 0.15s ease;
+}
+
+.settings-nav-item:hover {
+    background: #f1f3f4;
+}
+
+.settings-nav-item.active {
+    background: #e8f0fe;
+    color: #1967d2;
+}
+
+.settings-nav-item svg {
+    flex-shrink: 0;
+}
+
+#settings-panel .settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 32px;
+    max-width: none;
+}
+
+.settings-section {
+    display: none;
+}
+
+.settings-section.active {
+    display: block;
+}
+
+.settings-section h3 {
+    font-size: 15px;
+    font-weight: 500;
+    color: #202124;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.setting-item {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.setting-item .setting-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .setting-item label {
-    font-weight: bold;
-    color: #333;
+    font-weight: 500;
+    font-size: 13px;
+    color: #202124;
+    display: block;
+}
+
+.setting-item .setting-desc {
+    font-size: 11px;
+    color: #5f6368;
+    margin-top: 2px;
 }
 
 .setting-item select,
-.setting-item input {
-    padding: 8px 14px;
-    border-radius: 20px;
+.setting-item input[type="text"] {
+    padding: 8px 12px;
+    border-radius: 6px;
     border: 1px solid #ddd;
     font-size: 13px;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.setting-action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #dadce0;
+    background: #fff;
+    color: #5f6368;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.setting-action-btn:hover {
+    background: #f1f3f4;
+    border-color: #c0c0c0;
+}
+
+.setting-action-btn.primary {
+    background: #4285f4;
+    border-color: #4285f4;
+    color: #fff;
+}
+
+.setting-action-btn.primary:hover {
+    background: #3367d6;
+    border-color: #3367d6;
+}
+
+.setting-action-btn.danger {
+    background: #ea4335;
+    border-color: #ea4335;
+    color: #fff;
+}
+
+.setting-action-btn.danger:hover {
+    background: #d33426;
+    border-color: #d33426;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zoom-controls span {
+    min-width: 50px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .list-item {
     display: flex;
     justify-content: space-between;
-    padding: 12px;
-    border-bottom: 1px solid #eee;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f0;
     align-items: flex-start;
 }
 
@@ -194,13 +410,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-right: 20px;
+    margin-right: 16px;
+    font-size: 13px;
 }
 
 /* 下载条目样式 */
 .download-item {
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .download-content {
@@ -211,21 +428,22 @@
 .download-file-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin-bottom: 4px;
+    gap: 1px;
+    margin-bottom: 3px;
 }
 
 .download-filename {
     font-weight: 500;
     color: #333;
+    font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .download-path {
-    font-size: 11px;
-    color: #888;
+    font-size: 10px;
+    color: #999;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -233,25 +451,25 @@
 
 .download-progress {
     width: 100%;
-    height: 6px;
-    margin: 4px 0;
+    height: 4px;
+    margin: 3px 0;
 }
 
 .download-detail {
-    font-size: 12px;
+    font-size: 11px;
     color: #555;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
 }
 
 .download-meta {
-    font-size: 11px;
+    font-size: 10px;
     color: #888;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
 }
 
 .download-state-info {
-    font-size: 12px;
-    margin-bottom: 4px;
+    font-size: 11px;
+    margin-bottom: 3px;
 }
 
 .download-state-info.state-completed {
@@ -271,33 +489,33 @@
 }
 
 .download-time {
-    font-size: 11px;
+    font-size: 10px;
     color: #888;
 }
 
 .download-url {
-    font-size: 10px;
-    color: #999;
+    font-size: 9px;
+    color: #aaa;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 .download-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: wrap;
     align-self: flex-start;
 }
 
 .download-actions button {
-    background: #f1f3f4;
+    background: #f5f5f5;
     border: 1px solid #e0e0e0;
-    padding: 4px 8px;
-    border-radius: 12px;
+    padding: 3px 6px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 10px;
     white-space: nowrap;
     transition: background 0.15s ease, transform 0.1s ease;
 }
@@ -312,16 +530,18 @@
 
 /* 图标按钮样式 */
 .download-actions button.icon-btn {
-    padding: 6px;
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    height: 28px;
+    min-width: 22px;
+    height: 22px;
 }
 
 .download-actions button.icon-btn svg {
     display: block;
+    width: 14px;
+    height: 14px;
 }
 
 .download-actions button.icon-btn:hover {
