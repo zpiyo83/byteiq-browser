@@ -273,6 +273,17 @@ function createMenu() {
   Menu.setApplicationMenu(null);
 }
 
+// 获取版本信息
+ipcMain.handle('get-version-info', () => {
+  return {
+    appVersion: app.getVersion(),
+    electronVersion: process.versions.electron,
+    chromiumVersion: process.versions.chrome,
+    nodeVersion: process.versions.node,
+    v8Version: process.versions.v8
+  };
+});
+
 // 开发者工具侧边栏管理
 ipcMain.on('toggle-devtools-sidebar', (event, { webContentsId, width }) => {
   if (!mainWindow) return;
