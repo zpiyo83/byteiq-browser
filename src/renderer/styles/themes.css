@@ -3,6 +3,18 @@ body.dark-mode {
     color: #e8eaed;
 }
 
+body.dark-mode .main-container {
+    background: #202124;
+}
+
+body.dark-mode .webview-mock {
+    background: #202124;
+}
+
+body.dark-mode webview {
+    background: #202124;
+}
+
 body.dark-mode .toolbar {
     background: #2d2e31;
     border-bottom: 1px solid #3c4043;
@@ -50,6 +62,23 @@ body.dark-mode .url-bar:focus-within {
     box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.3);
 }
 
+body.dark-mode .url-bar button {
+    color: #9aa0a6;
+}
+
+body.dark-mode .url-bar button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e8eaed;
+}
+
+body.dark-mode #clear-url-btn {
+    color: #9aa0a6;
+}
+
+body.dark-mode #bookmark-svg.active {
+    color: #fbbc05;
+}
+
 body.dark-mode .overlay-panel {
     background: rgba(30, 30, 30, 0.98);
     color: #e8eaed;
@@ -82,6 +111,10 @@ body.dark-mode .info {
 
 body.dark-mode .info h2 {
     color: #fff;
+}
+
+body.dark-mode .content {
+    background: #202124;
 }
 
 body.dark-mode .search-box input {
@@ -191,6 +224,212 @@ body.dark-mode #find-box input {
     background: #202124;
     border-color: #3c4043;
     color: #e8eaed;
+}
+
+/* 设置面板深色模式 */
+body.dark-mode #settings-panel {
+    background: #202124;
+}
+
+body.dark-mode #settings-panel .settings-header {
+    background: #2d2e31;
+    border-bottom-color: #3c4043;
+}
+
+body.dark-mode #settings-panel .settings-header h2 {
+    color: #e8eaed;
+}
+
+body.dark-mode #settings-panel .settings-sidebar {
+    background: #2d2e31;
+    border-right-color: #3c4043;
+}
+
+body.dark-mode .settings-nav-item {
+    color: #9aa0a6;
+}
+
+body.dark-mode .settings-nav-item:hover {
+    background: #3c4043;
+}
+
+body.dark-mode .settings-nav-item.active {
+    background: rgba(138, 180, 248, 0.15);
+    color: #8ab4f8;
+}
+
+body.dark-mode .settings-section h3 {
+    color: #e8eaed;
+    border-bottom-color: #3c4043;
+}
+
+body.dark-mode .setting-item {
+    background: #2d2e31;
+    border-color: #3c4043;
+}
+
+body.dark-mode .setting-item label {
+    color: #e8eaed;
+}
+
+body.dark-mode .setting-item .setting-desc {
+    color: #9aa0a6;
+}
+
+body.dark-mode .setting-item select,
+body.dark-mode .setting-item input[type="text"] {
+    background: #202124;
+    border-color: #3c4043;
+    color: #e8eaed;
+}
+
+body.dark-mode .setting-item select:focus,
+body.dark-mode .setting-item input[type="text"]:focus {
+    border-color: #8ab4f8;
+    outline-color: #8ab4f8;
+}
+
+body.dark-mode .setting-action-btn {
+    background: #35363a;
+    border-color: #3c4043;
+    color: #e8eaed;
+}
+
+body.dark-mode .setting-action-btn:hover {
+    background: #3c4043;
+    border-color: #5f6368;
+}
+
+body.dark-mode .setting-action-btn.primary {
+    background: #8ab4f8;
+    border-color: #8ab4f8;
+    color: #202124;
+}
+
+body.dark-mode .setting-action-btn.primary:hover {
+    background: #aecbfa;
+}
+
+body.dark-mode .setting-action-btn.danger {
+    background: #f28b82;
+    border-color: #f28b82;
+    color: #202124;
+}
+
+body.dark-mode .setting-action-btn.danger:hover {
+    background: #ec9288;
+}
+
+body.dark-mode .zoom-controls span {
+    color: #e8eaed;
+}
+
+/* 下载筛选器深色模式 */
+body.dark-mode .downloads-filters .filter-btn {
+    background: #35363a;
+    border-color: #3c4043;
+    color: #9aa0a6;
+}
+
+body.dark-mode .downloads-filters .filter-btn:hover {
+    background: #3c4043;
+}
+
+body.dark-mode .downloads-filters .filter-btn.active {
+    background: rgba(138, 180, 248, 0.15);
+    border-color: #8ab4f8;
+    color: #8ab4f8;
+}
+
+/* 新标签页按钮深色模式 */
+body.dark-mode .new-tab-btn {
+    background: #35363a;
+    color: #9aa0a6;
+}
+
+body.dark-mode .new-tab-btn:hover {
+    background: #3c4043;
+    color: #fff;
+}
+
+/* 关闭按钮深色模式 */
+body.dark-mode .close-tab {
+    color: #9aa0a6;
+}
+
+body.dark-mode .close-tab:hover {
+    background: rgba(242, 139, 130, 0.3);
+    color: #f28b82;
+}
+
+/* 滚动条深色模式 */
+body.dark-mode ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #202124;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #5f6368;
+    border-radius: 4px;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #80868b;
+}
+
+/* overlay-backdrop 深色模式 */
+body.dark-mode .overlay-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* 下载项深色模式 */
+body.dark-mode .download-filename {
+    color: #e8eaed;
+}
+
+body.dark-mode .download-path {
+    color: #9aa0a6;
+}
+
+body.dark-mode .download-detail,
+body.dark-mode .download-meta {
+    color: #9aa0a6;
+}
+
+body.dark-mode .download-url {
+    color: #5f6368;
+}
+
+/* overlay-header 深色模式 */
+body.dark-mode .overlay-header {
+    border-bottom-color: #3c4043;
+}
+
+body.dark-mode .overlay-header h2 {
+    color: #e8eaed;
+}
+
+/* 面板关闭按钮深色模式 */
+body.dark-mode .close-overlay {
+    color: #9aa0a6;
+}
+
+body.dark-mode .close-overlay:hover {
+    background: #3c4043;
+    color: #fff;
+}
+
+/* 历史记录和书签链接深色模式 */
+body.dark-mode .list-item a {
+    color: #8ab4f8;
+}
+
+body.dark-mode .list-item a:hover {
+    color: #aecbfa;
 }
 
 body.incognito-mode .tabs-container {

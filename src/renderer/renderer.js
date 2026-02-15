@@ -12,6 +12,11 @@ const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
 const store = new Store();
 
+// 尽早应用深色模式，避免闪烁
+if (store.get('settings.darkMode')) {
+  document.body.classList.add('dark-mode');
+}
+
 const urlInput = document.getElementById('url-input');
 const goBtn = document.getElementById('go-btn');
 const backBtn = document.getElementById('back-btn');
@@ -388,15 +393,17 @@ incognitoToggleBtn.addEventListener('click', () => {
   browserManager.toggleIncognito();
 });
 
-darkModeToggle.addEventListener('change', () => {
-  const isDark = darkModeToggle.checked;
-  document.body.classList.toggle('dark-mode', isDark);
-  store.set('settings.darkMode', isDark);
-});
+if (darkModeToggle) {
+  darkModeToggle.addEventListener('change', () => {
+    const isDark = darkModeToggle.checked;
+    document.body.classList.toggle('dark-mode', isDark);
+    store.set('settings.darkMode', isDark);
+  });
 
-if (store.get('settings.darkMode')) {
-  document.body.classList.add('dark-mode');
-  darkModeToggle.checked = true;
+  if (store.get('settings.darkMode')) {
+    document.body.classList.add('dark-mode');
+    darkModeToggle.checked = true;
+  }
 }
 
 zoomInBtn.addEventListener('click', () => {
