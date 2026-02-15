@@ -711,3 +711,102 @@ body.dark-mode .devtools-placeholder {
 body.dark-mode .devtools-hint {
     color: #5f6368;
 }
+
+/* 关于页面样式 */
+.about-logo {
+    display: flex;
+    justify-content: center;
+    padding: 24px 0 16px;
+}
+
+.about-logo-text {
+    font-size: 28px;
+    font-weight: 600;
+    color: #202124;
+}
+
+.about-logo-text span {
+    font-weight: 400;
+    color: #5f6368;
+}
+
+.about-info-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 0;
+    margin-bottom: 20px;
+}
+
+.about-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+}
+
+.about-info-row:not(:last-child) {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.about-info-label {
+    font-size: 13px;
+    color: #5f6368;
+}
+
+.about-info-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: #202124;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.about-footer {
+    text-align: center;
+    padding: 16px 0;
+    color: #5f6368;
+}
+
+.about-footer p {
+    font-size: 12px;
+    margin: 4px 0;
+}
+
+.about-copyright {
+    font-size: 11px !important;
+    color: #9aa0a6;
+}
+
+/* 深色模式 - 关于页面 */
+body.dark-mode .about-logo-text {
+    color: #e8eaed;
+}
+
+body.dark-mode .about-logo-text span {
+    color: #9aa0a6;
+}
+
+body.dark-mode .about-info-card {
+    background: #2d2e31;
+    border-color: #3c4043;
+}
+
+body.dark-mode .about-info-row:not(:last-child) {
+    border-bottom-color: #3c4043;
+}
+
+body.dark-mode .about-info-label {
+    color: #9aa0a6;
+}
+
+body.dark-mode .about-info-value {
+    color: #e8eaed;
+}
+
+body.dark-mode .about-footer {
+    color: #9aa0a6;
+}
+
+body.dark-mode .about-copyright {
+    color: #5f6368;
+}
