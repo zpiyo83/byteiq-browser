@@ -13,7 +13,8 @@
     openOverlay,
     showToast,
     store,
-    t
+    t,
+    modalManager
   } = options;
 
   let downloadsRaf = null;
@@ -421,9 +422,12 @@
 
   function bindEvents() {
     if (downloadsClearAllBtn) {
-      downloadsClearAllBtn.addEventListener('click', () => {
-        const msg = t('panels.downloads.clearAllConfirm') || 'Clear all downloads?';
-        if (!confirm(msg)) return;
+      downloadsClearAllBtn.addEventListener('click', async () => {
+        const confirmed = await modalManager.confirmDelete(
+          '确定要清空所有下载记录吗？',
+          '清空下载'
+        );
+        if (!confirmed) return;
         store.set('downloads', []);
         renderDownloadsPanel();
       });
