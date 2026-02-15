@@ -244,67 +244,8 @@ function createWindow() {
 }
 
 function createMenu() {
-  const template = [
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'New Window',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => createWindow()
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit',
-          accelerator: 'CmdOrCtrl+Q',
-          click: () => app.quit()
-        }
-      ]
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-        { label: 'Redo', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
-        { type: 'separator' },
-        { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
-        { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
-        { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' }
-      ]
-    },
-    {
-      label: 'View',
-      submenu: [
-        { label: 'Reload', accelerator: 'CmdOrCtrl+R', role: 'reload' },
-        { label: 'Toggle DevTools', accelerator: 'CmdOrCtrl+Shift+I', role: 'toggleDevTools' },
-        { type: 'separator' },
-        { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
-        { label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
-        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
-        { type: 'separator' },
-        { label: 'Toggle Fullscreen', accelerator: 'F11', role: 'togglefullscreen' }
-      ]
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'About',
-          click: () => {
-            dialog.showMessageBox({
-              type: 'info',
-              title: 'About Byteiq Browser',
-              message: 'Byteiq Browser',
-              detail: 'Version 0.1.0\nBuilt with Electron + Chromium.'
-            });
-          }
-        }
-      ]
-    }
-  ];
-
-  const menu = Menu.buildFromTemplate(template);
-  Menu.setApplicationMenu(menu);
+  // 隐藏菜单栏
+  Menu.setApplicationMenu(null);
 }
 
 app.whenReady().then(() => {
