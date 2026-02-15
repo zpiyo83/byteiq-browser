@@ -10,7 +10,8 @@
     setupWebviewEvents,
     updateTabUrl,
     updateBookmarkIcon,
-    updateZoomUI
+    updateZoomUI,
+    modalManager
   } = options;
 
   function getHostFromUrl(url) {
@@ -117,11 +118,14 @@
     const nextIncognito = !getIncognito();
     setIncognito(nextIncognito);
     documentRef.body.classList.toggle('incognito-mode', nextIncognito);
-    alert(
-      nextIncognito
-        ? t('panels.settings.incognitoOn')
-        : t('panels.settings.incognitoOff')
-    );
+    if (modalManager) {
+      modalManager.alert(
+        nextIncognito
+          ? t('panels.settings.incognitoOn')
+          : t('panels.settings.incognitoOff'),
+        nextIncognito ? '隐身模式已开启' : '隐身模式已关闭'
+      );
+    }
   }
 
   function onActiveWebviewChanged(webview) {

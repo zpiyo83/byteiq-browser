@@ -1,17 +1,22 @@
 .ai-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
     width: 360px;
     background: #ffffff;
     border-left: 1px solid #e0e0e0;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s ease;
-    position: relative;
     z-index: 10;
     box-shadow: -4px 0 12px rgba(0,0,0,0.05);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
 .ai-sidebar.collapsed {
-    display: none;
+    transform: translateX(100%);
+    pointer-events: none;
+    opacity: 0;
 }
 
 .ai-header {
@@ -38,12 +43,17 @@
     border-radius: 50%;
     font-size: 18px;
     color: #5f6368;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ai-header button:hover {
     background: #e0e0e0;
     color: #333;
+    transform: rotate(90deg);
+}
+
+.ai-header button:active {
+    transform: rotate(90deg) scale(0.9);
 }
 
 .ai-chat-area {
@@ -61,6 +71,18 @@
     border-radius: 18px;
     font-size: 14px;
     line-height: 1.5;
+    animation: messageSlideIn 0.3s ease forwards;
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .chat-message.ai {
@@ -92,12 +114,12 @@
     border-radius: 24px;
     font-size: 14px;
     outline: none;
-    transition: all 0.2s ease;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .ai-input-area input:focus {
     border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.1);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
 }
 
 .ai-input-area button {
@@ -109,10 +131,15 @@
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ai-input-area button:hover {
     background: #3367d6;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.ai-input-area button:active {
+    transform: translateY(0) scale(0.98);
 }
