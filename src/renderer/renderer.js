@@ -572,7 +572,98 @@ function refreshCurrentPage() {
 devtoolsBtn.addEventListener('click', () => {
   const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
   if (wv && wv.tagName === 'WEBVIEW') {
-    wv.openDevTools();
+    const devtoolsSidebar = document.getElementById('devtools-sidebar');
+    const mainContainer = document.querySelector('.main-container');
+    const isActive = devtoolsSidebar.classList.contains('active');
+
+    if (isActive) {
+      // 关闭开发者工具
+      ipcRenderer.send('toggle-devtools-sidebar', {});
+      devtoolsSidebar.classList.remove('active');
+      devtoolsSidebar.style.width = '0';
+      mainContainer.classList.remove('devtools-open');
+    } else {
+      // 打开开发者工具
+      const webContentsId = wv.getWebContentsId();
+      ipcRenderer.send('toggle-devtools-sidebar', {
+        webContentsId,
+        width: 400
+      });
+      devtoolsSidebar.classList.add('active');
+      devtoolsSidebar.style.width = '400px';
+      mainContainer.classList.add('devtools-open');
+    }
+  }
+});
+
+// 关闭开发者工具按钮
+const closeDevtoolsBtn = document.getElementById('close-devtools-btn');
+if (closeDevtoolsBtn) {
+  closeDevtoolsBtn.addEventListener('click', () => {
+    const devtoolsSidebar = document.getElementById('devtools-sidebar');
+    const mainContainer = document.querySelector('.main-container');
+    ipcRenderer.send('toggle-devtools-sidebar', {});
+    devtoolsSidebar.classList.remove('active');
+    devtoolsSidebar.style.width = '0';
+    mainContainer.classList.remove('devtools-open');
+  });
+}
+
+// 开发者工具侧边栏拖动调整宽度
+const devtoolsResizeHandle = document.getElementById('devtools-resize-handle');
+const devtoolsSidebar = document.getElementById('devtools-sidebar');
+
+if (devtoolsResizeHandle && devtoolsSidebar) {
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  devtoolsResizeHandle.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    startX = e.clientX;
+    startWidth = devtoolsSidebar.offsetWidth;
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+
+    const deltaX = startX - e.clientX;
+    const newWidth = Math.max(250, Math.min(800, startWidth + deltaX));
+
+    devtoolsSidebar.style.width = newWidth + 'px';
+    webviewsContainer.style.marginRight = newWidth + 'px';
+    ipcRenderer.send('resize-devtools-sidebar', { width: newWidth });
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+}
+
+// 监听窗口大小变化
+window.addEventListener('resize', () => {
+  ipcRenderer.send('window-resized', {
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+});
+
+// 监听开发者工具状态
+ipcRenderer.on('devtools-sidebar-closed', () => {
+  const devtoolsSidebar = document.getElementById('devtools-sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  if (devtoolsSidebar) {
+    devtoolsSidebar.classList.remove('active');
+    devtoolsSidebar.style.width = '0';
+  }
+  if (mainContainer) {
+    mainContainer.classList.remove('devtools-open');
   }
 });
 

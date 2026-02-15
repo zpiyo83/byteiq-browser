@@ -13,6 +13,12 @@
     height: 100%;
     min-width: 0;
     min-height: 0;
+    transition: margin-right 0.15s ease;
+}
+
+/* 当开发者工具打开时，webview容器收缩 */
+.main-container.devtools-open #webviews-container {
+    margin-right: 400px;
 }
 
 .webview-mock {
