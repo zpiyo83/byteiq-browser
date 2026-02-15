@@ -49,9 +49,28 @@
     cursor: pointer;
     border: none;
     border-bottom: 1px solid transparent;
-    transition: all 0.2s ease;
     position: relative;
     top: 1px;
+    transition: background-color 0.2s ease;
+}
+
+.tab.closing {
+    animation: tabSlideOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes tabSlideOut {
+    from {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+    to {
+        opacity: 0;
+        transform: scaleX(0.8);
+        min-width: 0;
+        max-width: 0;
+        padding: 0;
+        margin: 0;
+    }
 }
 
 .tab-content {
@@ -143,17 +162,23 @@
     justify-content: center;
     border-radius: 50%;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transform: scale(0.8);
+    transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
     color: #5f6368;
 }
 
 .tab:hover .close-tab {
     opacity: 1;
+    transform: scale(1);
 }
 
 .tab .close-tab:hover {
-    background: #e0e0e0;
-    color: #333;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tab .close-tab:active {
+    transform: scale(0.9);
+    background-color: rgba(0, 0, 0, 0.15);
 }
 
 .new-tab-btn {
@@ -166,12 +191,16 @@
     color: #5f6368;
     border-radius: 6px;
     margin-bottom: 2px;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .new-tab-btn:hover {
     background: rgba(0,0,0,0.08);
-    transform: scale(1.1);
+    transform: scale(1.1) rotate(90deg);
+}
+
+.new-tab-btn:active {
+    transform: scale(1) rotate(90deg);
 }
 
 .toolbar button {
@@ -181,10 +210,22 @@
     cursor: pointer;
     color: #5f6368;
     border-radius: 50%;
-    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.toolbar button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0;
+    transform: scale(0);
+    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .toolbar button:hover {
@@ -192,24 +233,46 @@
     transform: translateY(-1px);
 }
 
+.toolbar button:active {
+    transform: translateY(0) scale(0.95);
+    background: #dadce0;
+}
+
 .toolbar button svg {
     display: block;
     width: 18px;
     height: 18px;
     flex-shrink: 0;
+    transition: transform 0.2s ease;
 }
 
-.toolbar button:active {
-    transform: translateY(0);
+.toolbar button:hover svg {
+    transform: scale(1.05);
 }
 
 .url-bar #bookmark-btn {
     padding: 2px;
     margin-left: 2px;
+    transition: transform 0.2s ease;
+}
+
+.url-bar #bookmark-btn:hover {
+    transform: scale(1.15);
+}
+
+.url-bar #bookmark-btn:active {
+    transform: scale(1);
 }
 
 #bookmark-svg.active {
     color: #fbbc05;
+    animation: bookmarkPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bookmarkPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
 }
 
 .url-bar {
@@ -219,12 +282,27 @@
     background: #f1f3f4;
     border-radius: 18px;
     padding: 4px 12px;
-    transition: all 0.2s ease;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+    position: relative;
+}
+
+.url-bar::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    transition: border-color 0.25s ease;
+    pointer-events: none;
 }
 
 .url-bar:focus-within {
     background: #fff;
-    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.url-bar:focus-within::before {
+    border-color: rgba(66, 133, 244, 0.4);
 }
 
 .url-bar input {
@@ -243,9 +321,40 @@
     top: 0;
     left: 0;
     height: 3px;
-    background: linear-gradient(90deg, #4285f4, #34a853);
+    background: linear-gradient(90deg, #4285f4, #34a853, #fbbc04, #ea4335);
+    background-size: 200% 100%;
     transition: width 0.2s ease;
     z-index: 9999;
+    box-shadow: 0 0 10px rgba(66, 133, 244, 0.5);
+}
+
+/* 进度条加载动画 */
+#progress-bar.loading {
+    animation: progressShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* 不确定进度的动画 */
+#progress-bar.indeterminate {
+    width: 30% !important;
+    animation: progressIndeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes progressIndeterminate {
+    0% {
+        left: -30%;
+    }
+    100% {
+        left: 100%;
+    }
 }
 
 /* Tab 图标样式 */

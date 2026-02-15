@@ -27,11 +27,16 @@
     cursor: pointer;
     font-size: 13px;
     border-radius: 4px;
-    transition: background 0.15s ease;
+    margin: 0 4px;
+    transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .context-menu-item:hover {
     background: #f1f3f4;
+}
+
+.context-menu-item:active {
+    transform: scale(0.98);
 }
 
 /* 图标按钮通用样式 */
@@ -46,17 +51,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s ease, transform 0.1s ease;
     color: #5f6368;
+    position: relative;
+    transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .icon-btn:hover {
     background: #e8eaed;
+    transform: scale(1.05);
 }
 
 .icon-btn:active {
     background: #dadce0;
     transform: scale(0.95);
+}
+
+.icon-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.icon-btn:hover svg {
+    transform: scale(1.1);
 }
 
 /* 统一图标尺寸为18x18px */
@@ -186,13 +201,14 @@
 
 .toast {
     padding: 12px 16px;
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--bg, #ffffff);
     border: 1px solid var(--border, #e0e0e0);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    animation: slideIn 0.3s ease;
+    animation: toastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     max-width: 300px;
     font-size: 14px;
+    transform-origin: right center;
 }
 
 .toast.error {
@@ -219,24 +235,24 @@
     color: #1967d2;
 }
 
-@keyframes slideIn {
+@keyframes toastSlideIn {
     from {
-        transform: translateX(100%);
+        transform: translateX(100%) scale(0.9);
         opacity: 0;
     }
     to {
-        transform: translateX(0);
+        transform: translateX(0) scale(1);
         opacity: 1;
     }
 }
 
 @keyframes slideOut {
     from {
-        transform: translateX(0);
+        transform: translateX(0) scale(1);
         opacity: 1;
     }
     to {
-        transform: translateX(100%);
+        transform: translateX(100%) scale(0.9);
         opacity: 0;
     }
 }
