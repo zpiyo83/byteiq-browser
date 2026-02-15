@@ -171,35 +171,35 @@
 
     const icons = {
       copy:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/>' +
         '</svg>',
       pause:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"/>' +
         '</svg>',
       resume:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"/>' +
         '</svg>',
       cancel:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>' +
         '</svg>',
       retry:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M17.65,6.35C16.2,4.9,14.21,4,12,4c-4.42,0-7.99,3.58-7.99,8s3.57,8,7.99,8c3.73,0,6.84-2.55,7.73-6h-2.08c-0.82,2.33-3.07,4-5.65,4c-3.31,0-6-2.69-6-6s2.69-6,6-6c1.66,0,3.14,0.69,4.22,1.78L13,11h7V4L17.65,6.35z"/>' +
         '</svg>',
       openFile:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z"/>' +
         '</svg>',
       showInFolder:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4M13,10H15V13H18V15H15V18H13V15H10V13H13V10Z"/>' +
         '</svg>',
       delete:
-        '<svg viewBox="0 0 24 24" width="16" height="16">' +
+        '<svg viewBox="0 0 24 24" width="14" height="14">' +
         '<path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>' +
         '</svg>'
     };

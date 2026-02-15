@@ -43,7 +43,7 @@ const downloadsClearFailedBtn = document.getElementById('downloads-clear-failed-
 const searchEngineSelect = document.getElementById('search-engine-select');
 const startupUrlInput = document.getElementById('startup-url-input');
 const incognitoToggleBtn = document.getElementById('incognito-toggle-btn');
-const darkModeBtn = document.getElementById('dark-mode-btn');
+const darkModeToggle = document.getElementById('dark-mode-toggle');
 const zoomInBtn = document.getElementById('zoom-in-btn');
 const zoomOutBtn = document.getElementById('zoom-out-btn');
 const zoomResetBtn = document.getElementById('zoom-reset-btn');
@@ -343,6 +343,25 @@ settingsBtn.addEventListener('click', () => {
   overlayManager.openOverlay(settingsPanel);
 });
 
+// Settings navigation
+document.querySelectorAll('.settings-nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const section = btn.getAttribute('data-section');
+    if (!section) return;
+
+    // Update nav items
+    document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    // Update sections
+    document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+    const targetSection = document.getElementById(`settings-${section}`);
+    if (targetSection) {
+      targetSection.classList.add('active');
+    }
+  });
+});
+
 if (historySearchInput) {
   historySearchInput.addEventListener('input', () => {
     listPanelManager.showPanel(
@@ -369,13 +388,15 @@ incognitoToggleBtn.addEventListener('click', () => {
   browserManager.toggleIncognito();
 });
 
-darkModeBtn.addEventListener('click', () => {
-  const isDark = document.body.classList.toggle('dark-mode');
+darkModeToggle.addEventListener('change', () => {
+  const isDark = darkModeToggle.checked;
+  document.body.classList.toggle('dark-mode', isDark);
   store.set('settings.darkMode', isDark);
 });
 
 if (store.get('settings.darkMode')) {
   document.body.classList.add('dark-mode');
+  darkModeToggle.checked = true;
 }
 
 zoomInBtn.addEventListener('click', () => {

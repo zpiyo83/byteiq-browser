@@ -1,9 +1,9 @@
 .toolbar {
     background: #ffffff;
-    padding: 4px 8px;
+    padding: 3px 6px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     border-bottom: 1px solid #e0e0e0;
     position: relative;
 }
@@ -29,8 +29,8 @@
 .tabs-container {
     background: #eaebed;
     display: flex;
-    padding: 6px 6px 0 6px;
-    gap: 3px;
+    padding: 4px 4px 0 4px;
+    gap: 2px;
     overflow-x: auto;
     user-select: none;
     align-items: flex-end;
@@ -38,11 +38,11 @@
 
 .tab {
     background: #f1f3f4;
-    padding: 8px 14px;
-    border-radius: 10px 10px 0 0;
-    font-size: 13px;
-    min-width: 130px;
-    max-width: 200px;
+    padding: 6px 10px;
+    border-radius: 8px 8px 0 0;
+    font-size: 12px;
+    min-width: 110px;
+    max-width: 180px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -57,14 +57,14 @@
 .tab-content {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
     flex: 1;
 }
 
 .tab-icon {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 2px;
     opacity: 0;
 }
@@ -74,8 +74,8 @@
 }
 
 .tab-spinner {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border: 2px solid rgba(95, 99, 104, 0.3);
     border-top-color: #5f6368;
     border-radius: 50%;
@@ -88,9 +88,9 @@
 }
 
 .tab.pinned {
-    min-width: 56px;
-    max-width: 56px;
-    padding: 8px 10px;
+    min-width: 44px;
+    max-width: 44px;
+    padding: 6px 8px;
 }
 
 .tab.pinned .tab-title {
@@ -130,14 +130,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-right: 8px;
+    margin-right: 6px;
     flex: 1;
 }
 
 .tab .close-tab {
-    font-size: 14px;
-    width: 20px;
-    height: 20px;
+    font-size: 12px;
+    width: 16px;
+    height: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,14 +157,14 @@
 }
 
 .new-tab-btn {
-    padding: 6px 14px;
+    padding: 4px 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
     color: #5f6368;
-    border-radius: 8px;
+    border-radius: 6px;
     margin-bottom: 2px;
     transition: all 0.2s ease;
 }
@@ -177,7 +177,7 @@
 .toolbar button {
     background: none;
     border: none;
-    padding: 8px;
+    padding: 5px;
     cursor: pointer;
     color: #5f6368;
     border-radius: 50%;
@@ -194,8 +194,8 @@
 
 .toolbar button svg {
     display: block;
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
 }
 
@@ -204,8 +204,8 @@
 }
 
 .url-bar #bookmark-btn {
-    padding: 4px;
-    margin-left: 4px;
+    padding: 2px;
+    margin-left: 2px;
 }
 
 #bookmark-svg.active {
@@ -217,8 +217,8 @@
     display: flex;
     align-items: center;
     background: #f1f3f4;
-    border-radius: 22px;
-    padding: 6px 16px;
+    border-radius: 18px;
+    padding: 4px 12px;
     transition: all 0.2s ease;
 }
 
@@ -231,9 +231,9 @@
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 14px;
+    font-size: 13px;
     outline: none;
-    padding: 6px 0;
+    padding: 4px 0;
     color: #202124;
 }
 
@@ -250,16 +250,16 @@
 
 /* Tab 图标样式 */
 .tab-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     border-radius: 2px;
 }
 
 /* Tab 关闭按钮样式 */
 .close-tab {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -280,8 +280,8 @@ body.dark-mode .close-tab:hover {
 
 /* Tab Spinner 动画 */
 .tab-spinner {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border: 2px solid transparent;
     border-top-color: currentColor;
     border-radius: 50%;

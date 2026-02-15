@@ -36,9 +36,9 @@
 
 /* 图标按钮通用样式 */
 .icon-btn {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
     border: none;
     background: transparent;
     border-radius: 50%;
@@ -59,13 +59,13 @@
     transform: scale(0.95);
 }
 
-/* 统一图标尺寸为24x24px */
+/* 统一图标尺寸为18x18px */
 .icon-btn svg,
 .filter-btn svg,
 .zoom-btn svg,
 .send-btn svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     display: block;
 }
@@ -86,17 +86,17 @@
 
 /* 过滤器按钮样式 */
 .filter-btn {
-    padding: 8px 14px;
+    padding: 5px 10px;
     border: 1px solid #e0e0e0;
     background: #ffffff;
     border-radius: 999px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     color: #333;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
     transition: all 0.15s ease;
 }
 
@@ -116,12 +116,12 @@
 
 /* 缩放按钮样式 */
 .zoom-btn {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
     border: 1px solid #e0e0e0;
     background: #ffffff;
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
     display: flex;
     align-items: center;
