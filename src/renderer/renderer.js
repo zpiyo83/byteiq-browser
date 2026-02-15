@@ -345,6 +345,19 @@ settingsBtn.addEventListener('click', () => {
   if (langSelect) {
     langSelect.value = store.get('settings.language', 'zh-CN');
   }
+  // 获取版本信息
+  ipcRenderer.invoke('get-version-info').then((versions) => {
+    const appVersionEl = document.getElementById('about-app-version');
+    const electronVersionEl = document.getElementById('about-electron-version');
+    const chromiumVersionEl = document.getElementById('about-chromium-version');
+    const nodeVersionEl = document.getElementById('about-node-version');
+    const v8VersionEl = document.getElementById('about-v8-version');
+    if (appVersionEl) appVersionEl.textContent = versions.appVersion;
+    if (electronVersionEl) electronVersionEl.textContent = versions.electronVersion;
+    if (chromiumVersionEl) chromiumVersionEl.textContent = versions.chromiumVersion;
+    if (nodeVersionEl) nodeVersionEl.textContent = versions.nodeVersion;
+    if (v8VersionEl) v8VersionEl.textContent = versions.v8Version;
+  });
   overlayManager.openOverlay(settingsPanel);
 });
 

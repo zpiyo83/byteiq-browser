@@ -243,6 +243,10 @@
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z"/></svg>
                     <span>数据</span>
                 </button>
+                <button class="settings-nav-item" data-section="about">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
+                    <span>关于</span>
+                </button>
             </div>
             <div class="settings-content">
                 <!-- 外观设置 -->
@@ -348,6 +352,39 @@
                             <div class="setting-desc">清除历史记录、书签等所有数据</div>
                         </div>
                         <button id="clear-data-btn" class="setting-action-btn danger">清除数据</button>
+                    </div>
+                </div>
+                <!-- 关于 -->
+                <div id="settings-about" class="settings-section">
+                    <h3>关于</h3>
+                    <div class="about-logo">
+                        <div class="about-logo-text">Byteiq <span>Browser</span></div>
+                    </div>
+                    <div class="about-info-card">
+                        <div class="about-info-row">
+                            <span class="about-info-label">软件版本</span>
+                            <span class="about-info-value" id="about-app-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">Electron</span>
+                            <span class="about-info-value" id="about-electron-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">Chromium</span>
+                            <span class="about-info-value" id="about-chromium-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">Node.js</span>
+                            <span class="about-info-value" id="about-node-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">V8</span>
+                            <span class="about-info-value" id="about-v8-version">--</span>
+                        </div>
+                    </div>
+                    <div class="about-footer">
+                        <p>社区驱动的 AI 浏览器</p>
+                        <p class="about-copyright">© 2024 Byteiq Community</p>
                     </div>
                 </div>
             </div>
