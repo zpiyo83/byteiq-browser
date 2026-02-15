@@ -10,6 +10,7 @@ const { createListPanelManager } = require('./modules/ui/list-panel-manager');
 const { createOverlayManager } = require('./modules/ui/overlay-manager');
 const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
+const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
 
 // 尽早应用深色模式，避免闪烁
@@ -80,6 +81,9 @@ let isIncognito = false;
 let browserManager = null;
 
 initI18n();
+
+// 初始化模态框管理器
+modalManager.init();
 
 const overlayManager = createOverlayManager({
   documentRef: document,
@@ -158,7 +162,8 @@ browserManager = createBrowserManager({
   updateBookmarkIcon,
   updateTabUrl: tabManager.updateTabUrl,
   updateZoomUI,
-  urlInput
+  urlInput,
+  modalManager
 });
 
 const downloadsManager = createDownloadsManager({
@@ -179,7 +184,8 @@ const downloadsManager = createDownloadsManager({
   openOverlay: overlayManager.openOverlay,
   showToast,
   store,
-  t
+  t,
+  modalManager
 });
 
 const contextMenuManager = createContextMenuManager({
@@ -460,11 +466,15 @@ startupUrlInput.addEventListener('change', () => {
   store.set('settings.startupUrl', startupUrlInput.value);
 });
 
-clearDataBtn.addEventListener('click', () => {
-  if (confirm(t('panels.settings.clearDataConfirm'))) {
+clearDataBtn.addEventListener('click', async () => {
+  const confirmed = await modalManager.confirmDelete(
+    '确定要清除所有浏览数据吗？此操作不可撤销。',
+    '清除数据'
+  );
+  if (confirmed) {
     store.set('history', []);
     store.set('bookmarks', []);
-    alert(t('panels.settings.clearDataDone'));
+    await modalManager.success('数据已清除', '完成');
   }
 });
 
@@ -688,3 +698,36 @@ tabsBar.addEventListener('dblclick', (e) => {
 });
 
 tabManager.restoreSession();
+
+// 添加快捷键提示到工具栏按钮
+function addShortcutHints() {
+  const shortcuts = {
+    'back-btn': 'Alt+←',
+    'forward-btn': 'Alt+→',
+    'refresh-btn': 'Ctrl+R / F5',
+    'home-btn': 'Alt+Home',
+    'url-input': 'Ctrl+L',
+    'history-btn': 'Ctrl+H',
+    'bookmarks-list-btn': 'Ctrl+B',
+    'downloads-btn': 'Ctrl+J',
+    'new-tab-btn': 'Ctrl+T'
+  };
+
+  Object.entries(shortcuts).forEach(([id, shortcut]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const currentTitle = el.getAttribute('title') || '';
+      if (!currentTitle.includes(shortcut)) {
+        el.setAttribute('title', currentTitle ? `${currentTitle} (${shortcut})` : shortcut);
+      }
+    }
+  });
+
+  // 为新建标签页按钮添加提示
+  const newTabBtnEl = document.getElementById('new-tab-btn');
+  if (newTabBtnEl) {
+    newTabBtnEl.setAttribute('title', '新建标签页 (Ctrl+T)');
+  }
+}
+
+addShortcutHints();
