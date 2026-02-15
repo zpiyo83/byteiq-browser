@@ -340,6 +340,15 @@
 
       console.error('Failed to load:', e);
 
+      if (e.validatedURL && e.validatedURL.startsWith('chrome-extension://')) {
+        ipcRenderer.send('extensions-log', {
+          sourceId: e.validatedURL,
+          level: 'error',
+          message: `did-fail-load(${e.errorCode}) ${e.errorDescription || ''}`,
+          detail: `url=${e.validatedURL}`
+        });
+      }
+
       // 根据错误代码提供友好的错误信息
       const errorMessages = {
         '-1': '无法连接到服务器',
@@ -385,6 +394,19 @@
 
     webview.addEventListener('new-window', (e) => {
       e.preventDefault();
+    });
+
+    webview.addEventListener('console-message', (e) => {
+      if (!e || !e.sourceId || !String(e.sourceId).startsWith('chrome-extension://')) {
+        return;
+      }
+
+      ipcRenderer.send('extensions-log', {
+        sourceId: e.sourceId,
+        level: e.level === 2 ? 'error' : e.level === 1 ? 'warn' : 'log',
+        message: e.message,
+        detail: `line=${e.line || 0}`
+      });
     });
   }
 
