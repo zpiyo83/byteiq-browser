@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Byteiq Browser",
-    "version": "Version 0.1.0",
+    "version": "Version 0.1.2",
     "communityDriven": "Community-driven AI Browser",
     "basedOn": "Based on Chromium | Electron"
   },
@@ -60,7 +60,18 @@
       "clearDataConfirm": "Are you sure you want to clear all history and bookmarks?",
       "clearDataDone": "Data cleared",
       "incognitoOn": "Incognito mode enabled (new tabs only)",
-      "incognitoOff": "Incognito mode disabled"
+      "incognitoOff": "Incognito mode disabled",
+      "ai": {
+        "endpoint": "API Endpoint URL",
+        "endpointDesc": "Configure the base URL for AI API",
+        "apiKey": "API Key",
+        "apiKeyDesc": "Your API access key, will be stored securely",
+        "requestType": "Request Type",
+        "requestTypeDesc": "Select the API request format type",
+        "openaiChat": "OpenAI Chat Compatible",
+        "openaiResponse": "OpenAI Response",
+        "anthropic": "Anthropic"
+      }
     },
     "downloads": {
       "title": "Downloads",
@@ -115,7 +126,7 @@
     "searchPlaceholder": "Search or enter URL...",
     "title": "Community-driven AI Browser",
     "subtitle": "Based on Chromium | Electron",
-    "version": "Version 0.1.0 | Open Source Community Driven"
+    "version": "Version 0.1.2 | Open Source Community Driven"
   },
   "status": {
     "loading": "Loading...",
