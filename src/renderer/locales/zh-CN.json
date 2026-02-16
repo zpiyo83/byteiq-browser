@@ -102,7 +102,10 @@
         "aiOpenaiResponse": "OpenAI Response",
         "aiAnthropic": "Anthropic",
         "aiModel": "模型ID",
-        "aiModelDesc": "指定要使用的AI模型，如 gpt-4、claude-3-sonnet 等"
+        "aiModelDesc": "指定要使用的AI模型，如 gpt-4、claude-3-sonnet 等",
+        "advancedSettings": "高级设置",
+        "streaming": "流式翻译",
+        "streamingDesc": "实时显示翻译结果，无需等待全部完成"
       }
     },
     "downloads": {

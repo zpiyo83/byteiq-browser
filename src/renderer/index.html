@@ -21,6 +21,7 @@
                 <path fill="currentColor" d="M4,5H11V7H7.74L9.93,9.19C10.5,8.41 10.96,7.57 11.31,6.69L13.16,7.46C12.71,8.58 12.12,9.64 11.39,10.61L12.75,11.97L11.34,13.38L10,12.04L8.66,13.38L7.25,11.97L8.61,10.61C7.52,9.16 6.68,7.57 6.08,5.86L7.97,5.2C8.42,6.49 9.05,7.71 9.86,8.82L11,7.68V5H4V3M15,11L12,19H14.25L14.88,17H19.12L19.75,19H22L19,11H15M15.5,15L17,10.5L18.5,15H15.5Z"/>
             </svg>
             <span class="translate-check" aria-hidden="true">✓</span>
+            <span class="translate-loading" aria-hidden="true"></span>
         </button>
         <button id="back-btn" data-i18n="toolbar.back"
             data-i18n-title="title.back" role="button" aria-label="后退">
@@ -400,6 +401,27 @@
                                 <div class="setting-desc" data-i18n="panels.settings.translation.aiModelDesc">指定要使用的AI模型</div>
                             </div>
                             <input type="text" id="translate-ai-model-input" placeholder="gpt-3.5-turbo">
+                        </div>
+                        <!-- 高级设置 -->
+                        <div class="advanced-settings">
+                            <div class="advanced-settings-header" id="translation-advanced-toggle">
+                                <span data-i18n="panels.settings.translation.advancedSettings">高级设置</span>
+                                <svg class="advanced-settings-arrow" viewBox="0 0 24 24" width="16" height="16">
+                                    <path fill="currentColor" d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/>
+                                </svg>
+                            </div>
+                            <div class="advanced-settings-content" id="translation-advanced-content">
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <label data-i18n="panels.settings.translation.streaming">流式翻译</label>
+                                        <div class="setting-desc" data-i18n="panels.settings.translation.streamingDesc">实时显示翻译结果，无需等待全部完成</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="translate-streaming-toggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="setting-item">
