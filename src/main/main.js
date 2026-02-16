@@ -1,5 +1,6 @@
 const { app, BrowserWindow, BrowserView, Menu, dialog, shell, ipcMain, session } = require('electron');
 const fs = require('fs');
+const https = require('https');
 const path = require('path');
 const Store = require('electron-store');
 
@@ -522,6 +523,309 @@ function createMenu() {
 }
 
 // 获取版本信息
+function requestText(urlString, options = {}) {
+  const {
+    method = 'GET',
+    headers = {},
+    body = ''
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    let parsed;
+    try {
+      parsed = new URL(urlString);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+
+    const requestOptions = {
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port || undefined,
+      path: `${parsed.pathname}${parsed.search}`,
+      method,
+      headers,
+      rejectUnauthorized: false // 允许自签名证书
+    };
+
+    const request = https.request(requestOptions, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        let responseText;
+        const buffer = Buffer.concat(chunks);
+
+        // 检查是否是 gzip 压缩
+        const contentEncoding = response.headers['content-encoding'];
+        if (contentEncoding === 'gzip' || contentEncoding === 'deflate') {
+          try {
+            const zlib = require('zlib');
+            responseText = contentEncoding === 'gzip'
+              ? zlib.gunzipSync(buffer).toString('utf8')
+              : zlib.inflateSync(buffer).toString('utf8');
+          } catch (decompressError) {
+            console.error('[Translation] Decompress error:', decompressError.message);
+            responseText = buffer.toString('utf8');
+          }
+        } else {
+          responseText = buffer.toString('utf8');
+        }
+
+        let json = null;
+        if (responseText) {
+          try {
+            json = JSON.parse(responseText);
+          } catch (error) {
+            json = null;
+          }
+        }
+
+        resolve({
+          statusCode: response.statusCode || 500,
+          headers: response.headers,
+          bodyText: responseText,
+          json,
+          finalUrl: urlString
+        });
+      });
+    });
+
+    request.on('error', (error) => {
+      console.error('[Translation] Request error:', error.message);
+      reject(error);
+    });
+
+    if (body) {
+      request.write(body);
+    }
+    request.end();
+  });
+}
+
+function mergeCookies(cookieJar, setCookieHeaders) {
+  const headers = Array.isArray(setCookieHeaders)
+    ? setCookieHeaders
+    : (setCookieHeaders ? [setCookieHeaders] : []);
+
+  headers.forEach((item) => {
+    const pair = String(item).split(';')[0];
+    const eqIndex = pair.indexOf('=');
+    if (eqIndex <= 0) return;
+    const key = pair.slice(0, eqIndex).trim();
+    const value = pair.slice(eqIndex + 1).trim();
+    if (!key) return;
+    cookieJar[key] = value;
+  });
+}
+
+function serializeCookies(cookieJar) {
+  return Object.entries(cookieJar)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('; ');
+}
+
+function resolveRedirectUrl(currentUrl, location) {
+  if (!location) return '';
+  if (/^https?:\/\//i.test(location)) return location;
+  return new URL(location, currentUrl).toString();
+}
+
+const BING_TRANSLATOR_URL = 'https://www.bing.com/translator';
+const BING_USER_AGENT = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+  'AppleWebKit/537.36 (KHTML, like Gecko)',
+  'Chrome/122.0.0.0',
+  'Safari/537.36'
+].join(' ');
+
+let cachedBingSession = null;
+
+function parseBingSession(html, pageUrl, cookieJar) {
+  const igMatch = html.match(/IG:"([^"]+)"/);
+  const iidMatch = html.match(/data-iid="([^"]+)"/);
+  const abuseMatch = html.match(
+    /params_AbusePreventionHelper\s*=\s*\[([^\]]+)\]/
+  );
+
+  if (!igMatch || !iidMatch || !abuseMatch) {
+    return null;
+  }
+
+  const parts = abuseMatch[1].split(',');
+  const key = parts[0] ? parts[0].trim() : '';
+  const token = parts[1]
+    ? parts[1].trim().replace(/^"|"$/g, '')
+    : '';
+  const intervalMs = Number.parseInt(parts[2] || '', 10) || 300000;
+
+  if (!key || !token) {
+    return null;
+  }
+
+  return {
+    origin: new URL(pageUrl).origin,
+    referer: pageUrl,
+    ig: igMatch[1],
+    iid: iidMatch[1],
+    key,
+    token,
+    cookieJar: { ...cookieJar },
+    requestSeq: 1,
+    expiresAt: Date.now() + Math.max(60000, intervalMs - 30000)
+  };
+}
+
+async function getBingSession(forceRefresh = false) {
+  if (
+    !forceRefresh
+    && cachedBingSession
+    && cachedBingSession.expiresAt > Date.now()
+  ) {
+    console.log('[Translation] Using cached Bing session');
+    return cachedBingSession;
+  }
+
+  console.log('[Translation] Fetching new Bing session...');
+  let currentUrl = BING_TRANSLATOR_URL;
+  const cookieJar = {};
+  let pageResult = null;
+
+  for (let i = 0; i < 6; i += 1) {
+    console.log('[Translation] Requesting:', currentUrl);
+    const result = await requestText(currentUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': BING_USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml'
+      }
+    });
+
+    console.log('[Translation] Response status:', result.statusCode);
+
+    mergeCookies(cookieJar, result.headers['set-cookie']);
+
+    if (
+      [301, 302, 307, 308].includes(result.statusCode)
+      && result.headers.location
+    ) {
+      currentUrl = resolveRedirectUrl(currentUrl, result.headers.location);
+      console.log('[Translation] Redirecting to:', currentUrl);
+      continue;
+    }
+
+    pageResult = result;
+    break;
+  }
+
+  if (
+    !pageResult
+    || pageResult.statusCode < 200
+    || pageResult.statusCode >= 300
+  ) {
+    throw new Error('Failed to load Bing translator page');
+  }
+
+  const session = parseBingSession(pageResult.bodyText, currentUrl, cookieJar);
+  if (!session) {
+    throw new Error('Failed to parse Bing translation token');
+  }
+
+  cachedBingSession = session;
+  return cachedBingSession;
+}
+
+function extractBingTranslation(bodyText) {
+  let payload = null;
+  try {
+    payload = JSON.parse(bodyText);
+  } catch (error) {
+    console.error('[Translation] Failed to parse Bing response:', error.message);
+    console.error('[Translation] Response text (first 200 chars):', bodyText.substring(0, 200));
+    return '';
+  }
+
+  if (!Array.isArray(payload) || payload.length === 0) {
+    console.error('[Translation] Invalid payload structure');
+    return '';
+  }
+
+  const firstRow = payload[0];
+  if (!firstRow || !Array.isArray(firstRow.translations)) {
+    console.error('[Translation] No translations in response');
+    return '';
+  }
+
+  const firstTranslation = firstRow.translations[0];
+  const result = firstTranslation && firstTranslation.text
+    ? firstTranslation.text
+    : '';
+
+  return result;
+}
+
+async function translateTextWithBing(text, targetLanguage, retry = true) {
+  console.log('[Translation] Translating text to', targetLanguage, ':', text.substring(0, 50) + '...');
+
+  let session;
+  try {
+    session = await getBingSession(!retry);
+  } catch (sessionError) {
+    console.error('[Translation] Failed to get Bing session:', sessionError);
+    throw sessionError;
+  }
+
+  const query = new URLSearchParams({
+    isVertical: '1',
+    IG: session.ig,
+    IID: `${session.iid}.${session.requestSeq++}`
+  });
+  const url = `${session.origin}/ttranslatev3?${query.toString()}`;
+
+  const body = new URLSearchParams({
+    fromLang: 'auto-detect',
+    text,
+    to: targetLanguage,
+    token: session.token,
+    key: session.key
+  }).toString();
+
+  const result = await requestText(url, {
+    method: 'POST',
+    body,
+    headers: {
+      'User-Agent': BING_USER_AGENT,
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'Content-Length': Buffer.byteLength(body),
+      'Referer': session.referer,
+      'Origin': session.origin,
+      'Accept': '*/*',
+      'Cookie': serializeCookies(session.cookieJar)
+    }
+  });
+
+  console.log('[Translation] API response status:', result.statusCode);
+
+  if (result.statusCode === 429 && retry) {
+    console.log('[Translation] Rate limited, retrying...');
+    cachedBingSession = null;
+    return translateTextWithBing(text, targetLanguage, false);
+  }
+
+  if (result.statusCode < 200 || result.statusCode >= 300) {
+    throw new Error(`Bing translate request failed (${result.statusCode})`);
+  }
+
+  const translated = extractBingTranslation(result.bodyText);
+  if (!translated) {
+    console.error('[Translation] Failed to extract translation from:', result.bodyText.substring(0, 200));
+    throw new Error('Bing translation result is empty');
+  }
+
+  console.log('[Translation] Translated:', translated.substring(0, 50) + '...');
+  return translated;
+}
+
 ipcMain.handle('get-version-info', () => {
   return {
     appVersion: app.getVersion(),
@@ -532,7 +836,320 @@ ipcMain.handle('get-version-info', () => {
   };
 });
 
-// 扩展管理
+// 翻译处理
+ipcMain.handle('translate-text-batch', async (event, payload = {}) => {
+  const {
+    engine,
+    texts,
+    targetLanguage
+  } = payload || {};
+
+  console.log('[Translation] translate-text-batch called');
+  console.log('[Translation] Engine:', engine);
+  console.log('[Translation] Target language:', targetLanguage);
+  console.log('[Translation] Texts count:', texts ? texts.length : 0);
+
+  if (engine !== 'bing') {
+    console.log('[Translation] Rejected: wrong engine');
+    return { ok: false, message: 'Only Bing translator is supported' };
+  }
+
+  if (!Array.isArray(texts) || texts.length === 0) {
+    console.log('[Translation] No texts to translate');
+    return { ok: true, translations: [] };
+  }
+
+  const safeTexts = texts.map((item) => String(item || '').trim());
+  if (safeTexts.some((item) => !item)) {
+    console.log('[Translation] Rejected: empty text found');
+    return { ok: false, message: 'Source text cannot be empty' };
+  }
+
+  const to = String(targetLanguage || '').trim();
+  if (!to) {
+    console.log('[Translation] Rejected: missing target language');
+    return { ok: false, message: 'Missing target language' };
+  }
+
+  try {
+    console.log('[Translation] Starting translation...');
+    const translations = [];
+    for (let i = 0; i < safeTexts.length; i++) {
+      console.log(`[Translation] Processing text ${i + 1}/${safeTexts.length}`);
+      const translated = await translateTextWithBing(safeTexts[i], to);
+      translations.push(translated);
+    }
+
+    if (translations.length !== safeTexts.length) {
+      console.log('[Translation] Error: count mismatch');
+      return { ok: false, message: 'Translation response count mismatch' };
+    }
+
+    console.log('[Translation] Translation completed successfully');
+    return {
+      ok: true,
+      translations
+    };
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    console.error('[Translation] Error:', message);
+    return { ok: false, message };
+  }
+});
+
+// AI翻译处理
+ipcMain.handle('translate-text-ai', async (event, payload = {}) => {
+  const {
+    texts,
+    targetLanguage,
+    endpoint,
+    apiKey,
+    requestType,
+    model
+  } = payload || {};
+
+  console.log('[AI Translation] translate-text-ai called');
+  console.log('[AI Translation] Target language:', targetLanguage);
+  console.log('[AI Translation] Texts count:', texts ? texts.length : 0);
+  console.log('[AI Translation] Endpoint:', endpoint);
+  console.log('[AI Translation] Request type:', requestType);
+  console.log('[AI Translation] Model:', model || '(default)');
+
+  if (!Array.isArray(texts) || texts.length === 0) {
+    console.log('[AI Translation] No texts to translate');
+    return { ok: true, translations: [] };
+  }
+
+  if (!endpoint || !apiKey) {
+    console.log('[AI Translation] Missing endpoint or API key');
+    return { ok: false, message: '缺少AI翻译配置：API端点或密钥' };
+  }
+
+  const targetLangNames = {
+    'zh-Hans': '简体中文',
+    'en': 'English',
+    'ja': '日本語',
+    'ko': '한국어',
+    'fr': 'Français',
+    'de': 'Deutsch',
+    'es': 'Español',
+    'ru': 'Русский'
+  };
+  const targetLangName = targetLangNames[targetLanguage] || targetLanguage;
+
+  try {
+    console.log('[AI Translation] Building request...');
+    const translations = await callAITranslation({
+      texts,
+      targetLanguage: targetLangName,
+      endpoint,
+      apiKey,
+      requestType: requestType || 'openai-chat',
+      model
+    });
+
+    if (translations.length !== texts.length) {
+      console.log('[AI Translation] Error: count mismatch');
+      return { ok: false, message: 'AI翻译结果数量不匹配' };
+    }
+
+    console.log('[AI Translation] Translation completed successfully');
+    return {
+      ok: true,
+      translations
+    };
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    console.error('[AI Translation] Error:', message);
+    return { ok: false, message };
+  }
+});
+
+async function callAITranslation(options) {
+  const { texts, targetLanguage, endpoint, apiKey, requestType, model } = options;
+
+  // 构建翻译请求
+  let prompt = `请你帮我把以下文字翻译为${targetLanguage}，冒号后跟翻译后的内容，保持"翻译块:"的格式不变：\n`;
+  texts.forEach((text, index) => {
+    prompt += `翻译块: ${text}\n`;
+  });
+
+  console.log('[AI Translation] Prompt length:', prompt.length);
+
+  let requestBody;
+  let url = endpoint;
+
+  // 根据请求类型设置默认模型
+  const defaultModels = {
+    'openai-chat': 'gpt-3.5-turbo',
+    'openai-response': 'gpt-3.5-turbo-instruct',
+    'anthropic': 'claude-3-haiku-20240307'
+  };
+  const actualModel = model || defaultModels[requestType] || defaultModels['openai-chat'];
+  console.log('[AI Translation] Using model:', actualModel);
+
+  if (requestType === 'openai-chat') {
+    // OpenAI Chat 兼容格式
+    if (endpoint.endsWith('/chat/completions')) {
+      url = endpoint;
+    } else if (endpoint.endsWith('/v1') || endpoint.endsWith('/v1/')) {
+      url = endpoint.replace(/\/$/, '') + '/chat/completions';
+    } else {
+      url = endpoint + (endpoint.endsWith('/') ? 'chat/completions' : '/chat/completions');
+    }
+    requestBody = {
+      model: actualModel,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.3
+    };
+  } else if (requestType === 'anthropic') {
+    // Anthropic 格式
+    if (endpoint.endsWith('/messages')) {
+      url = endpoint;
+    } else {
+      url = endpoint + (endpoint.endsWith('/') ? 'messages' : '/messages');
+    }
+    requestBody = {
+      model: actualModel,
+      max_tokens: 4096,
+      messages: [
+        { role: 'user', content: prompt }
+      ]
+    };
+  } else {
+    // OpenAI Response 格式（简单文本补全）
+    if (endpoint.endsWith('/completions')) {
+      url = endpoint;
+    } else {
+      url = endpoint + (endpoint.endsWith('/') ? 'completions' : '/completions');
+    }
+    requestBody = {
+      model: actualModel,
+      prompt: prompt,
+      max_tokens: 4096,
+      temperature: 0.3
+    };
+  }
+
+  console.log('[AI Translation] Calling API:', url);
+
+  const bodyString = JSON.stringify(requestBody);
+  const parsedUrl = new URL(url);
+
+  const result = await new Promise((resolve, reject) => {
+    const requestOptions = {
+      protocol: parsedUrl.protocol,
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || undefined,
+      path: `${parsedUrl.pathname}${parsedUrl.search}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyString),
+        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': requestType === 'anthropic' ? apiKey : undefined
+      },
+      rejectUnauthorized: false
+    };
+
+    // 移除undefined的header
+    Object.keys(requestOptions.headers).forEach(key => {
+      if (requestOptions.headers[key] === undefined) {
+        delete requestOptions.headers[key];
+      }
+    });
+
+    const request = https.request(requestOptions, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        const responseText = Buffer.concat(chunks).toString('utf8');
+        resolve({
+          statusCode: response.statusCode || 500,
+          bodyText: responseText
+        });
+      });
+    });
+
+    request.on('error', (error) => {
+      console.error('[AI Translation] Request error:', error.message);
+      reject(error);
+    });
+
+    request.write(bodyString);
+    request.end();
+  });
+
+  console.log('[AI Translation] API response status:', result.statusCode);
+
+  if (result.statusCode < 200 || result.statusCode >= 300) {
+    throw new Error(`AI API请求失败 (${result.statusCode}): ${result.bodyText.substring(0, 200)}`);
+  }
+
+  // 解析响应
+  let responseContent = '';
+  try {
+    const jsonResponse = JSON.parse(result.bodyText);
+
+    if (requestType === 'anthropic') {
+      responseContent = jsonResponse.content?.[0]?.text || '';
+    } else if (requestType === 'openai-response') {
+      responseContent = jsonResponse.choices?.[0]?.text || '';
+    } else {
+      // OpenAI Chat 格式
+      responseContent = jsonResponse.choices?.[0]?.message?.content || '';
+    }
+  } catch (parseError) {
+    console.error('[AI Translation] Failed to parse response:', parseError);
+    throw new Error('AI API响应解析失败');
+  }
+
+  console.log('[AI Translation] Response content length:', responseContent.length);
+  console.log('[AI Translation] Response preview:', responseContent.substring(0, 300));
+
+  // 解析翻译结果
+  const translations = [];
+  const lines = responseContent.split('\n');
+
+  for (const line of lines) {
+    const match = line.match(/^翻译块:\s*(.+)$/);
+    if (match) {
+      translations.push(match[1].trim());
+    }
+  }
+
+  console.log('[AI Translation] Parsed translations:', translations.length);
+
+  // 如果解析失败，尝试按行匹配
+  if (translations.length !== texts.length) {
+    console.log('[AI Translation] Trying alternative parsing...');
+    translations.length = 0;
+
+    // 直接按原始文本顺序分配
+    const allMatches = responseContent.match(/翻译块:\s*.+/g);
+    if (allMatches && allMatches.length >= texts.length) {
+      for (let i = 0; i < texts.length; i++) {
+        const match = allMatches[i]?.match(/^翻译块:\s*(.+)$/);
+        if (match) {
+          translations.push(match[1].trim());
+        }
+      }
+    }
+  }
+
+  if (translations.length !== texts.length) {
+    console.error('[AI Translation] Count mismatch. Expected:', texts.length, 'Got:', translations.length);
+    // 如果数量不匹配，用原文填充
+    while (translations.length < texts.length) {
+      translations.push(texts[translations.length]);
+    }
+  }
+
+  return translations;
+}
+
 ipcMain.handle('extensions-list', () => {
   const list = getStoredExtensions();
   const enriched = list.map((item) => {
