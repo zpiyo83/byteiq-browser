@@ -1,6 +1,13 @@
+// 单个文本块的最大长度
 const MAX_TEXT_LENGTH = 4000;
-const MAX_ITEMS_PER_REQUEST = 40;
-const MAX_CHARS_PER_REQUEST = 30000;
+
+// Bing翻译的限制（较严格）
+const BING_MAX_ITEMS_PER_REQUEST = 40;
+const BING_MAX_CHARS_PER_REQUEST = 30000;
+
+// AI翻译的限制（较宽松，大多数AI模型支持较大的context）
+const AI_MAX_ITEMS_PER_REQUEST = 500;
+const AI_MAX_CHARS_PER_REQUEST = 200000;
 
 const COLLECT_TEXT_SCRIPT = `(() => {
   const root = document.body || document.documentElement;
@@ -128,7 +135,6 @@ function buildApplyScript(payload) {
   const payloadJson = JSON.stringify(payload);
 
   return `(() => {
-    console.log('[Translation Apply] Starting apply script');
     const payload = ${payloadJson};
     const translations = Array.isArray(payload.translations)
       ? payload.translations
@@ -137,12 +143,20 @@ function buildApplyScript(payload) {
       ? 'bilingual'
       : 'replace';
 
-    console.log('[Translation Apply] Mode:', mode, 'Translations:', translations.length);
-
     const nodes = window.__byteiqTranslationNodes || [];
     const textIndexes = window.__byteiqTranslationTextIndexes || [];
 
-    console.log('[Translation Apply] Nodes:', nodes.length, 'TextIndexes:', textIndexes.length);
+    const wrapperByIndex = new Map();
+    if (mode === 'bilingual') {
+      document
+        .querySelectorAll('[data-byteiq-translation-wrapper="1"][data-byteiq-translation-index]')
+        .forEach((wrapper) => {
+          const idx = Number(wrapper.getAttribute('data-byteiq-translation-index'));
+          if (!Number.isNaN(idx)) {
+            wrapperByIndex.set(idx, wrapper);
+          }
+        });
+    }
 
     const ensureStyle = () => {
       if (document.getElementById('__byteiq-translation-style')) {
@@ -218,8 +232,129 @@ function buildApplyScript(payload) {
       appliedCount++;
     }
 
-    console.log('[Translation Apply] Applied', appliedCount, 'translations');
     return { ok: true, mode, count: nodes.length, applied: appliedCount };
+  })();`;
+}
+
+// 流式应用翻译脚本 - 用于增量更新
+function buildStreamingApplyScript(payload) {
+  const payloadJson = JSON.stringify(payload);
+
+  return `(() => {
+    const payload = ${payloadJson};
+    const translations = Array.isArray(payload.translations)
+      ? payload.translations
+      : [];
+    const mode = payload.displayMode === 'bilingual'
+      ? 'bilingual'
+      : 'replace';
+    const startIndex = payload.startIndex || 0;
+
+    const nodes = window.__byteiqTranslationNodes || [];
+    const textIndexes = window.__byteiqTranslationTextIndexes || [];
+
+    const ensureStyle = () => {
+      if (document.getElementById('__byteiq-translation-style')) {
+        return;
+      }
+
+      const style = document.createElement('style');
+      style.id = '__byteiq-translation-style';
+      style.textContent = [
+        '[data-byteiq-translation-wrapper="1"]{',
+        'display:inline-block;',
+        'vertical-align:baseline;',
+        'line-height:1.4;',
+        '}',
+        '[data-byteiq-source-line="1"]{',
+        'display:block;',
+        'opacity:.82;',
+        '}',
+        '[data-byteiq-target-line="1"]{',
+        'display:block;',
+        'font-weight:600;',
+        'margin-top:2px;',
+        '}',
+        '[data-byteiq-translating="1"]{',
+        'background:linear-gradient(90deg,transparent 50%,rgba(66,133,244,0.15) 50%);',
+        'background-size:200% 100%;',
+        'animation:byteiq-translating 1.5s linear infinite;',
+        '}',
+        '@keyframes byteiq-translating{',
+        '0%{background-position:200% 0}',
+        '100%{background-position:0 0}',
+        '}'
+      ].join('');
+      (document.head || document.documentElement).appendChild(style);
+    };
+
+    ensureStyle();
+
+    let appliedCount = 0;
+    for (let i = 0; i < nodes.length; i += 1) {
+      const node = nodes[i];
+      const index = textIndexes[i];
+      if (!node || typeof index !== 'number') {
+        continue;
+      }
+
+      // 只处理新的翻译
+      if (index < startIndex) {
+        continue;
+      }
+
+      const translatedText = translations[index];
+      if (!translatedText) {
+        continue;
+      }
+
+      const sourceText = typeof node.__byteiqOriginalText === 'string'
+        ? node.__byteiqOriginalText
+        : (node.nodeValue || '');
+
+      if (mode === 'replace') {
+        if (typeof node.__byteiqOriginalText !== 'string') {
+          node.__byteiqOriginalText = sourceText;
+        }
+        node.nodeValue = translatedText;
+        appliedCount++;
+        continue;
+      }
+
+      // 双语模式
+      const existingWrapper = wrapperByIndex.get(index);
+      if (existingWrapper) {
+        const targetLine = existingWrapper.querySelector(
+          '[data-byteiq-target-line="1"]'
+        );
+        if (targetLine) {
+          targetLine.textContent = translatedText;
+          appliedCount++;
+        }
+        continue;
+      }
+
+      const wrapper = document.createElement('span');
+      wrapper.setAttribute('data-byteiq-translation-wrapper', '1');
+      wrapper.setAttribute('data-byteiq-source', sourceText);
+      wrapper.setAttribute('data-byteiq-translation-index', String(index));
+
+      const sourceLine = document.createElement('span');
+      sourceLine.setAttribute('data-byteiq-source-line', '1');
+      sourceLine.textContent = sourceText;
+
+      const targetLine = document.createElement('span');
+      targetLine.setAttribute('data-byteiq-target-line', '1');
+      targetLine.textContent = translatedText;
+
+      wrapper.appendChild(sourceLine);
+      wrapper.appendChild(targetLine);
+      node.replaceWith(wrapper);
+      wrapperByIndex.set(index, wrapper);
+      appliedCount++;
+    }
+
+    return { ok: true, applied: appliedCount };
   })();`;
 }
 
@@ -228,7 +363,8 @@ function createTranslationManager(options) {
     getActiveWebview,
     ipcRenderer,
     showToast,
-    store
+    store,
+    onTranslationStatusChange
   } = options;
 
   function getSettings() {
@@ -243,7 +379,8 @@ function createTranslationManager(options) {
       aiEndpoint: store.get('settings.translation.aiEndpoint', ''),
       aiApiKey: store.get('settings.translation.aiApiKey', ''),
       aiRequestType: store.get('settings.translation.aiRequestType', 'openai-chat'),
-      aiModel: store.get('settings.translation.aiModel', '')
+      aiModel: store.get('settings.translation.aiModel', ''),
+      streaming: store.get('settings.translation.streaming', true)
     };
   }
 
@@ -258,7 +395,11 @@ function createTranslationManager(options) {
     return typeof url === 'string' && /^https?:\/\//i.test(url);
   }
 
-  function chunkTexts(texts) {
+  function chunkTexts(texts, engine = 'bing') {
+    // 根据翻译引擎选择不同的限制
+    const maxItems = engine === 'ai' ? AI_MAX_ITEMS_PER_REQUEST : BING_MAX_ITEMS_PER_REQUEST;
+    const maxChars = engine === 'ai' ? AI_MAX_CHARS_PER_REQUEST : BING_MAX_CHARS_PER_REQUEST;
+
     const chunks = [];
     let current = [];
     let currentChars = 0;
@@ -268,8 +409,8 @@ function createTranslationManager(options) {
       if (!item) return;
 
       const nextChars = currentChars + item.length;
-      const shouldSplit = current.length >= MAX_ITEMS_PER_REQUEST
-        || nextChars > MAX_CHARS_PER_REQUEST;
+      const shouldSplit = current.length >= maxItems
+        || nextChars > maxChars;
 
       if (shouldSplit && current.length > 0) {
         chunks.push(current);
@@ -288,25 +429,42 @@ function createTranslationManager(options) {
     return chunks;
   }
 
-  async function translateTexts(settings, texts) {
-    const chunks = chunkTexts(texts);
+  async function translateTexts(settings, texts, onStreamUpdate) {
+    const chunks = chunkTexts(texts, settings.engine);
     const allTranslations = [];
 
     for (const chunk of chunks) {
-      console.log('[Translation] Translating chunk of', chunk.length, 'texts');
-
       let result;
       try {
         if (settings.engine === 'ai') {
           // AI翻译
-          result = await ipcRenderer.invoke('translate-text-ai', {
-            texts: chunk,
-            targetLanguage: settings.targetLanguage,
-            endpoint: settings.aiEndpoint,
-            apiKey: settings.aiApiKey,
-            requestType: settings.aiRequestType,
-            model: settings.aiModel
-          });
+          // 设置流式更新监听器（仅在流式模式下）
+          let streamHandler = null;
+          const useStreaming = settings.streaming !== false;
+
+          if (useStreaming && typeof onStreamUpdate === 'function') {
+            streamHandler = (_event, data) => {
+              onStreamUpdate(data);
+            };
+            ipcRenderer.on('translation-stream-update', streamHandler);
+          }
+
+          try {
+            result = await ipcRenderer.invoke('translate-text-ai', {
+              texts: chunk,
+              targetLanguage: settings.targetLanguage,
+              endpoint: settings.aiEndpoint,
+              apiKey: settings.aiApiKey,
+              requestType: settings.aiRequestType,
+              model: settings.aiModel,
+              streaming: useStreaming
+            });
+          } finally {
+            // 移除流式更新监听器
+            if (streamHandler) {
+              ipcRenderer.removeListener('translation-stream-update', streamHandler);
+            }
+          }
         } else {
           // Bing翻译
           result = await ipcRenderer.invoke('translate-text-batch', {
@@ -316,11 +474,9 @@ function createTranslationManager(options) {
           });
         }
       } catch (ipcError) {
-        console.error('[Translation] IPC error:', ipcError);
+        console.error('[翻译] IPC错误:', ipcError.message || ipcError);
         throw new Error(`IPC调用失败: ${ipcError.message || ipcError}`);
       }
-
-      console.log('[Translation] Result:', result);
 
       if (!result || !result.ok) {
         const message = result && result.message
@@ -346,27 +502,20 @@ function createTranslationManager(options) {
   async function translateWebview(webview, options = {}) {
     const { force = false, notify = false } = options;
 
-    console.log('[Translation] translateWebview called, force:', force);
-
     if (!webview || webview.tagName !== 'WEBVIEW') {
-      console.error('[Translation] Invalid webview:', webview);
       return { ok: false, skipped: true, reason: 'invalid-webview' };
     }
 
     const settings = getSettings();
-    console.log('[Translation] Settings:', settings);
 
     if (!force && !settings.enabled) {
-      console.log('[Translation] Translation disabled');
       return { ok: false, skipped: true, reason: 'disabled' };
     }
     if (settings.engine !== 'bing' && settings.engine !== 'ai') {
-      console.log('[Translation] Wrong engine:', settings.engine);
       return { ok: false, skipped: true, reason: 'engine' };
     }
     // AI翻译需要检查配置
     if (settings.engine === 'ai' && (!settings.aiEndpoint || !settings.aiApiKey)) {
-      console.log('[Translation] AI translation missing config');
       if (notify || force) {
         showToast('AI翻译未配置，请先设置API端点和密钥', 'error');
       }
@@ -374,10 +523,8 @@ function createTranslationManager(options) {
     }
 
     const url = webview.getURL();
-    console.log('[Translation] Page URL:', url);
 
     if (!isTranslatableUrl(url)) {
-      console.log('[Translation] URL not translatable');
       return { ok: false, skipped: true, reason: 'url' };
     }
 
@@ -388,19 +535,16 @@ function createTranslationManager(options) {
     const lastAtRaw = webview.dataset.translationLastRequestAt;
     const lastAt = lastAtRaw ? Number(lastAtRaw) : 0;
     if (lastSignature === signature && lastAt && now - lastAt < 4000) {
-      console.log('[Translation] Cooldown hit, skipping duplicate request');
       return { ok: true, skipped: true, reason: 'cooldown' };
     }
     webview.dataset.translationLastRequestSignature = signature;
     webview.dataset.translationLastRequestAt = String(now);
     if (!force && webview.dataset.translationSignature === signature) {
-      console.log('[Translation] Same signature, skipping');
       return { ok: true, skipped: true, reason: 'same-signature' };
     }
 
     // 检查是否正在翻译中
     if (webview.dataset.isTranslating === 'true') {
-      console.log('[Translation] Already translating, skipping');
       return { ok: false, skipped: true, reason: 'in-progress' };
     }
 
@@ -408,28 +552,62 @@ function createTranslationManager(options) {
     webview.dataset.translationRequestId = requestId;
     webview.dataset.isTranslating = 'true';
 
+    // 通知翻译开始
+    if (typeof onTranslationStatusChange === 'function') {
+      onTranslationStatusChange(true);
+    }
+
     try {
-      console.log('[Translation] Executing COLLECT_TEXT_SCRIPT...');
       const collected = await webview.executeJavaScript(
         COLLECT_TEXT_SCRIPT,
         true
       );
-      console.log('[Translation] Collected:', collected);
 
       const sourceTexts = collected && Array.isArray(collected.texts)
         ? collected.texts
         : [];
 
-      console.log('[Translation] Source texts count:', sourceTexts.length);
-
       if (sourceTexts.length === 0) {
-        console.log('[Translation] No texts to translate');
+        // 通知翻译结束（没有内容需要翻译）
+        if (typeof onTranslationStatusChange === 'function') {
+          onTranslationStatusChange(false);
+        }
         return { ok: true, skipped: true, reason: 'empty' };
       }
 
-      console.log('[Translation] Calling translateTexts...');
-      const translated = await translateTexts(settings, sourceTexts);
-      console.log('[Translation] Translated count:', translated.length);
+      // 流式更新回调函数
+      let lastAppliedIndex = 0;
+      const onStreamUpdate = async (data) => {
+        if (!data || !Array.isArray(data.translations)) return;
+
+        // 检查请求是否仍然有效
+        if (webview.dataset.translationRequestId !== requestId) return;
+        if (webview.getURL() !== url) return;
+
+        const translations = data.translations;
+        const startIndex = data.startIndex || lastAppliedIndex;
+
+        if (translations.length <= lastAppliedIndex) return;
+
+        console.log('[Translation Stream] Applying incremental update, startIndex:', startIndex, 'total:', translations.length);
+
+        try {
+          // 流式应用翻译
+          await webview.executeJavaScript(
+            buildStreamingApplyScript({
+              translations: translations,
+              displayMode: settings.displayMode,
+              startIndex: startIndex
+            }),
+            true
+          );
+          lastAppliedIndex = translations.length;
+        } catch (err) {
+          console.error('[翻译] 流式应用错误:', err.message);
+        }
+      };
+
+      const translated = await translateTexts(settings, sourceTexts, onStreamUpdate);
 
       if (webview.dataset.translationRequestId !== requestId) {
         return { ok: true, skipped: true, reason: 'stale' };
@@ -438,41 +616,66 @@ function createTranslationManager(options) {
         return { ok: true, skipped: true, reason: 'url-changed' };
       }
 
-      console.log('[Translation] Applying translations...');
-      console.log('[Translation] Translations sample:', translated.slice(0, 3));
-
+      // 对于AI翻译，流式更新已经应用了大部分翻译
+      // 但仍需确保所有翻译都已应用（处理最后一批）
       let applyResult;
       try {
-        applyResult = await webview.executeJavaScript(
-          buildApplyScript({
-            translations: translated,
-            displayMode: settings.displayMode
-          }),
-          true
-        );
-        console.log('[Translation] Apply result:', applyResult);
+        // 如果是AI翻译且已通过流式应用了部分，只应用剩余部分
+        // 否则应用全部翻译
+        if (settings.engine === 'ai' && lastAppliedIndex > 0) {
+          // 流式翻译已应用部分，确保剩余部分应用
+          if (lastAppliedIndex < translated.length) {
+            applyResult = await webview.executeJavaScript(
+              buildStreamingApplyScript({
+                translations: translated,
+                displayMode: settings.displayMode,
+                startIndex: lastAppliedIndex
+              }),
+              true
+            );
+          } else {
+            applyResult = { ok: true, applied: lastAppliedIndex };
+          }
+        } else {
+          // 非流式翻译，一次性应用全部
+          applyResult = await webview.executeJavaScript(
+            buildApplyScript({
+              translations: translated,
+              displayMode: settings.displayMode
+            }),
+            true
+          );
+        }
       } catch (applyError) {
-        console.error('[Translation] Apply script error:', applyError);
+        console.error('[翻译] 应用错误:', applyError.message);
         throw new Error(`应用翻译失败: ${applyError.message || applyError}`);
       }
 
       if (!applyResult || !applyResult.ok) {
-        console.error('[Translation] Apply result not ok:', applyResult);
         throw new Error('翻译应用返回失败结果');
       }
 
       webview.dataset.translationSignature = signature;
-      console.log('[Translation] Signature set:', signature);
 
       if (notify) {
         showToast('页面翻译完成', 'success');
       }
-      console.log('[Translation] Translation completed successfully, applied:', applyResult.applied);
       webview.dataset.isTranslating = 'false';
+
+      // 通知翻译结束
+      if (typeof onTranslationStatusChange === 'function') {
+        onTranslationStatusChange(false);
+      }
+
       return { ok: true, translated: translated.length, applied: applyResult?.applied };
     } catch (error) {
-      console.error('[Translation] Error:', error);
       webview.dataset.isTranslating = 'false';
+
+      // 通知翻译结束
+      if (typeof onTranslationStatusChange === 'function') {
+        onTranslationStatusChange(false);
+      }
+
       const message = error && error.message ? error.message : String(error);
       if (notify || force) {
         showToast(`翻译失败: ${message}`, 'error');
@@ -495,7 +698,6 @@ function createTranslationManager(options) {
       return { ok: false, skipped: true, reason: 'no-webview' };
     }
 
-    console.log('[Translation] Starting translation for:', webview.getURL());
     return translateWebview(webview, { force: true, notify: true });
   }
 

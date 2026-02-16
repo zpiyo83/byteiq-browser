@@ -53,6 +53,29 @@ body.dark-mode #translate-toggle-btn.active {
     color: #8ab4f8;
 }
 
+body.dark-mode #translate-toggle-btn .translate-loading {
+    border-top-color: #8ab4f8;
+    border-right-color: #8ab4f8;
+}
+
+/* 深色模式 - 高级设置 */
+body.dark-mode .advanced-settings {
+    border-color: #3c4043;
+}
+
+body.dark-mode .advanced-settings-header {
+    background: #2d2e30;
+    color: #9aa0a6;
+}
+
+body.dark-mode .advanced-settings-header:hover {
+    background: #35363a;
+}
+
+body.dark-mode .advanced-settings-content {
+    background: #292a2d;
+}
+
 body.dark-mode .url-bar {
     background: #35363a;
     color: #fff;

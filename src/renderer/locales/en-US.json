@@ -102,7 +102,10 @@
         "aiOpenaiResponse": "OpenAI Response",
         "aiAnthropic": "Anthropic",
         "aiModel": "Model ID",
-        "aiModelDesc": "Specify the AI model to use, e.g. gpt-4, claude-3-sonnet"
+        "aiModelDesc": "Specify the AI model to use, e.g. gpt-4, claude-3-sonnet",
+        "advancedSettings": "Advanced Settings",
+        "streaming": "Streaming Translation",
+        "streamingDesc": "Display translation results in real-time without waiting for completion"
       }
     },
     "downloads": {

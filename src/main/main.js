@@ -765,13 +765,11 @@ function extractBingTranslation(bodyText) {
 }
 
 async function translateTextWithBing(text, targetLanguage, retry = true) {
-  console.log('[Translation] Translating text to', targetLanguage, ':', text.substring(0, 50) + '...');
-
   let session;
   try {
     session = await getBingSession(!retry);
   } catch (sessionError) {
-    console.error('[Translation] Failed to get Bing session:', sessionError);
+    console.error('[Bing翻译] 获取会话失败:', sessionError.message);
     throw sessionError;
   }
 
@@ -804,10 +802,7 @@ async function translateTextWithBing(text, targetLanguage, retry = true) {
     }
   });
 
-  console.log('[Translation] API response status:', result.statusCode);
-
   if (result.statusCode === 429 && retry) {
-    console.log('[Translation] Rate limited, retrying...');
     cachedBingSession = null;
     return translateTextWithBing(text, targetLanguage, false);
   }
@@ -818,11 +813,9 @@ async function translateTextWithBing(text, targetLanguage, retry = true) {
 
   const translated = extractBingTranslation(result.bodyText);
   if (!translated) {
-    console.error('[Translation] Failed to extract translation from:', result.bodyText.substring(0, 200));
     throw new Error('Bing translation result is empty');
   }
 
-  console.log('[Translation] Translated:', translated.substring(0, 50) + '...');
   return translated;
 }
 
@@ -844,55 +837,43 @@ ipcMain.handle('translate-text-batch', async (event, payload = {}) => {
     targetLanguage
   } = payload || {};
 
-  console.log('[Translation] translate-text-batch called');
-  console.log('[Translation] Engine:', engine);
-  console.log('[Translation] Target language:', targetLanguage);
-  console.log('[Translation] Texts count:', texts ? texts.length : 0);
-
   if (engine !== 'bing') {
-    console.log('[Translation] Rejected: wrong engine');
     return { ok: false, message: 'Only Bing translator is supported' };
   }
 
   if (!Array.isArray(texts) || texts.length === 0) {
-    console.log('[Translation] No texts to translate');
     return { ok: true, translations: [] };
   }
 
   const safeTexts = texts.map((item) => String(item || '').trim());
   if (safeTexts.some((item) => !item)) {
-    console.log('[Translation] Rejected: empty text found');
     return { ok: false, message: 'Source text cannot be empty' };
   }
 
   const to = String(targetLanguage || '').trim();
   if (!to) {
-    console.log('[Translation] Rejected: missing target language');
     return { ok: false, message: 'Missing target language' };
   }
 
   try {
-    console.log('[Translation] Starting translation...');
     const translations = [];
     for (let i = 0; i < safeTexts.length; i++) {
-      console.log(`[Translation] Processing text ${i + 1}/${safeTexts.length}`);
       const translated = await translateTextWithBing(safeTexts[i], to);
       translations.push(translated);
     }
 
     if (translations.length !== safeTexts.length) {
-      console.log('[Translation] Error: count mismatch');
       return { ok: false, message: 'Translation response count mismatch' };
     }
 
-    console.log('[Translation] Translation completed successfully');
+    console.log(`[Bing翻译] 完成: ${texts.length} 个文本块`);
     return {
       ok: true,
       translations
     };
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
-    console.error('[Translation] Error:', message);
+    console.error('[Bing翻译] 失败:', message);
     return { ok: false, message };
   }
 });
@@ -905,23 +886,16 @@ ipcMain.handle('translate-text-ai', async (event, payload = {}) => {
     endpoint,
     apiKey,
     requestType,
-    model
+    model,
+    streaming
   } = payload || {};
 
-  console.log('[AI Translation] translate-text-ai called');
-  console.log('[AI Translation] Target language:', targetLanguage);
-  console.log('[AI Translation] Texts count:', texts ? texts.length : 0);
-  console.log('[AI Translation] Endpoint:', endpoint);
-  console.log('[AI Translation] Request type:', requestType);
-  console.log('[AI Translation] Model:', model || '(default)');
-
   if (!Array.isArray(texts) || texts.length === 0) {
-    console.log('[AI Translation] No texts to translate');
     return { ok: true, translations: [] };
   }
 
   if (!endpoint || !apiKey) {
-    console.log('[AI Translation] Missing endpoint or API key');
+    console.error('[AI翻译] 缺少API端点或密钥');
     return { ok: false, message: '缺少AI翻译配置：API端点或密钥' };
   }
 
@@ -938,43 +912,46 @@ ipcMain.handle('translate-text-ai', async (event, payload = {}) => {
   const targetLangName = targetLangNames[targetLanguage] || targetLanguage;
 
   try {
-    console.log('[AI Translation] Building request...');
+    // 保存 sender 用于流式更新
+    const senderWebContents = event.sender;
+    const useStreaming = streaming !== false;
+
     const translations = await callAITranslation({
       texts,
       targetLanguage: targetLangName,
       endpoint,
       apiKey,
       requestType: requestType || 'openai-chat',
-      model
+      model,
+      senderWebContents,
+      streaming: useStreaming
     });
 
     if (translations.length !== texts.length) {
-      console.log('[AI Translation] Error: count mismatch');
+      console.error('[AI翻译] 结果数量不匹配');
       return { ok: false, message: 'AI翻译结果数量不匹配' };
     }
 
-    console.log('[AI Translation] Translation completed successfully');
+    console.log(`[AI翻译] 完成: ${texts.length} 个文本块`);
     return {
       ok: true,
       translations
     };
   } catch (error) {
     const message = error && error.message ? error.message : String(error);
-    console.error('[AI Translation] Error:', message);
+    console.error('[AI翻译] 失败:', message);
     return { ok: false, message };
   }
 });
 
 async function callAITranslation(options) {
-  const { texts, targetLanguage, endpoint, apiKey, requestType, model } = options;
+  const { texts, targetLanguage, endpoint, apiKey, requestType, model, senderWebContents, streaming } = options;
 
   // 构建翻译请求
   let prompt = `请你帮我把以下文字翻译为${targetLanguage}，冒号后跟翻译后的内容，保持"翻译块:"的格式不变：\n`;
   texts.forEach((text, index) => {
     prompt += `翻译块: ${text}\n`;
   });
-
-  console.log('[AI Translation] Prompt length:', prompt.length);
 
   let requestBody;
   let url = endpoint;
@@ -986,7 +963,6 @@ async function callAITranslation(options) {
     'anthropic': 'claude-3-haiku-20240307'
   };
   const actualModel = model || defaultModels[requestType] || defaultModels['openai-chat'];
-  console.log('[AI Translation] Using model:', actualModel);
 
   if (requestType === 'openai-chat') {
     // OpenAI Chat 兼容格式
@@ -1002,7 +978,8 @@ async function callAITranslation(options) {
       messages: [
         { role: 'user', content: prompt }
       ],
-      temperature: 0.3
+      temperature: 0.3,
+      stream: !!streaming
     };
   } else if (requestType === 'anthropic') {
     // Anthropic 格式
@@ -1016,7 +993,8 @@ async function callAITranslation(options) {
       max_tokens: 4096,
       messages: [
         { role: 'user', content: prompt }
-      ]
+      ],
+      stream: !!streaming
     };
   } else {
     // OpenAI Response 格式（简单文本补全）
@@ -1029,14 +1007,195 @@ async function callAITranslation(options) {
       model: actualModel,
       prompt: prompt,
       max_tokens: 4096,
-      temperature: 0.3
+      temperature: 0.3,
+      stream: !!streaming
     };
   }
 
-  console.log('[AI Translation] Calling API:', url);
-
   const bodyString = JSON.stringify(requestBody);
   const parsedUrl = new URL(url);
+
+  // 如果是非流式模式，直接请求并解析
+  if (!streaming) {
+    return await callAITranslationNonStreaming({ url, parsedUrl, bodyString, apiKey, requestType, texts });
+  }
+
+  // 流式模式
+  // 用于存储流式响应内容
+  let fullContent = '';
+  const translations = [];
+  let lastSentCount = 0;
+
+  // 解析并提取翻译块的辅助函数
+  const parseAndNotify = (content) => {
+    const lines = content.split('\n');
+    // 流式响应时，最后一行可能还没输出完整（没有换行结尾），不要提前解析
+    if (!content.endsWith('\n')) {
+      lines.pop();
+    }
+    const newTranslations = [];
+
+    for (const line of lines) {
+      const match = line.match(/^翻译块:\s*(.+)$/);
+      if (match) {
+        newTranslations.push(match[1].trim());
+      }
+    }
+
+    // 如果有新的翻译块，发送增量更新
+    if (newTranslations.length > lastSentCount && senderWebContents) {
+      const incremental = newTranslations.slice(lastSentCount);
+      senderWebContents.send('translation-stream-update', {
+        translations: newTranslations,
+        incremental: incremental,
+        startIndex: lastSentCount,
+        total: texts.length
+      });
+      lastSentCount = newTranslations.length;
+    }
+
+    return newTranslations;
+  };
+
+  await new Promise((resolve, reject) => {
+    const requestOptions = {
+      protocol: parsedUrl.protocol,
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || undefined,
+      path: `${parsedUrl.pathname}${parsedUrl.search}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyString),
+        'Authorization': `Bearer ${apiKey}`,
+        'x-api-key': requestType === 'anthropic' ? apiKey : undefined
+      },
+      rejectUnauthorized: false
+    };
+
+    // 移除undefined的header
+    Object.keys(requestOptions.headers).forEach(key => {
+      if (requestOptions.headers[key] === undefined) {
+        delete requestOptions.headers[key];
+      }
+    });
+
+    const request = https.request(requestOptions, (response) => {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => {
+          const errorText = Buffer.concat(chunks).toString('utf8');
+          reject(new Error(`AI API请求失败 (${response.statusCode}): ${errorText.substring(0, 200)}`));
+        });
+        return;
+      }
+
+      let buffer = '';
+
+      response.on('data', (chunk) => {
+        buffer += chunk.toString('utf8');
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // 保留不完整的行
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          // 处理 SSE 格式
+          if (trimmed.startsWith('data: ')) {
+            const data = trimmed.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const json = JSON.parse(data);
+              let contentDelta = '';
+
+              if (requestType === 'anthropic') {
+                // Anthropic stream format
+                if (json.type === 'content_block_delta' && json.delta?.text) {
+                  contentDelta = json.delta.text;
+                }
+              } else if (requestType === 'openai-response') {
+                // OpenAI completions stream format
+                contentDelta = json.choices?.[0]?.text || '';
+              } else {
+                // OpenAI chat stream format
+                contentDelta = json.choices?.[0]?.delta?.content || '';
+              }
+
+              if (contentDelta) {
+                fullContent += contentDelta;
+                parseAndNotify(fullContent);
+              }
+            } catch (e) {
+              // 忽略解析错误，可能是部分数据
+            }
+          } else if (trimmed.startsWith('event:')) {
+            // 忽略事件类型行
+            continue;
+          }
+        }
+      });
+
+      response.on('end', () => {
+        resolve();
+      });
+
+      response.on('error', (error) => {
+        console.error('[AI翻译] 响应错误:', error.message);
+        reject(error);
+      });
+    });
+
+    request.on('error', (error) => {
+      console.error('[AI翻译] 请求错误:', error.message);
+      reject(error);
+    });
+
+    request.write(bodyString);
+    request.end();
+  });
+
+  // 最终解析翻译结果
+  const finalTranslations = [];
+  const lines = fullContent.split('\n');
+
+  for (const line of lines) {
+    const match = line.match(/^翻译块:\s*(.+)$/);
+    if (match) {
+      finalTranslations.push(match[1].trim());
+    }
+  }
+
+  // 如果解析失败，尝试其他方式
+  if (finalTranslations.length !== texts.length) {
+    finalTranslations.length = 0;
+
+    const allMatches = fullContent.match(/翻译块:\s*.+/g);
+    if (allMatches && allMatches.length >= texts.length) {
+      for (let i = 0; i < texts.length; i++) {
+        const match = allMatches[i]?.match(/^翻译块:\s*(.+)$/);
+        if (match) {
+          finalTranslations.push(match[1].trim());
+        }
+      }
+    }
+  }
+
+  if (finalTranslations.length !== texts.length) {
+    console.error(`[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`);
+    while (finalTranslations.length < texts.length) {
+      finalTranslations.push(texts[finalTranslations.length]);
+    }
+  }
+
+  return finalTranslations;
+}
+
+// 非流式翻译
+async function callAITranslationNonStreaming(options) {
+  const { parsedUrl, bodyString, apiKey, requestType, texts } = options;
 
   const result = await new Promise((resolve, reject) => {
     const requestOptions = {
@@ -1071,18 +1230,13 @@ async function callAITranslation(options) {
           bodyText: responseText
         });
       });
+      response.on('error', reject);
     });
 
-    request.on('error', (error) => {
-      console.error('[AI Translation] Request error:', error.message);
-      reject(error);
-    });
-
+    request.on('error', reject);
     request.write(bodyString);
     request.end();
   });
-
-  console.log('[AI Translation] API response status:', result.statusCode);
 
   if (result.statusCode < 200 || result.statusCode >= 300) {
     throw new Error(`AI API请求失败 (${result.statusCode}): ${result.bodyText.substring(0, 200)}`);
@@ -1102,52 +1256,43 @@ async function callAITranslation(options) {
       responseContent = jsonResponse.choices?.[0]?.message?.content || '';
     }
   } catch (parseError) {
-    console.error('[AI Translation] Failed to parse response:', parseError);
     throw new Error('AI API响应解析失败');
   }
 
-  console.log('[AI Translation] Response content length:', responseContent.length);
-  console.log('[AI Translation] Response preview:', responseContent.substring(0, 300));
-
   // 解析翻译结果
-  const translations = [];
+  const finalTranslations = [];
   const lines = responseContent.split('\n');
 
   for (const line of lines) {
     const match = line.match(/^翻译块:\s*(.+)$/);
     if (match) {
-      translations.push(match[1].trim());
+      finalTranslations.push(match[1].trim());
     }
   }
 
-  console.log('[AI Translation] Parsed translations:', translations.length);
+  // 如果解析失败，尝试其他方式
+  if (finalTranslations.length !== texts.length) {
+    finalTranslations.length = 0;
 
-  // 如果解析失败，尝试按行匹配
-  if (translations.length !== texts.length) {
-    console.log('[AI Translation] Trying alternative parsing...');
-    translations.length = 0;
-
-    // 直接按原始文本顺序分配
     const allMatches = responseContent.match(/翻译块:\s*.+/g);
     if (allMatches && allMatches.length >= texts.length) {
       for (let i = 0; i < texts.length; i++) {
         const match = allMatches[i]?.match(/^翻译块:\s*(.+)$/);
         if (match) {
-          translations.push(match[1].trim());
+          finalTranslations.push(match[1].trim());
         }
       }
     }
   }
 
-  if (translations.length !== texts.length) {
-    console.error('[AI Translation] Count mismatch. Expected:', texts.length, 'Got:', translations.length);
-    // 如果数量不匹配，用原文填充
-    while (translations.length < texts.length) {
-      translations.push(texts[translations.length]);
+  if (finalTranslations.length !== texts.length) {
+    console.error(`[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`);
+    while (finalTranslations.length < texts.length) {
+      finalTranslations.push(texts[finalTranslations.length]);
     }
   }
 
-  return translations;
+  return finalTranslations;
 }
 
 ipcMain.handle('extensions-list', () => {

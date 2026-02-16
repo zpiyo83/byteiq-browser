@@ -282,6 +282,97 @@
     transform: scale(1);
 }
 
+/* 翻译加载动画 */
+#translate-toggle-btn .translate-loading {
+    position: absolute;
+    right: -4px;
+    top: -4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: #1a73e8;
+    border-right-color: #1a73e8;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    animation: translate-spin 0.8s linear infinite;
+}
+
+#translate-toggle-btn.loading .translate-loading {
+    opacity: 1;
+    transform: scale(1);
+}
+
+#translate-toggle-btn.loading .translate-check {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+@keyframes translate-spin {
+    0% {
+        transform: scale(1) rotate(0deg);
+    }
+    100% {
+        transform: scale(1) rotate(360deg);
+    }
+}
+
+/* 高级设置折叠样式 */
+.advanced-settings {
+    margin-top: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.advanced-settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #5f6368;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.advanced-settings-header:hover {
+    background: #ebebeb;
+}
+
+.advanced-settings-arrow {
+    transition: transform 0.2s ease;
+}
+
+.advanced-settings.expanded .advanced-settings-arrow {
+    transform: rotate(180deg);
+}
+
+.advanced-settings-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.advanced-settings.expanded .advanced-settings-content {
+    max-height: 200px;
+}
+
+.advanced-settings-content .setting-item {
+    border-bottom: none;
+    margin: 0;
+    padding: 12px 14px;
+}
+
+.advanced-settings-content .setting-item:last-child {
+    padding-bottom: 14px;
+}
+
 .url-bar #bookmark-btn {
     padding: 2px;
     margin-left: 2px;
