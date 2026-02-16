@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Byteiq Browser",
-    "version": "版本 0.1.1",
+    "version": "版本 0.1.2",
     "communityDriven": "社区驱动的 AI 浏览器",
     "basedOn": "基于 Chromium 内核 | Electron 构建"
   },
@@ -60,7 +60,18 @@
       "clearDataConfirm": "确定要清除所有历史和书签吗？",
       "clearDataDone": "数据已清除",
       "incognitoOn": "已启用无痕模式（仅新标签页生效）",
-      "incognitoOff": "已关闭无痕模式"
+      "incognitoOff": "已关闭无痕模式",
+      "ai": {
+        "endpoint": "API端点URL",
+        "endpointDesc": "配置AI API的基础URL地址",
+        "apiKey": "API密钥",
+        "apiKeyDesc": "您的API访问密钥，将被安全存储",
+        "requestType": "请求方式",
+        "requestTypeDesc": "选择API的请求格式类型",
+        "openaiChat": "OpenAI Chat 兼容",
+        "openaiResponse": "OpenAI Response",
+        "anthropic": "Anthropic"
+      }
     },
     "downloads": {
       "title": "下载管理",
@@ -115,7 +126,7 @@
     "searchPlaceholder": "搜索或输入 URL...",
     "title": "社区驱动的 AI 浏览器",
     "subtitle": "基于 Chromium 内核 | Electron 构建",
-    "version": "版本 0.1.1 | 开源社区驱动"
+    "version": "版本 0.1.2 | 开源社区驱动"
   },
   "status": {
     "loading": "加载中...",

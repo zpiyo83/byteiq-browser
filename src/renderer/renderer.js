@@ -62,6 +62,9 @@ const extensionsList = document.getElementById('extensions-list');
 const extensionsAddBtn = document.getElementById('extensions-add-btn');
 const extensionsRefreshBtn = document.getElementById('extensions-refresh-btn');
 const extensionsEmpty = document.getElementById('extensions-empty');
+const aiEndpointInput = document.getElementById('ai-endpoint-input');
+const aiApiKeyInput = document.getElementById('ai-api-key-input');
+const aiRequestTypeSelect = document.getElementById('ai-request-type-select');
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
 const webviewsContainer = document.getElementById('webviews-container');
@@ -369,6 +372,10 @@ settingsBtn.addEventListener('click', () => {
   if (langSelect) {
     langSelect.value = store.get('settings.language', 'zh-CN');
   }
+  // 加载AI设置
+  aiEndpointInput.value = store.get('settings.aiEndpoint', '');
+  aiApiKeyInput.value = store.get('settings.aiApiKey', '');
+  aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
   // 获取版本信息
   ipcRenderer.invoke('get-version-info').then((versions) => {
     const appVersionEl = document.getElementById('about-app-version');
@@ -483,6 +490,18 @@ searchEngineSelect.addEventListener('change', () => {
 
 startupUrlInput.addEventListener('change', () => {
   store.set('settings.startupUrl', startupUrlInput.value);
+});
+
+aiEndpointInput.addEventListener('change', () => {
+  store.set('settings.aiEndpoint', aiEndpointInput.value);
+});
+
+aiApiKeyInput.addEventListener('change', () => {
+  store.set('settings.aiApiKey', aiApiKeyInput.value);
+});
+
+aiRequestTypeSelect.addEventListener('change', () => {
+  store.set('settings.aiRequestType', aiRequestTypeSelect.value);
 });
 
 clearDataBtn.addEventListener('click', async () => {
