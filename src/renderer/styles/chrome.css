@@ -250,6 +250,38 @@
     transform: scale(1.05);
 }
 
+#translate-toggle-btn {
+    overflow: visible;
+}
+
+#translate-toggle-btn.active {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+#translate-toggle-btn .translate-check {
+    position: absolute;
+    right: -1px;
+    top: -1px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #34a853;
+    color: #fff;
+    font-size: 10px;
+    line-height: 14px;
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+#translate-toggle-btn.active .translate-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
 .url-bar #bookmark-btn {
     padding: 2px;
     margin-left: 2px;

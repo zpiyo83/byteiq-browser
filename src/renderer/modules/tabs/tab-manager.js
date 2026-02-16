@@ -16,6 +16,7 @@
     formatUrl,
     applyStoredZoom,
     getIncognito,
+    onWebviewDidStopLoading,
     onActiveWebviewChanged,
     updateBookmarkIcon
   } = options;
@@ -299,6 +300,9 @@
       updateTabUrl(id, webview.getURL());
       applyStoredZoom(webview);
       updateBookmarkIcon(webview.getURL());
+      if (typeof onWebviewDidStopLoading === 'function') {
+        onWebviewDidStopLoading(webview, id);
+      }
     });
 
     webview.addEventListener('found-in-page', (e) => {

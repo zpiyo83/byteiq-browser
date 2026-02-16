@@ -48,6 +48,11 @@ body.dark-mode .toolbar button:hover {
     color: #fff;
 }
 
+body.dark-mode #translate-toggle-btn.active {
+    background: rgba(138, 180, 248, 0.2);
+    color: #8ab4f8;
+}
+
 body.dark-mode .url-bar {
     background: #35363a;
     color: #fff;
