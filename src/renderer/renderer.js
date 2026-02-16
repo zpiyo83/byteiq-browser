@@ -11,6 +11,7 @@ const { createOverlayManager } = require('./modules/ui/overlay-manager');
 const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
 const { createExtensionsManager } = require('./modules/extensions/extensions-manager');
+const { createTranslationManager } = require('./modules/ui/translation-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
 
@@ -30,6 +31,7 @@ const bookmarksListBtn = document.getElementById('bookmarks-list-btn');
 const devtoolsBtn = document.getElementById('devtools-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const downloadsBtn = document.getElementById('downloads-btn');
+const translateToggleBtn = document.getElementById('translate-toggle-btn');
 const bookmarkBtn = document.getElementById('bookmark-btn');
 const clearUrlBtn = document.getElementById('clear-url-btn');
 const progressBar = document.getElementById('progress-bar');
@@ -65,6 +67,22 @@ const extensionsEmpty = document.getElementById('extensions-empty');
 const aiEndpointInput = document.getElementById('ai-endpoint-input');
 const aiApiKeyInput = document.getElementById('ai-api-key-input');
 const aiRequestTypeSelect = document.getElementById('ai-request-type-select');
+const translateEnableToggle = document.getElementById('translate-enable-toggle');
+const translateEngineSelect = document.getElementById('translate-engine-select');
+const translateTargetLangSelect = document.getElementById(
+  'translate-target-lang-select'
+);
+const translateDisplayModeSelect = document.getElementById(
+  'translate-display-mode-select'
+);
+const translateCurrentPageBtn = document.getElementById(
+  'translate-current-page-btn'
+);
+const aiTranslationConfig = document.getElementById('ai-translation-config');
+const translateAiEndpointInput = document.getElementById('translate-ai-endpoint-input');
+const translateAiApiKeyInput = document.getElementById('translate-ai-api-key-input');
+const translateAiRequestTypeSelect = document.getElementById('translate-ai-request-type-select');
+const translateAiModelInput = document.getElementById('translate-ai-model-input');
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
 const webviewsContainer = document.getElementById('webviews-container');
@@ -87,6 +105,7 @@ const overlayBackdrop = document.getElementById('overlay-backdrop');
 
 let isIncognito = false;
 let browserManager = null;
+let translationManager = null;
 
 initI18n();
 
@@ -111,6 +130,14 @@ function showToast(message, type = 'info', duration = 3000) {
     toast.style.animation = 'slideOut 0.3s ease forwards';
     setTimeout(() => toast.remove(), 300);
   }, duration);
+}
+
+function setTranslateToggleActive(enabled) {
+  if (!translateToggleBtn) return;
+  const active = !!enabled;
+  translateToggleBtn.classList.toggle('active', active);
+  translateToggleBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  translateToggleBtn.setAttribute('title', active ? '翻译已开启' : '翻译已关闭');
 }
 
 function updateBookmarkIcon(url) {
@@ -141,6 +168,11 @@ const tabManager = createTabManager({
   onActiveWebviewChanged: (webview) => {
     if (browserManager) {
       browserManager.onActiveWebviewChanged(webview);
+    }
+  },
+  onWebviewDidStopLoading: (webview) => {
+    if (translationManager) {
+      translationManager.handleWebviewDidStopLoading(webview);
     }
   },
   progressBar,
@@ -253,6 +285,18 @@ const extensionsManager = createExtensionsManager({
   refreshBtn: extensionsRefreshBtn,
   emptyEl: extensionsEmpty
 });
+
+translationManager = createTranslationManager({
+  getActiveWebview: () => {
+    const activeTabId = tabManager.getActiveTabId();
+    const webview = document.getElementById(`webview-${activeTabId}`);
+    return webview && webview.tagName === 'WEBVIEW' ? webview : null;
+  },
+  ipcRenderer,
+  showToast,
+  store
+});
+setTranslateToggleActive(translationManager.getSettings().enabled);
 
 extensionsManager.init();
 
@@ -376,6 +420,39 @@ settingsBtn.addEventListener('click', () => {
   aiEndpointInput.value = store.get('settings.aiEndpoint', '');
   aiApiKeyInput.value = store.get('settings.aiApiKey', '');
   aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
+  if (translationManager) {
+    const translationSettings = translationManager.getSettings();
+    if (translateEnableToggle) {
+      translateEnableToggle.checked = translationSettings.enabled;
+      setTranslateToggleActive(translationSettings.enabled);
+    }
+    if (translateEngineSelect) {
+      translateEngineSelect.value = translationSettings.engine;
+    }
+    if (translateTargetLangSelect) {
+      translateTargetLangSelect.value = translationSettings.targetLanguage;
+    }
+    if (translateDisplayModeSelect) {
+      translateDisplayModeSelect.value = translationSettings.displayMode;
+    }
+    // 加载AI翻译配置
+    if (translateAiEndpointInput) {
+      translateAiEndpointInput.value = translationSettings.aiEndpoint || '';
+    }
+    if (translateAiApiKeyInput) {
+      translateAiApiKeyInput.value = translationSettings.aiApiKey || '';
+    }
+    if (translateAiRequestTypeSelect) {
+      translateAiRequestTypeSelect.value = translationSettings.aiRequestType || 'openai-chat';
+    }
+    if (translateAiModelInput) {
+      translateAiModelInput.value = translationSettings.aiModel || '';
+    }
+    // 显示/隐藏AI翻译配置
+    if (aiTranslationConfig) {
+      aiTranslationConfig.style.display = translationSettings.engine === 'ai' ? 'block' : 'none';
+    }
+  }
   // 获取版本信息
   ipcRenderer.invoke('get-version-info').then((versions) => {
     const appVersionEl = document.getElementById('about-app-version');
@@ -503,6 +580,110 @@ aiApiKeyInput.addEventListener('change', () => {
 aiRequestTypeSelect.addEventListener('change', () => {
   store.set('settings.aiRequestType', aiRequestTypeSelect.value);
 });
+
+if (translateEnableToggle) {
+  translateEnableToggle.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      enabled: translateEnableToggle.checked
+    });
+    setTranslateToggleActive(translateEnableToggle.checked);
+  });
+}
+
+if (translateEngineSelect) {
+  translateEngineSelect.addEventListener('change', () => {
+    if (!translationManager) return;
+    const engine = translateEngineSelect.value || 'bing';
+    translationManager.saveSettings({
+      engine
+    });
+    // 显示/隐藏AI翻译配置
+    if (aiTranslationConfig) {
+      aiTranslationConfig.style.display = engine === 'ai' ? 'block' : 'none';
+    }
+  });
+}
+
+if (translateTargetLangSelect) {
+  translateTargetLangSelect.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      targetLanguage: translateTargetLangSelect.value || 'zh-Hans'
+    });
+  });
+}
+
+if (translateDisplayModeSelect) {
+  translateDisplayModeSelect.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      displayMode: translateDisplayModeSelect.value || 'replace'
+    });
+  });
+}
+
+// AI翻译配置事件
+if (translateAiEndpointInput) {
+  translateAiEndpointInput.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      aiEndpoint: translateAiEndpointInput.value
+    });
+  });
+}
+
+if (translateAiApiKeyInput) {
+  translateAiApiKeyInput.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      aiApiKey: translateAiApiKeyInput.value
+    });
+  });
+}
+
+if (translateAiRequestTypeSelect) {
+  translateAiRequestTypeSelect.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      aiRequestType: translateAiRequestTypeSelect.value
+    });
+  });
+}
+
+if (translateAiModelInput) {
+  translateAiModelInput.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      aiModel: translateAiModelInput.value
+    });
+  });
+}
+
+if (translateCurrentPageBtn) {
+  translateCurrentPageBtn.addEventListener('click', () => {
+    if (!translationManager) return;
+    translationManager.translateActiveWebview();
+  });
+}
+
+if (translateToggleBtn) {
+  translateToggleBtn.addEventListener('click', () => {
+    if (!translationManager) return;
+    const currentEnabled = translationManager.getSettings().enabled;
+    const nextEnabled = !currentEnabled;
+    translationManager.saveSettings({
+      enabled: nextEnabled
+    });
+    if (translateEnableToggle) {
+      translateEnableToggle.checked = nextEnabled;
+    }
+    setTranslateToggleActive(nextEnabled);
+    if (nextEnabled) {
+      translationManager.translateActiveWebview();
+    }
+  });
+}
 
 clearDataBtn.addEventListener('click', async () => {
   const confirmed = await modalManager.confirmDelete(
