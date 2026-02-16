@@ -184,7 +184,7 @@
                 <h2 data-i18n="newTab.title">Community-driven AI Browser</h2>
                 <p data-i18n="newTab.subtitle">Based on Chromium | Electron</p>
                 <p data-i18n="newTab.version">
-                    Version 0.1.1 | Open Source Community Driven
+                    Version 0.1.2 | Open Source Community Driven
                 </p>
             </div>
         </div>
@@ -242,6 +242,10 @@
                 <button class="settings-nav-item" data-section="data">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z"/></svg>
                     <span>数据</span>
+                </button>
+                <button class="settings-nav-item" data-section="ai">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,2H5A2,2 0 0,0 3,4V19L7,15H19A2,2 0 0,0 21,13V4A2,2 0 0,0 19,2M19,13H6.17L5,14.17V4H19V13M12,5.5L10.5,8.5L7.5,10L10.5,11.5L12,14.5L13.5,11.5L16.5,10L13.5,8.5L12,5.5Z"/></svg>
+                    <span>AI</span>
                 </button>
                 <button class="settings-nav-item" data-section="extensions">
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,6H17V4C17,2.9 16.1,2 15,2C13.9,2 13,2.9 13,4V6H11V4C11,2.9 10.1,2 9,2C7.9,2 7,2.9 7,4V6H5C3.9,6 3,6.9 3,8V11H5C6.1,11 7,11.9 7,13C7,14.1 6.1,15 5,15H3V18C3,19.1 3.9,20 5,20H7V18C7,16.9 7.9,16 9,16C10.1,16 11,16.9 11,18V20H13V18C13,16.9 13.9,16 15,16C16.1,16 17,16.9 17,18V20H19C20.1,20 21,19.1 21,18V15H19C17.9,15 17,14.1 17,13C17,11.9 17.9,11 19,11H21V8C21,6.9 20.1,6 19,6Z"/></svg>
@@ -357,6 +361,35 @@
                             <div class="setting-desc">清除历史记录、书签等所有数据</div>
                         </div>
                         <button id="clear-data-btn" class="setting-action-btn danger">清除数据</button>
+                    </div>
+                </div>
+                <!-- AI设置 -->
+                <div id="settings-ai" class="settings-section">
+                    <h3>AI设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.endpoint">API端点URL</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.endpointDesc">配置AI API的基础URL地址</div>
+                        </div>
+                        <input type="text" id="ai-endpoint-input" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.apiKey">API密钥</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.apiKeyDesc">您的API访问密钥，将被安全存储</div>
+                        </div>
+                        <input type="password" id="ai-api-key-input" placeholder="sk-...">
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.requestType">请求方式</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.requestTypeDesc">选择API的请求格式类型</div>
+                        </div>
+                        <select id="ai-request-type-select">
+                            <option value="openai-chat" data-i18n="panels.settings.ai.openaiChat">OpenAI Chat 兼容</option>
+                            <option value="openai-response" data-i18n="panels.settings.ai.openaiResponse">OpenAI Response</option>
+                            <option value="anthropic" data-i18n="panels.settings.ai.anthropic">Anthropic</option>
+                        </select>
                     </div>
                 </div>
                 <!-- 扩展管理 -->
