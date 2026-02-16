@@ -83,6 +83,9 @@ const translateAiEndpointInput = document.getElementById('translate-ai-endpoint-
 const translateAiApiKeyInput = document.getElementById('translate-ai-api-key-input');
 const translateAiRequestTypeSelect = document.getElementById('translate-ai-request-type-select');
 const translateAiModelInput = document.getElementById('translate-ai-model-input');
+const translateStreamingToggle = document.getElementById('translate-streaming-toggle');
+const translationAdvancedToggle = document.getElementById('translation-advanced-toggle');
+const translationAdvancedContent = document.getElementById('translation-advanced-content');
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
 const webviewsContainer = document.getElementById('webviews-container');
@@ -136,8 +139,24 @@ function setTranslateToggleActive(enabled) {
   if (!translateToggleBtn) return;
   const active = !!enabled;
   translateToggleBtn.classList.toggle('active', active);
+  translateToggleBtn.classList.remove('loading');
   translateToggleBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
   translateToggleBtn.setAttribute('title', active ? '翻译已开启' : '翻译已关闭');
+}
+
+function setTranslateLoading(loading) {
+  if (!translateToggleBtn) return;
+  if (loading) {
+    translateToggleBtn.classList.add('loading');
+    translateToggleBtn.classList.add('active');
+    translateToggleBtn.setAttribute('title', '正在翻译...');
+  } else {
+    translateToggleBtn.classList.remove('loading');
+    const settings = translationManager ? translationManager.getSettings() : null;
+    const enabled = settings ? settings.enabled : false;
+    translateToggleBtn.classList.toggle('active', enabled);
+    translateToggleBtn.setAttribute('title', enabled ? '翻译已开启' : '翻译已关闭');
+  }
 }
 
 function updateBookmarkIcon(url) {
@@ -294,7 +313,10 @@ translationManager = createTranslationManager({
   },
   ipcRenderer,
   showToast,
-  store
+  store,
+  onTranslationStatusChange: (isTranslating) => {
+    setTranslateLoading(isTranslating);
+  }
 });
 setTranslateToggleActive(translationManager.getSettings().enabled);
 
@@ -447,6 +469,9 @@ settingsBtn.addEventListener('click', () => {
     }
     if (translateAiModelInput) {
       translateAiModelInput.value = translationSettings.aiModel || '';
+    }
+    if (translateStreamingToggle) {
+      translateStreamingToggle.checked = translationSettings.streaming !== false;
     }
     // 显示/隐藏AI翻译配置
     if (aiTranslationConfig) {
@@ -657,6 +682,26 @@ if (translateAiModelInput) {
     translationManager.saveSettings({
       aiModel: translateAiModelInput.value
     });
+  });
+}
+
+// 流式翻译开关
+if (translateStreamingToggle) {
+  translateStreamingToggle.addEventListener('change', () => {
+    if (!translationManager) return;
+    translationManager.saveSettings({
+      streaming: translateStreamingToggle.checked
+    });
+  });
+}
+
+// 高级设置折叠
+if (translationAdvancedToggle) {
+  translationAdvancedToggle.addEventListener('click', () => {
+    const parent = translationAdvancedToggle.closest('.advanced-settings');
+    if (parent) {
+      parent.classList.toggle('expanded');
+    }
   });
 }
 
