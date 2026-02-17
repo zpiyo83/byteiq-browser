@@ -726,6 +726,12 @@ if (translateToggleBtn) {
     setTranslateToggleActive(nextEnabled);
     if (nextEnabled) {
       translationManager.translateActiveWebview();
+    } else {
+      // 关闭翻译时恢复原文
+      const webview = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
+      if (webview && webview.tagName === 'WEBVIEW') {
+        translationManager.restoreOriginalText(webview);
+      }
     }
   });
 }
