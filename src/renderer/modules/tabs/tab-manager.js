@@ -333,10 +333,18 @@
     webview.addEventListener('did-navigate', (e) => {
       updateTabUrl(id, e.url);
       applyStoredZoom(webview);
+      // 清除翻译签名，以便在新页面重新翻译
+      delete webview.dataset.translationSignature;
+      delete webview.dataset.translationLastRequestSignature;
+      delete webview.dataset.translationLastRequestAt;
     });
 
     webview.addEventListener('did-navigate-in-page', (e) => {
       updateTabUrl(id, e.url);
+      // 清除翻译签名，以便在新页面重新翻译
+      delete webview.dataset.translationSignature;
+      delete webview.dataset.translationLastRequestSignature;
+      delete webview.dataset.translationLastRequestAt;
     });
 
     webview.addEventListener('did-fail-load', (e) => {
