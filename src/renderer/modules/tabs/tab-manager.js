@@ -241,7 +241,7 @@
 
       webviewsContainer.appendChild(webview);
       setupWebviewEvents(webview, id);
-    } else {
+    } else if (newTabTemplate && newTabTemplate.content) {
       const content = newTabTemplate.content.cloneNode(true);
       const container = documentRef.createElement('div');
       container.className = 'webview-mock';
@@ -249,20 +249,30 @@
       container.appendChild(content);
 
       const searchInput = container.querySelector('.tab-search-input');
-      searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          const query = searchInput.value;
-          if (query && typeof navigateToHandler === 'function') {
-            navigateToHandler(query, id);
+      if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            const query = searchInput.value;
+            if (query && typeof navigateToHandler === 'function') {
+              navigateToHandler(query, id);
+            }
           }
-        }
-      });
+        });
+      }
 
       webviewsContainer.appendChild(container);
 
       if (typeof initI18n === 'function') {
         initI18n(container);
       }
+    } else {
+      // newTabTemplate 不存在时创建简单的占位容器
+      console.warn('[tab-manager] newTabTemplate not found, creating placeholder');
+      const container = documentRef.createElement('div');
+      container.className = 'webview-mock';
+      container.id = `webview-${id}`;
+      container.innerHTML = '<div style="padding:20px;text-align:center;">新标签页</div>';
+      webviewsContainer.appendChild(container);
     }
 
     if (activate) {

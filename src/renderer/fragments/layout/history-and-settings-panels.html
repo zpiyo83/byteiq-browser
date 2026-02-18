@@ -1,0 +1,369 @@
+﻿    <div id="history-panel" class="overlay-panel" role="dialog" aria-labelledby="history-panel-title" aria-modal="true">
+        <div class="overlay-header">
+            <h2 id="history-panel-title" data-i18n="panels.history.title">History</h2>
+            <button class="close-overlay icon-btn" data-i18n-title="panels.history.close" role="button" aria-label="关闭历史记录面板">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="panel-search">
+            <input type="text" id="history-search-input"
+                data-i18n-placeholder="panels.history.search"
+                role="searchbox" aria-label="搜索历史记录"
+                placeholder="Search history...">
+        </div>
+        <div id="history-list" role="list" aria-label="历史记录列表"></div>
+    </div>
+
+    <div id="settings-panel" class="overlay-panel" role="dialog" aria-labelledby="settings-panel-title" aria-modal="true">
+        <div class="settings-header">
+            <h2 id="settings-panel-title" data-i18n="panels.settings.title">设置</h2>
+            <button class="close-overlay icon-btn" data-i18n-title="panels.settings.close" role="button" aria-label="关闭设置面板">
+                <svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="settings-body">
+            <div class="settings-sidebar">
+                <button class="settings-nav-item active" data-section="appearance">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,3A9,9 0 0,0 3,12A9,9 0 0,0 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M12,19A7,7 0 0,1 5,12A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19Z"/></svg>
+                    <span>外观</span>
+                </button>
+                <button class="settings-nav-item" data-section="search">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/></svg>
+                    <span>搜索</span>
+                </button>
+                <button class="settings-nav-item" data-section="startup">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6Z"/></svg>
+                    <span>启动</span>
+                </button>
+                <button class="settings-nav-item" data-section="language">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V5.99H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"/></svg>
+                    <span>语言</span>
+                </button>
+                <button class="settings-nav-item" data-section="translation">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M4,5H11V7H7.74L9.93,9.19C10.5,8.41 10.96,7.57 11.31,6.69L13.16,7.46C12.71,8.58 12.12,9.64 11.39,10.61L12.75,11.97L11.34,13.38L10,12.04L8.66,13.38L7.25,11.97L8.61,10.61C7.52,9.16 6.68,7.57 6.08,5.86L7.97,5.2C8.42,6.49 9.05,7.71 9.86,8.82L11,7.68V5H4V3M15,11L12,19H14.25L14.88,17H19.12L19.75,19H22L19,11H15M15.5,15L17,10.5L18.5,15H15.5Z"/></svg>
+                    <span>翻译</span>
+                </button>
+                <button class="settings-nav-item" data-section="privacy">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"/></svg>
+                    <span>隐私</span>
+                </button>
+                <button class="settings-nav-item" data-section="data">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M15,18V16H6V18H15M18,14V12H6V14H18Z"/></svg>
+                    <span>数据</span>
+                </button>
+                <button class="settings-nav-item" data-section="ai">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,2H5A2,2 0 0,0 3,4V19L7,15H19A2,2 0 0,0 21,13V4A2,2 0 0,0 19,2M19,13H6.17L5,14.17V4H19V13M12,5.5L10.5,8.5L7.5,10L10.5,11.5L12,14.5L13.5,11.5L16.5,10L13.5,8.5L12,5.5Z"/></svg>
+                    <span>AI</span>
+                </button>
+                <button class="settings-nav-item" data-section="extensions">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19,6H17V4C17,2.9 16.1,2 15,2C13.9,2 13,2.9 13,4V6H11V4C11,2.9 10.1,2 9,2C7.9,2 7,2.9 7,4V6H5C3.9,6 3,6.9 3,8V11H5C6.1,11 7,11.9 7,13C7,14.1 6.1,15 5,15H3V18C3,19.1 3.9,20 5,20H7V18C7,16.9 7.9,16 9,16C10.1,16 11,16.9 11,18V20H13V18C13,16.9 13.9,16 15,16C16.1,16 17,16.9 17,18V20H19C20.1,20 21,19.1 21,18V15H19C17.9,15 17,14.1 17,13C17,11.9 17.9,11 19,11H21V8C21,6.9 20.1,6 19,6Z"/></svg>
+                    <span>扩展</span>
+                    <span class="beta-badge" data-tooltip="当前为测试版，无法保证可用性">BETA</span>
+                </button>
+                <button class="settings-nav-item" data-section="about">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
+                    <span>关于</span>
+                </button>
+            </div>
+            <div class="settings-content">
+                <!-- 外观设置 -->
+                <div id="settings-appearance" class="settings-section active">
+                    <h3>外观设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>深色模式</label>
+                            <div class="setting-desc">启用深色主题以减少眼睛疲劳</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="dark-mode-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>页面缩放</label>
+                            <div class="setting-desc">调整网页内容的显示大小</div>
+                        </div>
+                        <div class="zoom-controls">
+                            <button class="setting-action-btn" id="zoom-out-btn">-</button>
+                            <span id="zoom-level-text">100%</span>
+                            <button class="setting-action-btn" id="zoom-in-btn">+</button>
+                            <button class="setting-action-btn" id="zoom-reset-btn">重置</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- 搜索设置 -->
+                <div id="settings-search" class="settings-section">
+                    <h3>搜索设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>默认搜索引擎</label>
+                            <div class="setting-desc">选择地址栏和搜索框使用的搜索引擎</div>
+                        </div>
+                        <select id="search-engine-select">
+                            <option value="bing">Bing</option>
+                            <option value="google">Google</option>
+                            <option value="baidu">百度</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 启动设置 -->
+                <div id="settings-startup" class="settings-section">
+                    <h3>启动设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>启动页面</label>
+                            <div class="setting-desc">浏览器启动时打开的页面</div>
+                        </div>
+                        <input type="text" id="startup-url-input" placeholder="留空则显示新标签页">
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>恢复上次会话</label>
+                            <div class="setting-desc">启动时自动恢复上次关闭时的标签页</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="restore-session-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <!-- 语言设置 -->
+                <div id="settings-language" class="settings-section">
+                    <h3 data-i18n="panels.settings.language">界面语言</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.language">界面语言</label>
+                            <div class="setting-desc" data-i18n="panels.settings.languageDesc">选择浏览器界面的显示语言</div>
+                        </div>
+                        <select id="lang-select">
+                            <option value="zh-CN">简体中文</option>
+                            <option value="en-US">English</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 翻译设置 -->
+                <div id="settings-translation" class="settings-section">
+                    <h3 data-i18n="panels.settings.translation.title">翻译设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.translation.autoTranslate">自动翻译页面</label>
+                            <div class="setting-desc" data-i18n="panels.settings.translation.autoTranslateDesc">页面加载完成后自动翻译</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="translate-enable-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.translation.engine">翻译引擎</label>
+                            <div class="setting-desc" data-i18n="panels.settings.translation.engineDesc">选择翻译引擎</div>
+                        </div>
+                        <select id="translate-engine-select">
+                            <option value="bing" data-i18n="panels.settings.translation.engineBing">微软翻译 (免费)</option>
+                            <option value="ai" data-i18n="panels.settings.translation.engineAI">AI翻译</option>
+                        </select>
+                    </div>
+                    <!-- AI翻译配置 -->
+                    <div id="ai-translation-config" style="display: none;">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label data-i18n="panels.settings.translation.aiEndpoint">API端点URL</label>
+                                <div class="setting-desc" data-i18n="panels.settings.translation.aiEndpointDesc">AI翻译API的基础URL地址</div>
+                            </div>
+                            <input type="text" id="translate-ai-endpoint-input" placeholder="https://api.openai.com/v1">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label data-i18n="panels.settings.translation.aiApiKey">API密钥</label>
+                                <div class="setting-desc" data-i18n="panels.settings.translation.aiApiKeyDesc">您的API访问密钥</div>
+                            </div>
+                            <input type="password" id="translate-ai-api-key-input" placeholder="sk-...">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label data-i18n="panels.settings.translation.aiRequestType">请求方式</label>
+                                <div class="setting-desc" data-i18n="panels.settings.translation.aiRequestTypeDesc">选择API的请求格式类型</div>
+                            </div>
+                            <select id="translate-ai-request-type-select">
+                                <option value="openai-chat" data-i18n="panels.settings.translation.aiOpenaiChat">OpenAI Chat 兼容</option>
+                                <option value="openai-response" data-i18n="panels.settings.translation.aiOpenaiResponse">OpenAI Response</option>
+                                <option value="anthropic" data-i18n="panels.settings.translation.aiAnthropic">Anthropic</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label data-i18n="panels.settings.translation.aiModel">模型ID</label>
+                                <div class="setting-desc" data-i18n="panels.settings.translation.aiModelDesc">指定要使用的AI模型</div>
+                            </div>
+                            <input type="text" id="translate-ai-model-input" placeholder="gpt-3.5-turbo">
+                        </div>
+                        <!-- 高级设置 -->
+                        <div class="advanced-settings">
+                            <div class="advanced-settings-header" id="translation-advanced-toggle">
+                                <span data-i18n="panels.settings.translation.advancedSettings">高级设置</span>
+                                <svg class="advanced-settings-arrow" viewBox="0 0 24 24" width="16" height="16">
+                                    <path fill="currentColor" d="M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z"/>
+                                </svg>
+                            </div>
+                            <div class="advanced-settings-content" id="translation-advanced-content">
+                                <div class="setting-item">
+                                    <div class="setting-info">
+                                        <label data-i18n="panels.settings.translation.streaming">流式翻译</label>
+                                        <div class="setting-desc" data-i18n="panels.settings.translation.streamingDesc">实时显示翻译结果，无需等待全部完成</div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="translate-streaming-toggle" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.translation.targetLanguage">目标语言</label>
+                            <div class="setting-desc" data-i18n="panels.settings.translation.targetLanguageDesc">选择翻译后的语言</div>
+                        </div>
+                        <select id="translate-target-lang-select">
+                            <option value="zh-Hans">中文 (简体)</option>
+                            <option value="en">English</option>
+                            <option value="ja">日本語</option>
+                            <option value="ko">한국어</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                            <option value="es">Español</option>
+                            <option value="ru">Русский</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.translation.displayMode">显示模式</label>
+                            <div class="setting-desc" data-i18n="panels.settings.translation.displayModeDesc">双语模式在原文上方显示翻译</div>
+                        </div>
+                        <select id="translate-display-mode-select">
+                            <option value="bilingual" data-i18n="panels.settings.translation.modeBilingual">双语显示</option>
+                            <option value="replace" data-i18n="panels.settings.translation.modeReplace">替换原文</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.translation.translateNow">翻译当前标签页</label>
+                            <div class="setting-desc" data-i18n="panels.settings.translation.translateNowDesc">立即翻译当前页面</div>
+                        </div>
+                        <button id="translate-current-page-btn" class="setting-action-btn primary" data-i18n="panels.settings.translation.translateNowBtn">立即翻译</button>
+                    </div>
+                </div>
+                <div id="settings-privacy" class="settings-section">
+                    <h3>隐私设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>隐身模式</label>
+                            <div class="setting-desc">以隐身模式浏览，不保存历史记录</div>
+                        </div>
+                        <button id="incognito-toggle-btn" class="setting-action-btn">开启隐身模式</button>
+                    </div>
+                </div>
+                <!-- 数据设置 -->
+                <div id="settings-data" class="settings-section">
+                    <h3>数据管理</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>导出浏览器数据</label>
+                            <div class="setting-desc">将书签、历史记录等数据导出为JSON文件</div>
+                        </div>
+                        <button id="export-data-btn" class="setting-action-btn primary">导出数据</button>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>清除浏览器数据</label>
+                            <div class="setting-desc">清除历史记录、书签等所有数据</div>
+                        </div>
+                        <button id="clear-data-btn" class="setting-action-btn danger">清除数据</button>
+                    </div>
+                </div>
+                <!-- AI设置 -->
+                <div id="settings-ai" class="settings-section">
+                    <h3 data-i18n="panels.settings.ai.title">AI设置</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.endpoint">API端点URL</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.endpointDesc">配置AI API的基础URL地址</div>
+                        </div>
+                        <input type="text" id="ai-endpoint-input" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.apiKey">API密钥</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.apiKeyDesc">您的API访问密钥，将被安全存储</div>
+                        </div>
+                        <input type="password" id="ai-api-key-input" placeholder="sk-...">
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.requestType">请求方式</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.requestTypeDesc">选择API的请求格式类型</div>
+                        </div>
+                        <select id="ai-request-type-select">
+                            <option value="openai-chat" data-i18n="panels.settings.ai.openaiChat">OpenAI Chat 兼容</option>
+                            <option value="openai-response" data-i18n="panels.settings.ai.openaiResponse">OpenAI Response</option>
+                            <option value="anthropic" data-i18n="panels.settings.ai.anthropic">Anthropic</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 扩展管理 -->
+                <div id="settings-extensions" class="settings-section">
+                    <h3 class="section-title-with-badge">
+                        扩展管理
+                        <span class="beta-badge" data-tooltip="当前为测试版，无法保证可用性">BETA</span>
+                    </h3>
+                    <div class="extensions-actions">
+                        <button id="extensions-add-btn" class="setting-action-btn primary">添加扩展</button>
+                        <button id="extensions-refresh-btn" class="setting-action-btn">刷新</button>
+                    </div>
+                    <div id="extensions-empty" class="extensions-empty">暂未添加扩展</div>
+                    <div id="extensions-list" class="extensions-list" role="list" aria-label="扩展列表"></div>
+                    <div class="extensions-hint">提示：请选择包含 manifest.json 的扩展目录</div>
+                </div>
+                <!-- 关于 -->
+                <div id="settings-about" class="settings-section">
+                    <h3>关于</h3>
+                    <div class="about-logo">
+                        <div class="about-logo-text">Byteiq <span>Browser</span></div>
+                    </div>
+                    <div class="about-info-card">
+                        <div class="about-info-row">
+                            <span class="about-info-label">软件版本</span>
+                            <span class="about-info-value" id="about-app-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">Electron</span>
+                            <span class="about-info-value" id="about-electron-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">Chromium</span>
+                            <span class="about-info-value" id="about-chromium-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">Node.js</span>
+                            <span class="about-info-value" id="about-node-version">--</span>
+                        </div>
+                        <div class="about-info-row">
+                            <span class="about-info-label">V8</span>
+                            <span class="about-info-value" id="about-v8-version">--</span>
+                        </div>
+                    </div>
+                    <div class="about-footer">
+                        <p>社区驱动的 AI 浏览器</p>
+                        <p class="about-copyright">© 2024 Byteiq Community</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
