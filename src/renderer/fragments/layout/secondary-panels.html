@@ -1,0 +1,156 @@
+﻿    <div id="bookmarks-panel" class="overlay-panel" role="dialog" aria-labelledby="bookmarks-panel-title" aria-modal="true">
+        <div class="overlay-header">
+            <h2 id="bookmarks-panel-title" data-i18n="panels.bookmarks.title">My Bookmarks</h2>
+            <button class="close-overlay icon-btn" data-i18n-title="panels.bookmarks.close" role="button" aria-label="关闭书签面板">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="panel-search">
+            <input type="text" id="bookmarks-search-input"
+                data-i18n-placeholder="panels.bookmarks.search"
+                role="searchbox" aria-label="搜索书签"
+                placeholder="Search bookmarks...">
+        </div>
+        <div id="bookmarks-list" role="list" aria-label="书签列表"></div>
+    </div>
+
+    <div id="downloads-panel" class="overlay-panel" role="dialog" aria-labelledby="downloads-panel-title" aria-modal="true">
+        <div class="overlay-header">
+            <h2 id="downloads-panel-title" data-i18n="panels.downloads.title">Downloads</h2>
+            <button class="close-overlay icon-btn" data-i18n-title="panels.downloads.close" role="button" aria-label="关闭下载面板">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="panel-search">
+            <input type="text" id="downloads-search-input"
+                data-i18n-placeholder="panels.downloads.search"
+                role="searchbox" aria-label="搜索下载"
+                placeholder="Search downloads...">
+        </div>
+        <div class="downloads-filters" id="downloads-filters" role="group" aria-label="下载筛选器">
+            <button class="filter-btn" data-filter="all"
+                data-i18n="panels.downloads.filterAll" role="button" aria-pressed="true">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M3,3H21V5H3V3M3,7H21V9H3V7M3,11H21V13H3V11M3,15H21V17H3V15M3,19H21V21H3V19Z"/>
+                </svg>
+                <span data-i18n="panels.downloads.filterAll">All</span>
+            </button>
+            <button class="filter-btn" data-filter="progressing"
+                data-i18n="panels.downloads.filterProgressing" role="button" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
+                </svg>
+                <span data-i18n="panels.downloads.filterProgressing">Downloading</span>
+            </button>
+            <button class="filter-btn" data-filter="completed"
+                data-i18n="panels.downloads.filterCompleted" role="button" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"/>
+                </svg>
+                <span data-i18n="panels.downloads.filterCompleted">Completed</span>
+            </button>
+            <button class="filter-btn" data-filter="failed"
+                data-i18n="panels.downloads.filterFailed" role="button" aria-pressed="false">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/>
+                </svg>
+                <span data-i18n="panels.downloads.filterFailed">Failed</span>
+            </button>
+        </div>
+        <div class="panel-actions" role="group" aria-label="下载操作">
+            <button id="downloads-clear-completed-btn"
+                data-i18n-title="panels.downloads.clearCompleted" role="button" aria-label="清空已完成">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M9,16.17L4.83,12L3.41,13.41L9,19L21,7L19.59,5.59L9,16.17Z"/>
+                </svg>
+            </button>
+            <button id="downloads-clear-failed-btn"
+                data-i18n-title="panels.downloads.clearFailed" role="button" aria-label="清空失败">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/>
+                </svg>
+            </button>
+            <button id="downloads-clear-all-btn"
+                data-i18n-title="panels.downloads.clearAll" role="button" aria-label="清空所有下载">
+                <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>
+                </svg>
+            </button>
+        </div>
+        <div id="downloads-list" role="list" aria-label="下载列表"></div>
+    </div>
+
+    <div id="find-box" class="find-in-page-box" role="search" aria-label="页面查找">
+        <input type="text" id="find-input"
+            data-i18n-placeholder="placeholder.find"
+            role="searchbox" aria-label="查找内容"
+            placeholder="Find in page...">
+        <span id="find-results" aria-live="polite" aria-label="查找结果">0/0</span>
+        <button id="find-prev" class="icon-btn" data-i18n-title="find.prev" role="button" aria-label="上一个">
+            <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                <path fill="currentColor" d="M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z"/>
+            </svg>
+        </button>
+        <button id="find-next" class="icon-btn" data-i18n-title="find.next" role="button" aria-label="下一个">
+            <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                <path fill="currentColor" d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/>
+            </svg>
+        </button>
+        <button id="find-close" class="icon-btn" data-i18n-title="find.close" role="button" aria-label="关闭查找">
+            <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div id="context-menu" class="custom-context-menu" role="menu" aria-label="上下文菜单">
+        <div class="context-menu-item" id="ctx-back"
+            data-i18n="contextMenu.back" role="menuitem" tabindex="0">Back</div>
+        <div class="context-menu-item" id="ctx-forward"
+            data-i18n="contextMenu.forward" role="menuitem" tabindex="0">Forward</div>
+        <div class="context-menu-item" id="ctx-reload"
+            data-i18n="contextMenu.reload" role="menuitem" tabindex="0">Reload</div>
+        <hr style="border:none; border-top:1px solid #eee; margin:4px 0;" role="separator">
+        <div class="context-menu-item" id="ctx-copy"
+            data-i18n="contextMenu.copy" role="menuitem" tabindex="0">Copy</div>
+        <div class="context-menu-item" id="ctx-paste"
+            data-i18n="contextMenu.paste" role="menuitem" tabindex="0">Paste</div>
+        <hr style="border:none; border-top:1px solid #eee; margin:4px 0;" role="separator">
+        <div class="context-menu-item" id="ctx-mute"
+            data-i18n="contextMenu.mute" role="menuitem" tabindex="0">Mute/Unmute Tab</div>
+        <div class="context-menu-item" id="ctx-inspect"
+            data-i18n="contextMenu.inspect" role="menuitem" tabindex="0">Inspect Element</div>
+    </div>
+
+    <div id="tab-context-menu" class="tab-context-menu" role="menu" aria-label="标签页上下文菜单">
+        <div class="context-menu-item" data-action="duplicate"
+            data-i18n="tabs.duplicate" role="menuitem" tabindex="0">Duplicate Tab</div>
+        <div class="context-menu-item" data-action="pin"
+            data-i18n="tabs.pin" role="menuitem" tabindex="0">Pin Tab</div>
+        <div class="context-menu-item" data-action="unpin"
+            data-i18n="tabs.unpin" role="menuitem" tabindex="0">Unpin Tab</div>
+        <div class="context-menu-item" data-action="close"
+            data-i18n="tabs.close" role="menuitem" tabindex="0">Close</div>
+        <div class="context-menu-item" data-action="close-others"
+            data-i18n="tabs.closeOthers" role="menuitem" tabindex="0">Close Others</div>
+        <div class="context-menu-item" data-action="close-right"
+            data-i18n="tabs.closeRight" role="menuitem" tabindex="0">Close Tabs to Right</div>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div id="toast-container" role="alert" aria-live="polite"></div>
+
+    <!-- 自定义模态框 -->
+    <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true">
+        <div class="modal-container">
+            <div class="modal-icon" id="modal-icon"></div>
+            <div class="modal-title" id="modal-title"></div>
+            <div class="modal-message" id="modal-message"></div>
+            <div class="modal-buttons" id="modal-buttons"></div>
+        </div>
+    </div>
+
