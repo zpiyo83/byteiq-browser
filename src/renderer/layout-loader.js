@@ -15,9 +15,9 @@ if (root) {
     const html = fragmentFiles
       .map((relativePath) => {
         const fullPath = path.join(__dirname, relativePath);
-        return fs.readFileSync(fullPath, 'utf8');
+        return fs.readFileSync(fullPath, 'utf8').trim();
       })
-      .join('\n');
+      .join('');
 
     root.innerHTML = html;
   } catch (error) {
