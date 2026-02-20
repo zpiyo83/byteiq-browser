@@ -1,4 +1,5 @@
-﻿function createTabManager(options) {
+﻿// 创建标签页管理器工厂函数
+function createTabManager(options) {
   const {
     documentRef,
     ipcRenderer,
@@ -21,24 +22,29 @@
     updateBookmarkIcon
   } = options;
 
+  // 标签页数据数组
   const tabs = [];
-  let activeTabId = null;
-  let isRestoringSession = false;
-  const lastClosedTabs = [];
-  let navigateToHandler = null;
+  let activeTabId = null; // 当前活跃标签页ID
+  let isRestoringSession = false; // 是否正在恢复会话
+  const lastClosedTabs = []; // 最近关闭的标签页列表
+  let navigateToHandler = null; // 导航处理器
 
+  // 设置导航处理器
   function setNavigateTo(handler) {
     navigateToHandler = handler;
   }
 
+  // 获取当前活跃标签页ID
   function getActiveTabId() {
     return activeTabId;
   }
 
+  // 根据ID获取标签页
   function getTabById(id) {
     return tabs.find(tab => tab.id === id);
   }
 
+  // 更新标签页URL
   function updateTabUrl(id, url) {
     const tab = getTabById(id);
     if (!tab) return;
@@ -46,6 +52,7 @@
     saveSession();
   }
 
+  // 保存会话数据
   function saveSession() {
     if (isRestoringSession) return;
     const sessionTabs = tabs.map(tab => ({
