@@ -43,7 +43,7 @@
 
   function bindTabContextActions() {
     if (!tabContextMenu) return;
-    tabContextMenu.addEventListener('click', (e) => {
+    tabContextMenu.addEventListener('click', e => {
       const item = e.target.closest('[data-action]');
       const action = item ? item.dataset.action : null;
       if (!action || !tabContextTargetId) return;
@@ -106,10 +106,7 @@
       ctxCopy.addEventListener('click', () => {
         const activeEl = documentRef.activeElement;
         if (activeEl && typeof activeEl.value === 'string') {
-          const selected = activeEl.value.slice(
-            activeEl.selectionStart,
-            activeEl.selectionEnd
-          );
+          const selected = activeEl.value.slice(activeEl.selectionStart, activeEl.selectionEnd);
           clipboard.writeText(selected || activeEl.value);
           return;
         }
@@ -163,7 +160,7 @@
   }
 
   function bindEvents() {
-    windowRef.addEventListener('contextmenu', (e) => {
+    windowRef.addEventListener('contextmenu', e => {
       e.preventDefault();
       const tabEl = e.target.closest('.tab');
       if (tabEl) {

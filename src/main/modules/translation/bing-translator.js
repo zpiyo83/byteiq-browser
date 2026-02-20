@@ -1,11 +1,7 @@
 ﻿const https = require('https');
 
 function requestText(urlString, options = {}) {
-  const {
-    method = 'GET',
-    headers = {},
-    body = ''
-  } = options;
+  const { method = 'GET', headers = {}, body = '' } = options;
 
   return new Promise((resolve, reject) => {
     let parsed;
@@ -26,9 +22,9 @@ function requestText(urlString, options = {}) {
       rejectUnauthorized: false // 允许自签名证书
     };
 
-    const request = https.request(requestOptions, (response) => {
+    const request = https.request(requestOptions, response => {
       const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('data', chunk => chunks.push(chunk));
       response.on('end', () => {
         let responseText;
         const buffer = Buffer.concat(chunks);
@@ -38,9 +34,10 @@ function requestText(urlString, options = {}) {
         if (contentEncoding === 'gzip' || contentEncoding === 'deflate') {
           try {
             const zlib = require('zlib');
-            responseText = contentEncoding === 'gzip'
-              ? zlib.gunzipSync(buffer).toString('utf8')
-              : zlib.inflateSync(buffer).toString('utf8');
+            responseText =
+              contentEncoding === 'gzip'
+                ? zlib.gunzipSync(buffer).toString('utf8')
+                : zlib.inflateSync(buffer).toString('utf8');
           } catch (decompressError) {
             console.error('[Translation] Decompress error:', decompressError.message);
             responseText = buffer.toString('utf8');
@@ -68,7 +65,7 @@ function requestText(urlString, options = {}) {
       });
     });
 
-    request.on('error', (error) => {
+    request.on('error', error => {
       console.error('[Translation] Request error:', error.message);
       reject(error);
     });
@@ -83,9 +80,11 @@ function requestText(urlString, options = {}) {
 function mergeCookies(cookieJar, setCookieHeaders) {
   const headers = Array.isArray(setCookieHeaders)
     ? setCookieHeaders
-    : (setCookieHeaders ? [setCookieHeaders] : []);
+    : setCookieHeaders
+      ? [setCookieHeaders]
+      : [];
 
-  headers.forEach((item) => {
+  headers.forEach(item => {
     const pair = String(item).split(';')[0];
     const eqIndex = pair.indexOf('=');
     if (eqIndex <= 0) return;
@@ -121,9 +120,7 @@ let cachedBingSession = null;
 function parseBingSession(html, pageUrl, cookieJar) {
   const igMatch = html.match(/IG:"([^"]+)"/);
   const iidMatch = html.match(/data-iid="([^"]+)"/);
-  const abuseMatch = html.match(
-    /params_AbusePreventionHelper\s*=\s*\[([^\]]+)\]/
-  );
+  const abuseMatch = html.match(/params_AbusePreventionHelper\s*=\s*\[([^\]]+)\]/);
 
   if (!igMatch || !iidMatch || !abuseMatch) {
     return null;
@@ -131,9 +128,7 @@ function parseBingSession(html, pageUrl, cookieJar) {
 
   const parts = abuseMatch[1].split(',');
   const key = parts[0] ? parts[0].trim() : '';
-  const token = parts[1]
-    ? parts[1].trim().replace(/^"|"$/g, '')
-    : '';
+  const token = parts[1] ? parts[1].trim().replace(/^"|"$/g, '') : '';
   const intervalMs = Number.parseInt(parts[2] || '', 10) || 300000;
 
   if (!key || !token) {
@@ -154,40 +149,27 @@ function parseBingSession(html, pageUrl, cookieJar) {
 }
 
 async function getBingSession(forceRefresh = false) {
-  if (
-    !forceRefresh
-    && cachedBingSession
-    && cachedBingSession.expiresAt > Date.now()
-  ) {
-    console.log('[Translation] Using cached Bing session');
+  if (!forceRefresh && cachedBingSession && cachedBingSession.expiresAt > Date.now()) {
     return cachedBingSession;
   }
 
-  console.log('[Translation] Fetching new Bing session...');
   let currentUrl = BING_TRANSLATOR_URL;
   const cookieJar = {};
   let pageResult = null;
 
   for (let i = 0; i < 6; i += 1) {
-    console.log('[Translation] Requesting:', currentUrl);
     const result = await requestText(currentUrl, {
       method: 'GET',
       headers: {
         'User-Agent': BING_USER_AGENT,
-        'Accept': 'text/html,application/xhtml+xml'
+        Accept: 'text/html,application/xhtml+xml'
       }
     });
 
-    console.log('[Translation] Response status:', result.statusCode);
-
     mergeCookies(cookieJar, result.headers['set-cookie']);
 
-    if (
-      [301, 302, 307, 308].includes(result.statusCode)
-      && result.headers.location
-    ) {
+    if ([301, 302, 307, 308].includes(result.statusCode) && result.headers.location) {
       currentUrl = resolveRedirectUrl(currentUrl, result.headers.location);
-      console.log('[Translation] Redirecting to:', currentUrl);
       continue;
     }
 
@@ -195,11 +177,7 @@ async function getBingSession(forceRefresh = false) {
     break;
   }
 
-  if (
-    !pageResult
-    || pageResult.statusCode < 200
-    || pageResult.statusCode >= 300
-  ) {
+  if (!pageResult || pageResult.statusCode < 200 || pageResult.statusCode >= 300) {
     throw new Error('Failed to load Bing translator page');
   }
 
@@ -234,9 +212,7 @@ function extractBingTranslation(bodyText) {
   }
 
   const firstTranslation = firstRow.translations[0];
-  const result = firstTranslation && firstTranslation.text
-    ? firstTranslation.text
-    : '';
+  const result = firstTranslation && firstTranslation.text ? firstTranslation.text : '';
 
   return result;
 }
@@ -272,10 +248,10 @@ async function translateTextWithBing(text, targetLanguage, retry = true) {
       'User-Agent': BING_USER_AGENT,
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       'Content-Length': Buffer.byteLength(body),
-      'Referer': session.referer,
-      'Origin': session.origin,
-      'Accept': '*/*',
-      'Cookie': serializeCookies(session.cookieJar)
+      Referer: session.referer,
+      Origin: session.origin,
+      Accept: '*/*',
+      Cookie: serializeCookies(session.cookieJar)
     }
   });
 
