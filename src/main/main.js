@@ -11,12 +11,8 @@
 const fs = require('fs');
 const path = require('path');
 const Store = require('electron-store');
-const {
-  registerTranslationIpcHandlers
-} = require('./modules/translation-ipc');
-const {
-  createExtensionsManager
-} = require('./modules/extensions-manager');
+const { registerTranslationIpcHandlers } = require('./modules/translation-ipc');
+const { createExtensionsManager } = require('./modules/extensions-manager');
 
 const store = new Store();
 
@@ -163,7 +159,6 @@ function createWindow() {
 
     item.on('updated', (event, state) => {
       if (state === 'interrupted') {
-        console.log('Download is interrupted but can be resumed');
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
             id: downloadId,
@@ -179,7 +174,6 @@ function createWindow() {
         }
       } else if (state === 'progressing') {
         if (item.isPaused()) {
-          console.log('Download is paused');
           if (mainWindow) {
             mainWindow.webContents.send('download-progress', {
               id: downloadId,
@@ -194,7 +188,6 @@ function createWindow() {
             });
           }
         } else {
-          console.log(`Received bytes: ${item.getReceivedBytes()}`);
           if (mainWindow) {
             mainWindow.webContents.send('download-progress', {
               id: downloadId,
@@ -214,7 +207,6 @@ function createWindow() {
 
     item.once('done', (event, state) => {
       if (state === 'completed') {
-        console.log('Download successfully');
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
             id: downloadId,
@@ -229,7 +221,6 @@ function createWindow() {
           });
         }
       } else if (state === 'cancelled') {
-        console.log('Download cancelled');
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
             id: downloadId,
@@ -244,7 +235,6 @@ function createWindow() {
           });
         }
       } else {
-        console.log(`Download failed: ${state}`);
         if (mainWindow) {
           mainWindow.webContents.send('download-progress', {
             id: downloadId,
@@ -304,7 +294,6 @@ function createMenu() {
   // 隐藏菜单栏
   Menu.setApplicationMenu(null);
 }
-
 
 // 开发者工具侧边栏管理
 ipcMain.on('toggle-devtools-sidebar', (event, { webContentsId, width }) => {
