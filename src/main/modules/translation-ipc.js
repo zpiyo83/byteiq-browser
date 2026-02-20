@@ -1,9 +1,5 @@
-﻿const {
-  callAITranslation
-} = require('./translation/ai-translator');
-const {
-  translateTextWithBing
-} = require('./translation/bing-translator');
+﻿const { callAITranslation } = require('./translation/ai-translator');
+const { translateTextWithBing } = require('./translation/bing-translator');
 
 function registerTranslationIpcHandlers(options) {
   const { app, ipcMain } = options;
@@ -19,11 +15,7 @@ function registerTranslationIpcHandlers(options) {
   });
 
   ipcMain.handle('translate-text-batch', async (event, payload = {}) => {
-    const {
-      engine,
-      texts,
-      targetLanguage
-    } = payload || {};
+    const { engine, texts, targetLanguage } = payload || {};
 
     if (engine !== 'bing') {
       return { ok: false, message: 'Only Bing translator is supported' };
@@ -33,8 +25,8 @@ function registerTranslationIpcHandlers(options) {
       return { ok: true, translations: [] };
     }
 
-    const safeTexts = texts.map((item) => String(item || '').trim());
-    if (safeTexts.some((item) => !item)) {
+    const safeTexts = texts.map(item => String(item || '').trim());
+    if (safeTexts.some(item => !item)) {
       return { ok: false, message: 'Source text cannot be empty' };
     }
 
@@ -54,7 +46,6 @@ function registerTranslationIpcHandlers(options) {
         return { ok: false, message: 'Translation response count mismatch' };
       }
 
-      console.log(`[Bing翻译] 完成: ${texts.length} 个文本块`);
       return {
         ok: true,
         translations
@@ -67,15 +58,8 @@ function registerTranslationIpcHandlers(options) {
   });
 
   ipcMain.handle('translate-text-ai', async (event, payload = {}) => {
-    const {
-      texts,
-      targetLanguage,
-      endpoint,
-      apiKey,
-      requestType,
-      model,
-      streaming
-    } = payload || {};
+    const { texts, targetLanguage, endpoint, apiKey, requestType, model, streaming } =
+      payload || {};
 
     if (!Array.isArray(texts) || texts.length === 0) {
       return { ok: true, translations: [] };
@@ -88,13 +72,13 @@ function registerTranslationIpcHandlers(options) {
 
     const targetLangNames = {
       'zh-Hans': '简体中文',
-      'en': 'English',
-      'ja': '日本語',
-      'ko': '한국어',
-      'fr': 'Français',
-      'de': 'Deutsch',
-      'es': 'Español',
-      'ru': 'Русский'
+      en: 'English',
+      ja: '日本語',
+      ko: '한국어',
+      fr: 'Français',
+      de: 'Deutsch',
+      es: 'Español',
+      ru: 'Русский'
     };
     const targetLangName = targetLangNames[targetLanguage] || targetLanguage;
 
@@ -118,7 +102,6 @@ function registerTranslationIpcHandlers(options) {
         return { ok: false, message: 'AI翻译结果数量不匹配' };
       }
 
-      console.log(`[AI翻译] 完成: ${texts.length} 个文本块`);
       return {
         ok: true,
         translations

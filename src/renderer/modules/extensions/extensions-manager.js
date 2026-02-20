@@ -1,14 +1,6 @@
 ﻿function createExtensionsManager(options) {
-  const {
-    documentRef,
-    ipcRenderer,
-    modalManager,
-    showToast,
-    listEl,
-    addBtn,
-    refreshBtn,
-    emptyEl
-  } = options;
+  const { documentRef, ipcRenderer, modalManager, showToast, listEl, addBtn, refreshBtn, emptyEl } =
+    options;
 
   let extensions = [];
 
@@ -144,7 +136,9 @@
           page: 'popup'
         });
         if (!result || !result.ok) {
-          modalManager.error(result && result.message ? result.message : '\u65e0\u6cd5\u6253\u5f00\u5f39\u7a97');
+          modalManager.error(
+            result && result.message ? result.message : '\u65e0\u6cd5\u6253\u5f00\u5f39\u7a97'
+          );
         }
       });
     }
@@ -156,7 +150,9 @@
           page: 'options'
         });
         if (!result || !result.ok) {
-          modalManager.error(result && result.message ? result.message : '\u65e0\u6cd5\u6253\u5f00\u8bbe\u7f6e');
+          modalManager.error(
+            result && result.message ? result.message : '\u65e0\u6cd5\u6253\u5f00\u8bbe\u7f6e'
+          );
         }
       });
     }
@@ -166,7 +162,9 @@
         path: ext.path
       });
       if (!result || !result.ok) {
-        modalManager.error(result && result.message ? result.message : '\u65e0\u6cd5\u83b7\u53d6\u8be6\u60c5');
+        modalManager.error(
+          result && result.message ? result.message : '\u65e0\u6cd5\u83b7\u53d6\u8be6\u60c5'
+        );
         return;
       }
 
@@ -199,24 +197,26 @@
         lines.push(`host_permissions: ${details.hostPermissions.join(', ')}`);
       }
       if (details.contentScripts && details.contentScripts.length) {
-        const scripts = details.contentScripts.map((item) => {
+        const scripts = details.contentScripts.map(item => {
           const matches = Array.isArray(item.matches) ? item.matches.join(', ') : '';
           const js = Array.isArray(item.js) ? item.js.join(', ') : '';
           return `content_script matches=[${matches}] js=[${js}] run_at=${item.run_at || ''}`;
         });
         lines.push('\u5185\u5bb9\u811a\u672c:');
-        scripts.forEach((line) => lines.push(`  - ${line}`));
+        scripts.forEach(line => lines.push(`  - ${line}`));
       }
       if (details.lastError) {
         lines.push(`\u6700\u8fd1\u9519\u8bef: ${details.lastError}`);
       }
 
       if (details.permissions && details.permissions.length) {
-        const needs = details.permissions.filter((p) => {
+        const needs = details.permissions.filter(p => {
           return p === 'sidePanel' || p === 'offscreen';
         });
         if (needs.length) {
-          lines.push(`\u63d0\u793a: \u68c0\u6d4b\u5230\u6743\u9650 ${needs.join(', ')} \uff0cElectron \u4e2d\u53ef\u80fd\u4e0d\u5b8c\u6574\u652f\u6301`);
+          lines.push(
+            `\u63d0\u793a: \u68c0\u6d4b\u5230\u6743\u9650 ${needs.join(', ')} \uff0cElectron \u4e2d\u53ef\u80fd\u4e0d\u5b8c\u6574\u652f\u6301`
+          );
         }
       }
 
@@ -225,7 +225,7 @@
       if (logs.length === 0) {
         lines.push('  (\u6682\u65e0)');
       } else {
-        logs.forEach((log) => {
+        logs.forEach(log => {
           const time = log.time || '';
           const level = log.level || 'info';
           const msg = log.message || '';
@@ -273,7 +273,7 @@
     }
 
     setEmptyVisible(false);
-    extensions.forEach((ext) => {
+    extensions.forEach(ext => {
       const item = buildExtensionItem(ext);
       listEl.appendChild(item);
     });
@@ -283,7 +283,10 @@
     if (!listEl) return;
     const result = await ipcRenderer.invoke('extensions-list');
     if (!result || result.ok === false) {
-      showToast(result && result.message ? result.message : '\u52a0\u8f7d\u6269\u5c55\u5931\u8d25', 'error');
+      showToast(
+        result && result.message ? result.message : '\u52a0\u8f7d\u6269\u5c55\u5931\u8d25',
+        'error'
+      );
       return;
     }
 

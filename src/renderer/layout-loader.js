@@ -13,7 +13,7 @@ if (root) {
 
   try {
     const html = fragmentFiles
-      .map((relativePath) => {
+      .map(relativePath => {
         const fullPath = path.join(__dirname, relativePath);
         return fs.readFileSync(fullPath, 'utf8').trim();
       })

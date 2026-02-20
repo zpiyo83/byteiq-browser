@@ -30,11 +30,7 @@
       const currentWv = documentRef.getElementById(`webview-${getActiveTabId()}`);
       let response = t('ai.prototype');
 
-      if (
-        text.includes('总结') ||
-        text.includes('總結') ||
-        text.includes('summary')
-      ) {
+      if (text.includes('总结') || text.includes('總結') || text.includes('summary')) {
         if (currentWv && currentWv.tagName === 'WEBVIEW') {
           response = t('ai.summaryPrompt');
         } else {
@@ -58,7 +54,7 @@
     });
 
     aiSendBtn.addEventListener('click', handleAISend);
-    aiInput.addEventListener('keypress', (e) => {
+    aiInput.addEventListener('keypress', e => {
       if (e.key === 'Enter') handleAISend();
     });
   }

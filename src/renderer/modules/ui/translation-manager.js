@@ -10,27 +10,16 @@ const {
   buildRestoreScript,
   buildStreamingApplyScript
 } = require('./translation/scripts');
-const {
-  createDynamicTranslationController
-} = require('./translation/dynamic-listener');
+const { createDynamicTranslationController } = require('./translation/dynamic-listener');
 
 function createTranslationManager(options) {
-  const {
-    getActiveWebview,
-    ipcRenderer,
-    showToast,
-    store,
-    onTranslationStatusChange
-  } = options;
+  const { getActiveWebview, ipcRenderer, showToast, store, onTranslationStatusChange } = options;
 
   function getSettings() {
     return {
       enabled: store.get('settings.translation.enabled', false),
       engine: store.get('settings.translation.engine', 'bing'),
-      targetLanguage: store.get(
-        'settings.translation.targetLanguage',
-        'zh-Hans'
-      ),
+      targetLanguage: store.get('settings.translation.targetLanguage', 'zh-Hans'),
       displayMode: store.get('settings.translation.displayMode', 'replace'),
       aiEndpoint: store.get('settings.translation.aiEndpoint', ''),
       aiApiKey: store.get('settings.translation.aiApiKey', ''),
@@ -60,13 +49,12 @@ function createTranslationManager(options) {
     let current = [];
     let currentChars = 0;
 
-    texts.forEach((text) => {
+    texts.forEach(text => {
       const item = String(text || '').trim();
       if (!item) return;
 
       const nextChars = currentChars + item.length;
-      const shouldSplit = current.length >= maxItems
-        || nextChars > maxChars;
+      const shouldSplit = current.length >= maxItems || nextChars > maxChars;
 
       if (shouldSplit && current.length > 0) {
         chunks.push(current);
@@ -135,15 +123,11 @@ function createTranslationManager(options) {
       }
 
       if (!result || !result.ok) {
-        const message = result && result.message
-          ? result.message
-          : 'Translation request failed';
+        const message = result && result.message ? result.message : 'Translation request failed';
         throw new Error(message);
       }
 
-      const translated = Array.isArray(result.translations)
-        ? result.translations
-        : [];
+      const translated = Array.isArray(result.translations) ? result.translations : [];
 
       if (translated.length !== chunk.length) {
         throw new Error('Translation result count mismatch');
@@ -214,14 +198,9 @@ function createTranslationManager(options) {
     }
 
     try {
-      const collected = await webview.executeJavaScript(
-        COLLECT_TEXT_SCRIPT,
-        true
-      );
+      const collected = await webview.executeJavaScript(COLLECT_TEXT_SCRIPT, true);
 
-      const sourceTexts = collected && Array.isArray(collected.texts)
-        ? collected.texts
-        : [];
+      const sourceTexts = collected && Array.isArray(collected.texts) ? collected.texts : [];
 
       if (sourceTexts.length === 0) {
         // 通知翻译结束（没有内容需要翻译）
@@ -233,7 +212,7 @@ function createTranslationManager(options) {
 
       // 流式更新回调函数
       let lastAppliedIndex = 0;
-      const onStreamUpdate = async (data) => {
+      const onStreamUpdate = async data => {
         if (!data || !Array.isArray(data.translations)) return;
 
         // 检查请求是否仍然有效
@@ -244,8 +223,6 @@ function createTranslationManager(options) {
         const startIndex = data.startIndex || lastAppliedIndex;
 
         if (translations.length <= lastAppliedIndex) return;
-
-        console.log('[Translation Stream] Applying incremental update, startIndex:', startIndex, 'total:', translations.length);
 
         try {
           // 流式应用翻译
@@ -371,9 +348,7 @@ function createTranslationManager(options) {
   }
 
   async function translateActiveWebview() {
-    const webview = typeof getActiveWebview === 'function'
-      ? getActiveWebview()
-      : null;
+    const webview = typeof getActiveWebview === 'function' ? getActiveWebview() : null;
 
     if (!webview) {
       showToast('无法找到当前页面的 webview', 'error');
@@ -387,10 +362,8 @@ function createTranslationManager(options) {
     getSettings,
     ipcRenderer
   });
-  const {
-    injectDynamicTranslationListener,
-    stopDynamicTranslationListener
-  } = dynamicTranslationController;
+  const { injectDynamicTranslationListener, stopDynamicTranslationListener } =
+    dynamicTranslationController;
 
   return {
     getSettings,

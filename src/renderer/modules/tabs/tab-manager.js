@@ -21,10 +21,10 @@
     updateBookmarkIcon
   } = options;
 
-  let tabs = [];
+  const tabs = [];
   let activeTabId = null;
   let isRestoringSession = false;
-  let lastClosedTabs = [];
+  const lastClosedTabs = [];
   let navigateToHandler = null;
 
   function setNavigateTo(handler) {
@@ -36,7 +36,7 @@
   }
 
   function getTabById(id) {
-    return tabs.find((tab) => tab.id === id);
+    return tabs.find(tab => tab.id === id);
   }
 
   function updateTabUrl(id, url) {
@@ -48,11 +48,11 @@
 
   function saveSession() {
     if (isRestoringSession) return;
-    const sessionTabs = tabs.map((tab) => ({
+    const sessionTabs = tabs.map(tab => ({
       url: tab.url || '',
       pinned: !!tab.pinned
     }));
-    const activeIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+    const activeIndex = tabs.findIndex(tab => tab.id === activeTabId);
     store.set('session.tabs', sessionTabs);
     store.set('session.activeIndex', activeIndex);
   }
@@ -71,7 +71,7 @@
     }
 
     isRestoringSession = true;
-    sessionTabs.forEach((tabInfo) => {
+    sessionTabs.forEach(tabInfo => {
       const tabUrl = typeof tabInfo === 'string' ? tabInfo : tabInfo.url;
       const pinned = typeof tabInfo === 'object' && tabInfo.pinned;
       createTab(tabUrl || null, {
@@ -92,8 +92,8 @@
   }
 
   function renderTabOrder() {
-    const pinnedTabs = tabs.filter((tab) => tab.pinned);
-    const normalTabs = tabs.filter((tab) => !tab.pinned);
+    const pinnedTabs = tabs.filter(tab => tab.pinned);
+    const normalTabs = tabs.filter(tab => !tab.pinned);
     const orderedTabs = pinnedTabs.concat(normalTabs);
 
     orderedTabs.forEach((tab, index) => {
@@ -148,7 +148,7 @@
   }
 
   function getOrderedTabIds() {
-    return Array.from(tabsBar.querySelectorAll('.tab')).map((tabEl) => {
+    return Array.from(tabsBar.querySelectorAll('.tab')).map(tabEl => {
       return tabEl.id.replace('tab-', '');
     });
   }
@@ -160,10 +160,8 @@
   }
 
   function closeOtherTabs(id) {
-    const idsToClose = tabs
-      .map((tab) => tab.id)
-      .filter((tabId) => tabId !== id);
-    idsToClose.forEach((tabId) => closeTab(tabId));
+    const idsToClose = tabs.map(tab => tab.id).filter(tabId => tabId !== id);
+    idsToClose.forEach(tabId => closeTab(tabId));
   }
 
   function closeTabsToRight(id) {
@@ -171,16 +169,11 @@
     const index = orderedIds.indexOf(id);
     if (index === -1) return;
     const idsToClose = orderedIds.slice(index + 1);
-    idsToClose.forEach((tabId) => closeTab(tabId));
+    idsToClose.forEach(tabId => closeTab(tabId));
   }
 
   function createTab(url = null, options = {}) {
-    const {
-      activate = true,
-      useStartup = true,
-      skipSession = false,
-      pinned = false
-    } = options;
+    const { activate = true, useStartup = true, skipSession = false, pinned = false } = options;
     const startupUrl = useStartup ? store.get('settings.startupUrl', '') : '';
     const targetUrl = url || startupUrl || null;
     const formattedUrl = targetUrl ? formatUrl(targetUrl) : null;
@@ -208,14 +201,14 @@
         <span class="close-tab">x</span>
     `;
     tabEl.classList.toggle('pinned', tab.pinned);
-    tabEl.addEventListener('click', (e) => {
+    tabEl.addEventListener('click', e => {
       if (e.target.classList.contains('close-tab')) {
         closeTab(id);
       } else {
         switchTab(id);
       }
     });
-    tabEl.addEventListener('auxclick', (e) => {
+    tabEl.addEventListener('auxclick', e => {
       if (e.button === 1) {
         closeTab(id);
       }
@@ -250,7 +243,7 @@
 
       const searchInput = container.querySelector('.tab-search-input');
       if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
+        searchInput.addEventListener('keypress', e => {
           if (e.key === 'Enter') {
             const query = searchInput.value;
             if (query && typeof navigateToHandler === 'function') {
@@ -315,20 +308,19 @@
       }
     });
 
-    webview.addEventListener('found-in-page', (e) => {
+    webview.addEventListener('found-in-page', e => {
       const result = e.result;
       if (result.matches !== undefined) {
-        findResults.innerText =
-          `${result.activeMatchOrdinal || 0}/${result.matches}`;
+        findResults.innerText = `${result.activeMatchOrdinal || 0}/${result.matches}`;
       }
     });
 
-    webview.addEventListener('page-favicon-updated', (e) => {
+    webview.addEventListener('page-favicon-updated', e => {
       const icon = e.favicons && e.favicons.length > 0 ? e.favicons[0] : '';
       setTabIcon(id, icon);
     });
 
-    webview.addEventListener('page-title-updated', (e) => {
+    webview.addEventListener('page-title-updated', e => {
       const tabEl = documentRef.getElementById(`tab-${id}`);
       if (tabEl) {
         tabEl.querySelector('.tab-title').innerText = e.title;
@@ -340,7 +332,7 @@
       saveHistory(webview.getURL(), e.title);
     });
 
-    webview.addEventListener('did-navigate', (e) => {
+    webview.addEventListener('did-navigate', e => {
       updateTabUrl(id, e.url);
       applyStoredZoom(webview);
       // 清除翻译签名，以便在新页面重新翻译
@@ -349,7 +341,7 @@
       delete webview.dataset.translationLastRequestAt;
     });
 
-    webview.addEventListener('did-navigate-in-page', (e) => {
+    webview.addEventListener('did-navigate-in-page', e => {
       updateTabUrl(id, e.url);
       // 清除翻译签名，以便在新页面重新翻译
       delete webview.dataset.translationSignature;
@@ -357,7 +349,7 @@
       delete webview.dataset.translationLastRequestAt;
     });
 
-    webview.addEventListener('did-fail-load', (e) => {
+    webview.addEventListener('did-fail-load', e => {
       if (e.errorCode === -3) return; // 忽略用户取消的请求
 
       console.error('Failed to load:', e);
@@ -414,11 +406,11 @@
       showToast(`页面加载失败: ${errorMsg}`, 'error');
     });
 
-    webview.addEventListener('new-window', (e) => {
+    webview.addEventListener('new-window', e => {
       e.preventDefault();
     });
 
-    webview.addEventListener('console-message', (e) => {
+    webview.addEventListener('console-message', e => {
       if (!e || !e.sourceId || !String(e.sourceId).startsWith('chrome-extension://')) {
         return;
       }
@@ -450,13 +442,13 @@
   function switchTab(id) {
     activeTabId = id;
 
-    documentRef.querySelectorAll('.tab').forEach((tabEl) => {
+    documentRef.querySelectorAll('.tab').forEach(tabEl => {
       tabEl.classList.remove('active');
     });
     const activeTabEl = documentRef.getElementById(`tab-${id}`);
     if (activeTabEl) activeTabEl.classList.add('active');
 
-    documentRef.querySelectorAll('#webviews-container > *').forEach((wv) => {
+    documentRef.querySelectorAll('#webviews-container > *').forEach(wv => {
       wv.classList.remove('active');
     });
 
@@ -469,7 +461,7 @@
   }
 
   function closeTab(id) {
-    const index = tabs.findIndex((tab) => tab.id === id);
+    const index = tabs.findIndex(tab => tab.id === id);
     if (index === -1) return;
 
     const tabData = tabs[index];

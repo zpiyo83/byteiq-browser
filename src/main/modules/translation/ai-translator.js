@@ -1,7 +1,16 @@
 ﻿const https = require('https');
 
 async function callAITranslation(options) {
-  const { texts, targetLanguage, endpoint, apiKey, requestType, model, senderWebContents, streaming } = options;
+  const {
+    texts,
+    targetLanguage,
+    endpoint,
+    apiKey,
+    requestType,
+    model,
+    senderWebContents,
+    streaming
+  } = options;
 
   // 构建翻译请求
   let prompt = `请你帮我把以下文字翻译为${targetLanguage}，冒号后跟翻译后的内容，保持"翻译块:"的格式不变：\n`;
@@ -16,7 +25,7 @@ async function callAITranslation(options) {
   const defaultModels = {
     'openai-chat': 'gpt-3.5-turbo',
     'openai-response': 'gpt-3.5-turbo-instruct',
-    'anthropic': 'claude-3-haiku-20240307'
+    anthropic: 'claude-3-haiku-20240307'
   };
   const actualModel = model || defaultModels[requestType] || defaultModels['openai-chat'];
 
@@ -31,9 +40,7 @@ async function callAITranslation(options) {
     }
     requestBody = {
       model: actualModel,
-      messages: [
-        { role: 'user', content: prompt }
-      ],
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
       stream: !!streaming
     };
@@ -47,9 +54,7 @@ async function callAITranslation(options) {
     requestBody = {
       model: actualModel,
       max_tokens: 4096,
-      messages: [
-        { role: 'user', content: prompt }
-      ],
+      messages: [{ role: 'user', content: prompt }],
       stream: !!streaming
     };
   } else {
@@ -73,7 +78,14 @@ async function callAITranslation(options) {
 
   // 如果是非流式模式，直接请求并解析
   if (!streaming) {
-    return await callAITranslationNonStreaming({ url, parsedUrl, bodyString, apiKey, requestType, texts });
+    return await callAITranslationNonStreaming({
+      url,
+      parsedUrl,
+      bodyString,
+      apiKey,
+      requestType,
+      texts
+    });
   }
 
   // 流式模式
@@ -83,7 +95,7 @@ async function callAITranslation(options) {
   let lastSentCount = 0;
 
   // 解析并提取翻译块的辅助函数
-  const parseAndNotify = (content) => {
+  const parseAndNotify = content => {
     const lines = content.split('\n');
     // 流式响应时，最后一行可能还没输出完整（没有换行结尾），不要提前解析
     if (!content.endsWith('\n')) {
@@ -123,7 +135,7 @@ async function callAITranslation(options) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(bodyString),
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'x-api-key': requestType === 'anthropic' ? apiKey : undefined
       },
       rejectUnauthorized: false
@@ -136,20 +148,22 @@ async function callAITranslation(options) {
       }
     });
 
-    const request = https.request(requestOptions, (response) => {
+    const request = https.request(requestOptions, response => {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         const chunks = [];
-        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('data', chunk => chunks.push(chunk));
         response.on('end', () => {
           const errorText = Buffer.concat(chunks).toString('utf8');
-          reject(new Error(`AI API请求失败 (${response.statusCode}): ${errorText.substring(0, 200)}`));
+          reject(
+            new Error(`AI API请求失败 (${response.statusCode}): ${errorText.substring(0, 200)}`)
+          );
         });
         return;
       }
 
       let buffer = '';
 
-      response.on('data', (chunk) => {
+      response.on('data', chunk => {
         buffer += chunk.toString('utf8');
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // 保留不完整的行
@@ -198,13 +212,13 @@ async function callAITranslation(options) {
         resolve();
       });
 
-      response.on('error', (error) => {
+      response.on('error', error => {
         console.error('[AI翻译] 响应错误:', error.message);
         reject(error);
       });
     });
 
-    request.on('error', (error) => {
+    request.on('error', error => {
       console.error('[AI翻译] 请求错误:', error.message);
       reject(error);
     });
@@ -240,7 +254,9 @@ async function callAITranslation(options) {
   }
 
   if (finalTranslations.length !== texts.length) {
-    console.error(`[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`);
+    console.error(
+      `[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`
+    );
     while (finalTranslations.length < texts.length) {
       finalTranslations.push(texts[finalTranslations.length]);
     }
@@ -263,7 +279,7 @@ async function callAITranslationNonStreaming(options) {
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(bodyString),
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'x-api-key': requestType === 'anthropic' ? apiKey : undefined
       },
       rejectUnauthorized: false
@@ -276,9 +292,9 @@ async function callAITranslationNonStreaming(options) {
       }
     });
 
-    const request = https.request(requestOptions, (response) => {
+    const request = https.request(requestOptions, response => {
       const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('data', chunk => chunks.push(chunk));
       response.on('end', () => {
         const responseText = Buffer.concat(chunks).toString('utf8');
         resolve({
@@ -342,7 +358,9 @@ async function callAITranslationNonStreaming(options) {
   }
 
   if (finalTranslations.length !== texts.length) {
-    console.error(`[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`);
+    console.error(
+      `[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`
+    );
     while (finalTranslations.length < texts.length) {
       finalTranslations.push(texts[finalTranslations.length]);
     }

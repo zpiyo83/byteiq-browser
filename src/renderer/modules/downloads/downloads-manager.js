@@ -23,15 +23,14 @@
     let downloads = store.get('downloads', []);
     const downloadId = data.id || '';
     const index = downloadId
-      ? downloads.findIndex((item) => item.id === downloadId)
-      : downloads.findIndex((item) => item.fileName === data.fileName);
+      ? downloads.findIndex(item => item.id === downloadId)
+      : downloads.findIndex(item => item.fileName === data.fileName);
     const current = index > -1 ? downloads[index] : {};
 
     const now = Date.now();
     const lastUpdateAt = current.lastUpdateAt || 0;
     const lastReceived = current.lastReceived || 0;
-    const received =
-      data.received !== undefined ? data.received : current.received || 0;
+    const received = data.received !== undefined ? data.received : current.received || 0;
     const total = data.total !== undefined ? data.total : current.total || 0;
 
     let speedBps = current.speedBps || 0;
@@ -61,8 +60,7 @@
       savePath: data.savePath || current.savePath || '',
       url: data.url || current.url || '',
       mimeType: data.mimeType || current.mimeType || '',
-      paused:
-        data.paused !== undefined ? data.paused : current.paused || false,
+      paused: data.paused !== undefined ? data.paused : current.paused || false,
       speedBps,
       etaSeconds,
       lastUpdateAt: now,
@@ -112,7 +110,7 @@
   function updateDownloadsFilterUI() {
     if (!downloadsFilters) return;
     const active = store.get('ui.downloadsFilter', 'all');
-    downloadsFilters.querySelectorAll('.filter-btn').forEach((btn) => {
+    downloadsFilters.querySelectorAll('.filter-btn').forEach(btn => {
       const key = btn.getAttribute('data-filter') || 'all';
       btn.classList.toggle('active', key === active);
     });
@@ -140,15 +138,11 @@
       return new Date(b.time || 0) - new Date(a.time || 0);
     });
 
-    const filtered = sortedDownloads.filter((item) => {
+    const filtered = sortedDownloads.filter(item => {
       if (activeFilter && activeFilter !== 'all') {
         const state = item.state || '';
         if (activeFilter === 'failed') {
-          if (
-            state !== 'failed' &&
-            state !== 'cancelled' &&
-            state !== 'interrupted'
-          ) {
+          if (state !== 'failed' && state !== 'cancelled' && state !== 'interrupted') {
             return false;
           }
         } else if (state !== activeFilter) {
@@ -165,7 +159,7 @@
 
     if (filtered.length === 0) {
       downloadsList.innerHTML =
-        `<p style="text-align:center;color:#999;padding:20px;">` +
+        '<p style="text-align:center;color:#999;padding:20px;">' +
         `${t('panels.downloads.empty')}</p>`;
       return;
     }
@@ -205,7 +199,7 @@
         '</svg>'
     };
 
-    filtered.forEach((item) => {
+    filtered.forEach(item => {
       const index = downloads.indexOf(item);
       const itemEl = document.createElement('div');
       itemEl.className = 'list-item download-item';
@@ -248,14 +242,10 @@
 
         const meta = document.createElement('div');
         meta.className = 'download-meta';
-        const speedText = item.speedBps
-          ? `${(item.speedBps / 1024 / 1024).toFixed(2)} MB/s`
-          : '';
+        const speedText = item.speedBps ? `${(item.speedBps / 1024 / 1024).toFixed(2)} MB/s` : '';
         const etaText = item.etaSeconds ? `${item.etaSeconds}s` : '';
         const pausedText = item.paused ? t('status.paused') : '';
-        meta.innerText = [speedText, etaText, pausedText]
-          .filter(Boolean)
-          .join(' | ');
+        meta.innerText = [speedText, etaText, pausedText].filter(Boolean).join(' | ');
         if (meta.innerText) {
           content.appendChild(meta);
         }
@@ -395,17 +385,12 @@
         actions.appendChild(openBtn);
       }
 
-      const deleteBtn = createIconButton(
-        'download-delete-btn',
-        icons.delete,
-        t('delete'),
-        () => {
-          const nextDownloads = store.get('downloads', []);
-          nextDownloads.splice(index, 1);
-          store.set('downloads', nextDownloads);
-          renderDownloadsPanel();
-        }
-      );
+      const deleteBtn = createIconButton('download-delete-btn', icons.delete, t('delete'), () => {
+        const nextDownloads = store.get('downloads', []);
+        nextDownloads.splice(index, 1);
+        store.set('downloads', nextDownloads);
+        renderDownloadsPanel();
+      });
       actions.appendChild(deleteBtn);
 
       itemEl.appendChild(content);
@@ -436,7 +421,7 @@
     if (downloadsClearCompletedBtn) {
       downloadsClearCompletedBtn.addEventListener('click', () => {
         const downloads = store.get('downloads', []);
-        const filtered = downloads.filter((item) => item.state !== 'completed');
+        const filtered = downloads.filter(item => item.state !== 'completed');
         if (filtered.length === downloads.length) {
           return;
         }
@@ -448,13 +433,9 @@
     if (downloadsClearFailedBtn) {
       downloadsClearFailedBtn.addEventListener('click', () => {
         const downloads = store.get('downloads', []);
-        const filtered = downloads.filter((item) => {
+        const filtered = downloads.filter(item => {
           const state = item.state || '';
-          return (
-            state !== 'failed' &&
-            state !== 'cancelled' &&
-            state !== 'interrupted'
-          );
+          return state !== 'failed' && state !== 'cancelled' && state !== 'interrupted';
         });
         if (filtered.length === downloads.length) {
           return;
@@ -465,7 +446,7 @@
     }
 
     if (downloadsFilters) {
-      downloadsFilters.addEventListener('click', (e) => {
+      downloadsFilters.addEventListener('click', e => {
         const btn = e.target.closest('.filter-btn');
         if (!btn) return;
         const key = btn.getAttribute('data-filter') || 'all';
@@ -482,23 +463,15 @@
     }
 
     ipcRenderer.on('download-progress', (event, data) => {
-      const prevState = store
-        .get('downloads', [])
-        .find((item) => item.id === data.id)?.state;
+      const prevState = store.get('downloads', []).find(item => item.id === data.id)?.state;
       updateDownloadStore(data);
 
       if (data.state === 'completed' && prevState !== 'completed') {
-        showToast(
-          t('toast.downloadComplete') || `下载完成: ${data.fileName}`,
-          'success'
-        );
+        showToast(t('toast.downloadComplete') || `下载完成: ${data.fileName}`, 'success');
       } else if (data.state === 'failed' && prevState !== 'failed') {
         showToast(t('toast.downloadFailed') || `下载失败: ${data.fileName}`, 'error');
       } else if (data.state === 'cancelled' && prevState !== 'cancelled') {
-        showToast(
-          t('toast.downloadCancelled') || `下载已取消: ${data.fileName}`,
-          'warning'
-        );
+        showToast(t('toast.downloadCancelled') || `下载已取消: ${data.fileName}`, 'warning');
       }
 
       if (!downloadsPanel.classList.contains('active')) return;

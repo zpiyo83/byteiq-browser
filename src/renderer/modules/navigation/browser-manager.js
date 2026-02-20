@@ -39,7 +39,7 @@
 
   function syncZoomUI(webview) {
     if (!webview || webview.tagName !== 'WEBVIEW') return;
-    webview.getZoomFactor((factor) => {
+    webview.getZoomFactor(factor => {
       updateZoomUI(factor);
     });
   }
@@ -76,7 +76,7 @@
 
   function navigateTo(url, id = getActiveTabId()) {
     const formattedUrl = formatUrl(url);
-    let container = documentRef.getElementById(`webview-${id}`);
+    const container = documentRef.getElementById(`webview-${id}`);
 
     if (!container) return;
 
@@ -120,9 +120,7 @@
     documentRef.body.classList.toggle('incognito-mode', nextIncognito);
     if (modalManager) {
       modalManager.alert(
-        nextIncognito
-          ? t('panels.settings.incognitoOn')
-          : t('panels.settings.incognitoOff'),
+        nextIncognito ? t('panels.settings.incognitoOn') : t('panels.settings.incognitoOff'),
         nextIncognito ? '隐身模式已开启' : '隐身模式已关闭'
       );
     }
