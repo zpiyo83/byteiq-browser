@@ -1,9 +1,12 @@
-﻿const { callAITranslation } = require('./translation/ai-translator');
+﻿// 翻译IPC处理器注册模块
+const { callAITranslation } = require('./translation/ai-translator');
 const { translateTextWithBing } = require('./translation/bing-translator');
 
+// 注册翻译相关的IPC处理器
 function registerTranslationIpcHandlers(options) {
   const { app, ipcMain } = options;
 
+  // 获取版本信息
   ipcMain.handle('get-version-info', () => {
     return {
       appVersion: app.getVersion(),
@@ -14,17 +17,21 @@ function registerTranslationIpcHandlers(options) {
     };
   });
 
+  // 批量翻译文本
   ipcMain.handle('translate-text-batch', async (event, payload = {}) => {
     const { engine, texts, targetLanguage } = payload || {};
 
+    // 目前只支持Bing翻译引擎
     if (engine !== 'bing') {
       return { ok: false, message: 'Only Bing translator is supported' };
     }
 
+    // 验证输入参数
     if (!Array.isArray(texts) || texts.length === 0) {
       return { ok: true, translations: [] };
     }
 
+    // 清理和验证文本
     const safeTexts = texts.map(item => String(item || '').trim());
     if (safeTexts.some(item => !item)) {
       return { ok: false, message: 'Source text cannot be empty' };
@@ -37,11 +44,13 @@ function registerTranslationIpcHandlers(options) {
 
     try {
       const translations = [];
+      // 逐个翻译文本
       for (let i = 0; i < safeTexts.length; i += 1) {
         const translated = await translateTextWithBing(safeTexts[i], to);
         translations.push(translated);
       }
 
+      // 验证翻译结果数量
       if (translations.length !== safeTexts.length) {
         return { ok: false, message: 'Translation response count mismatch' };
       }

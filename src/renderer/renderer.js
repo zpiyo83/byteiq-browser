@@ -1,4 +1,5 @@
-﻿const { ipcRenderer, clipboard } = require('electron');
+﻿// Electron 渲染进程入口文件
+const { ipcRenderer, clipboard } = require('electron');
 const Store = require('electron-store');
 const { initI18n, t, setLocale } = require('./i18n');
 const { createBrowserManager } = require('./modules/navigation/browser-manager');
@@ -14,19 +15,17 @@ const { createExtensionsManager } = require('./modules/extensions/extensions-man
 const { createTranslationManager } = require('./modules/ui/translation-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
-const {
-  bindSettingsAndPanelEvents
-} = require('./modules/app/events/settings-and-panels-events');
+const { bindSettingsAndPanelEvents } = require('./modules/app/events/settings-and-panels-events');
 const {
   bindNavigationAndDevtoolsEvents
 } = require('./modules/app/events/navigation-and-devtools-events');
 
-
-// 尽早应用深色模式，避免闪烁
+// 尽早应用深色模式，避免页面闪烁
 if (store.get('settings.darkMode')) {
   document.body.classList.add('dark-mode');
 }
 
+// DOM 元素引用
 const urlInput = document.getElementById('url-input');
 const goBtn = document.getElementById('go-btn');
 const backBtn = document.getElementById('back-btn');
@@ -42,6 +41,7 @@ const translateToggleBtn = document.getElementById('translate-toggle-btn');
 const bookmarkBtn = document.getElementById('bookmark-btn');
 const clearUrlBtn = document.getElementById('clear-url-btn');
 const progressBar = document.getElementById('progress-bar');
+// 面板相关元素
 const historyPanel = document.getElementById('history-panel');
 const settingsPanel = document.getElementById('settings-panel');
 const bookmarksPanel = document.getElementById('bookmarks-panel');
@@ -56,6 +56,7 @@ const downloadsFilters = document.getElementById('downloads-filters');
 const downloadsClearAllBtn = document.getElementById('downloads-clear-all-btn');
 const downloadsClearCompletedBtn = document.getElementById('downloads-clear-completed-btn');
 const downloadsClearFailedBtn = document.getElementById('downloads-clear-failed-btn');
+// 设置相关元素
 const searchEngineSelect = document.getElementById('search-engine-select');
 const startupUrlInput = document.getElementById('startup-url-input');
 const incognitoToggleBtn = document.getElementById('incognito-toggle-btn');
@@ -67,6 +68,7 @@ const zoomLevelText = document.getElementById('zoom-level-text');
 const clearDataBtn = document.getElementById('clear-data-btn');
 const exportDataBtn = document.getElementById('export-data-btn');
 const restoreSessionToggle = document.getElementById('restore-session-toggle');
+// 扩展和翻译相关元素
 const extensionsList = document.getElementById('extensions-list');
 const extensionsAddBtn = document.getElementById('extensions-add-btn');
 const extensionsRefreshBtn = document.getElementById('extensions-refresh-btn');
@@ -76,15 +78,9 @@ const aiApiKeyInput = document.getElementById('ai-api-key-input');
 const aiRequestTypeSelect = document.getElementById('ai-request-type-select');
 const translateEnableToggle = document.getElementById('translate-enable-toggle');
 const translateEngineSelect = document.getElementById('translate-engine-select');
-const translateTargetLangSelect = document.getElementById(
-  'translate-target-lang-select'
-);
-const translateDisplayModeSelect = document.getElementById(
-  'translate-display-mode-select'
-);
-const translateCurrentPageBtn = document.getElementById(
-  'translate-current-page-btn'
-);
+const translateTargetLangSelect = document.getElementById('translate-target-lang-select');
+const translateDisplayModeSelect = document.getElementById('translate-display-mode-select');
+const translateCurrentPageBtn = document.getElementById('translate-current-page-btn');
 const aiTranslationConfig = document.getElementById('ai-translation-config');
 const translateAiEndpointInput = document.getElementById('translate-ai-endpoint-input');
 const translateAiApiKeyInput = document.getElementById('translate-ai-api-key-input');
@@ -93,16 +89,19 @@ const translateAiModelInput = document.getElementById('translate-ai-model-input'
 const translateStreamingToggle = document.getElementById('translate-streaming-toggle');
 const translationAdvancedToggle = document.getElementById('translation-advanced-toggle');
 const translationAdvancedContent = document.getElementById('translation-advanced-content');
+// 标签页和webview相关元素
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
 const webviewsContainer = document.getElementById('webviews-container');
 const newTabTemplate = document.getElementById('new-tab-template');
+// AI 助手相关元素
 const aiSidebar = document.getElementById('ai-sidebar');
 const toggleAiBtn = document.getElementById('toggle-ai-btn');
 const closeAiBtn = document.getElementById('close-ai-btn');
 const aiInput = document.getElementById('ai-input');
 const aiSendBtn = document.getElementById('ai-send-btn');
 const aiChatArea = document.getElementById('ai-chat-area');
+// 查找和上下文菜单相关元素
 const findBox = document.getElementById('find-box');
 const findInput = document.getElementById('find-input');
 const findResults = document.getElementById('find-results');
@@ -113,20 +112,24 @@ const contextMenu = document.getElementById('context-menu');
 const tabContextMenu = document.getElementById('tab-context-menu');
 const overlayBackdrop = document.getElementById('overlay-backdrop');
 
-let isIncognito = false;
-let browserManager = null;
-let translationManager = null;
+// 全局状态变量
+let isIncognito = false; // 隐私模式状态
+let browserManager = null; // 浏览器管理器实例
+let translationManager = null; // 翻译管理器实例
 
+// 初始化国际化
 initI18n();
 
 // 初始化模态框管理器
 modalManager.init();
 
+// 创建覆盖层管理器
 const overlayManager = createOverlayManager({
   documentRef: document,
   overlayBackdrop
 });
 
+// Toast 提示功能
 function showToast(message, type = 'info', duration = 3000) {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -142,6 +145,7 @@ function showToast(message, type = 'info', duration = 3000) {
   }, duration);
 }
 
+// 设置翻译切换按钮状态
 function setTranslateToggleActive(enabled) {
   if (!translateToggleBtn) return;
   const active = !!enabled;
@@ -151,6 +155,7 @@ function setTranslateToggleActive(enabled) {
   translateToggleBtn.setAttribute('title', active ? '翻译已开启' : '翻译已关闭');
 }
 
+// 设置翻译加载状态
 function setTranslateLoading(loading) {
   if (!translateToggleBtn) return;
   if (loading) {
@@ -166,24 +171,26 @@ function setTranslateLoading(loading) {
   }
 }
 
+// 更新书签图标状态
 function updateBookmarkIcon(url) {
   const bookmarks = store.get('bookmarks', []);
-  const isBookmarked = bookmarks.some((item) => item.url === url);
+  const isBookmarked = bookmarks.some(item => item.url === url);
   const bookmarkSvg = document.getElementById('bookmark-svg');
   if (bookmarkSvg) {
     bookmarkSvg.classList.toggle('active', isBookmarked);
   }
 }
 
+// 创建标签页管理器
 const tabManager = createTabManager({
-  applyStoredZoom: (webview) => {
+  applyStoredZoom: webview => {
     if (browserManager) {
       browserManager.applyStoredZoom(webview);
     }
   },
   documentRef: document,
   findResults,
-  formatUrl: (url) => {
+  formatUrl: url => {
     return browserManager ? browserManager.formatUrl(url) : url;
   },
   getIncognito: () => isIncognito,
@@ -191,12 +198,12 @@ const tabManager = createTabManager({
   ipcRenderer,
   newTabBtn,
   newTabTemplate,
-  onActiveWebviewChanged: (webview) => {
+  onActiveWebviewChanged: webview => {
     if (browserManager) {
       browserManager.onActiveWebviewChanged(webview);
     }
   },
-  onWebviewDidStopLoading: (webview) => {
+  onWebviewDidStopLoading: webview => {
     if (translationManager) {
       translationManager.handleWebviewDidStopLoading(webview);
     }
@@ -211,15 +218,17 @@ const tabManager = createTabManager({
   urlInput
 });
 
+// 更新缩放级别UI显示
 function updateZoomUI(level) {
   zoomLevelText.innerText = `${Math.round(level * 100)}%`;
 }
 
+// 创建浏览器管理器
 browserManager = createBrowserManager({
   documentRef: document,
   getActiveTabId: tabManager.getActiveTabId,
   getIncognito: () => isIncognito,
-  setIncognito: (value) => {
+  setIncognito: value => {
     isIncognito = value;
   },
   setupWebviewEvents: tabManager.setupWebviewEvents,
@@ -242,7 +251,7 @@ const downloadsManager = createDownloadsManager({
   downloadsPanel,
   downloadsSearchInput,
   ipcRenderer,
-  openDownloadPath: (path) => {
+  openDownloadPath: path => {
     if (path) {
       ipcRenderer.send('open-download-path', path);
     }
@@ -321,7 +330,7 @@ translationManager = createTranslationManager({
   ipcRenderer,
   showToast,
   store,
-  onTranslationStatusChange: (isTranslating) => {
+  onTranslationStatusChange: isTranslating => {
     setTranslateLoading(isTranslating);
   }
 });
@@ -378,7 +387,7 @@ aiManager.bindEvents();
 findManager.bindEvents();
 shortcutsManager.bindEvents();
 
-
+// 关闭所有面板
 function closeAllPanels() {
   overlayManager.closeAllOverlays();
 
@@ -393,6 +402,7 @@ function closeAllPanels() {
   }
 }
 
+// 刷新当前页面
 function refreshCurrentPage() {
   const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
   if (wv && wv.tagName === 'WEBVIEW') {
