@@ -1,4 +1,5 @@
-﻿function createBrowserManager(options) {
+﻿// 创建浏览器管理器工厂函数
+function createBrowserManager(options) {
   const {
     documentRef,
     store,
@@ -14,6 +15,7 @@
     modalManager
   } = options;
 
+  // 从URL中提取主机名
   function getHostFromUrl(url) {
     try {
       return new URL(url).host;
@@ -22,6 +24,7 @@
     }
   }
 
+  // 获取特定URL的缩放级别
   function getZoomForUrl(url) {
     const host = getHostFromUrl(url);
     if (!host) return null;
@@ -29,6 +32,7 @@
     return zoomByHost[host] || null;
   }
 
+  // 设置特定URL的缩放级别
   function setZoomForUrl(url, factor) {
     const host = getHostFromUrl(url);
     if (!host) return;
@@ -37,6 +41,7 @@
     store.set('zoomByHost', zoomByHost);
   }
 
+  // 同步缩放UI显示
   function syncZoomUI(webview) {
     if (!webview || webview.tagName !== 'WEBVIEW') return;
     webview.getZoomFactor(factor => {
@@ -44,6 +49,7 @@
     });
   }
 
+  // 应用存储的缩放级别
   function applyStoredZoom(webview) {
     if (!webview || webview.tagName !== 'WEBVIEW') return;
     const storedZoom = getZoomForUrl(webview.getURL());
