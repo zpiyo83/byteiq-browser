@@ -1,6 +1,7 @@
 ﻿// 翻译IPC处理器注册模块
 const { callAITranslation } = require('./translation/ai-translator');
 const { translateTextWithBing } = require('./translation/bing-translator');
+const { diagnoseNetworkIssue } = require('./translation/network-diagnostics');
 
 // 注册翻译相关的IPC处理器
 function registerTranslationIpcHandlers(options) {
@@ -128,6 +129,26 @@ function registerTranslationIpcHandlers(options) {
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
       console.error('[AI翻译] 失败:', message);
+      return { ok: false, message };
+    }
+  });
+
+  // 网络诊断
+  ipcMain.handle('diagnose-translation-network', async (event, payload = {}) => {
+    const { endpoint } = payload || {};
+
+    if (!endpoint) {
+      return { ok: false, message: '缺少API端点' };
+    }
+
+    try {
+      console.error('[网络诊断] 开始诊断:', endpoint);
+      const diagnostics = await diagnoseNetworkIssue(endpoint);
+      console.error('[网络诊断] 诊断完成:', diagnostics);
+      return { ok: true, diagnostics };
+    } catch (error) {
+      const message = error && error.message ? error.message : String(error);
+      console.error('[网络诊断] 失败:', message);
       return { ok: false, message };
     }
   });

@@ -358,6 +358,48 @@ function createTranslationManager(options) {
     return translateWebview(webview, { force: true, notify: true });
   }
 
+  async function diagnoseNetwork() {
+    const settings = getSettings();
+
+    if (settings.engine !== 'ai') {
+      showToast('网络诊断仅支持AI翻译引擎', 'warning');
+      return { ok: false, message: '仅支持AI翻译引擎' };
+    }
+
+    if (!settings.aiEndpoint) {
+      showToast('请先配置AI翻译端点', 'error');
+      return { ok: false, message: '缺少AI端点配置' };
+    }
+
+    try {
+      showToast('正在诊断网络连接...', 'info');
+      const result = await ipcRenderer.invoke('diagnose-translation-network', {
+        endpoint: settings.aiEndpoint
+      });
+
+      if (!result || !result.ok) {
+        const message = result?.message || '诊断失败';
+        showToast(`诊断失败: ${message}`, 'error');
+        return result;
+      }
+
+      const diagnostics = result.diagnostics;
+      console.error('[网络诊断] 结果:', diagnostics);
+
+      // 显示诊断结果
+      if (diagnostics.suggestions && diagnostics.suggestions.length > 0) {
+        const firstSuggestion = diagnostics.suggestions[0];
+        showToast(`${firstSuggestion.issue}: ${firstSuggestion.suggestion}`, 'info', 8000);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[网络诊断] 错误:', error);
+      showToast(`诊断错误: ${error.message}`, 'error');
+      return { ok: false, message: error.message };
+    }
+  }
+
   const dynamicTranslationController = createDynamicTranslationController({
     getSettings,
     ipcRenderer
@@ -373,7 +415,8 @@ function createTranslationManager(options) {
     injectDynamicTranslationListener,
     stopDynamicTranslationListener,
     translateActiveWebview,
-    translateWebview
+    translateWebview,
+    diagnoseNetwork
   };
 }
 
