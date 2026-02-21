@@ -139,7 +139,7 @@ async function callAITranslation(options) {
     const requestOptions = {
       protocol: parsedUrl.protocol,
       hostname: parsedUrl.hostname,
-      port: parsedUrl.port || undefined,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
       path: `${parsedUrl.pathname}${parsedUrl.search}`,
       method: 'POST',
       headers: {
@@ -148,7 +148,8 @@ async function callAITranslation(options) {
         Authorization: `Bearer ${apiKey}`,
         'x-api-key': requestType === 'anthropic' ? apiKey : undefined
       },
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      timeout: 60000 // 60秒超时
     };
 
     // 移除undefined的header
@@ -246,7 +247,24 @@ async function callAITranslation(options) {
         address: error.address,
         port: error.port
       });
-      reject(error);
+
+      // 提供更友好的错误信息
+      let errorMessage = error.message;
+      if (error.code === 'ETIMEDOUT') {
+        errorMessage = `连接超时: 无法连接到 ${parsedUrl.hostname}。请检查网络连接、防火墙设置或代理配置。`;
+      } else if (error.code === 'ENOTFOUND') {
+        errorMessage = `DNS解析失败: 无法解析域名 ${parsedUrl.hostname}。请检查网络连接或DNS设置。`;
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage = `连接被拒绝: 服务器 ${parsedUrl.hostname} 拒绝连接。请检查API端点是否正确。`;
+      }
+
+      reject(new Error(errorMessage));
+    });
+
+    request.on('timeout', () => {
+      console.error('[AI翻译] 请求超时');
+      request.destroy();
+      reject(new Error(`请求超时: 连接到 ${parsedUrl.hostname} 超过60秒未响应`));
     });
 
     console.error('[AI翻译] 开始写入请求体...');
@@ -302,7 +320,7 @@ async function callAITranslationNonStreaming(options) {
     const requestOptions = {
       protocol: parsedUrl.protocol,
       hostname: parsedUrl.hostname,
-      port: parsedUrl.port || undefined,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
       path: `${parsedUrl.pathname}${parsedUrl.search}`,
       method: 'POST',
       headers: {
@@ -311,7 +329,8 @@ async function callAITranslationNonStreaming(options) {
         Authorization: `Bearer ${apiKey}`,
         'x-api-key': requestType === 'anthropic' ? apiKey : undefined
       },
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      timeout: 60000 // 60秒超时
     };
 
     // 移除undefined的header
@@ -351,7 +370,24 @@ async function callAITranslationNonStreaming(options) {
         address: error.address,
         port: error.port
       });
-      reject(error);
+
+      // 提供更友好的错误信息
+      let errorMessage = error.message;
+      if (error.code === 'ETIMEDOUT') {
+        errorMessage = `连接超时: 无法连接到 ${parsedUrl.hostname}。请检查网络连接、防火墙设置或代理配置。`;
+      } else if (error.code === 'ENOTFOUND') {
+        errorMessage = `DNS解析失败: 无法解析域名 ${parsedUrl.hostname}。请检查网络连接或DNS设置。`;
+      } else if (error.code === 'ECONNREFUSED') {
+        errorMessage = `连接被拒绝: 服务器 ${parsedUrl.hostname} 拒绝连接。请检查API端点是否正确。`;
+      }
+
+      reject(new Error(errorMessage));
+    });
+
+    request.on('timeout', () => {
+      console.error('[AI翻译-非流式] 请求超时');
+      request.destroy();
+      reject(new Error(`请求超时: 连接到 ${parsedUrl.hostname} 超过60秒未响应`));
     });
 
     console.error('[AI翻译-非流式] 开始写入请求体...');

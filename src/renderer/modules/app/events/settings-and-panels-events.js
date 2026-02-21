@@ -41,6 +41,7 @@
     translateAiModelInput,
     translateAiRequestTypeSelect,
     translateCurrentPageBtn,
+    diagnoseTranslationNetworkBtn,
     translateDisplayModeSelect,
     translateEnableToggle,
     translateEngineSelect,
@@ -392,6 +393,13 @@
     translateCurrentPageBtn.addEventListener('click', () => {
       if (!translationManager) return;
       translationManager.translateActiveWebview();
+    });
+  }
+
+  if (diagnoseTranslationNetworkBtn) {
+    diagnoseTranslationNetworkBtn.addEventListener('click', () => {
+      if (!translationManager) return;
+      translationManager.diagnoseNetwork();
     });
   }
 
