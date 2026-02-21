@@ -81,6 +81,7 @@ const translateEngineSelect = document.getElementById('translate-engine-select')
 const translateTargetLangSelect = document.getElementById('translate-target-lang-select');
 const translateDisplayModeSelect = document.getElementById('translate-display-mode-select');
 const translateCurrentPageBtn = document.getElementById('translate-current-page-btn');
+const diagnoseTranslationNetworkBtn = document.getElementById('diagnose-translation-network-btn');
 const aiTranslationConfig = document.getElementById('ai-translation-config');
 const translateAiEndpointInput = document.getElementById('translate-ai-endpoint-input');
 const translateAiApiKeyInput = document.getElementById('translate-ai-api-key-input');
@@ -458,6 +459,7 @@ bindSettingsAndPanelEvents({
   translateAiModelInput,
   translateAiRequestTypeSelect,
   translateCurrentPageBtn,
+  diagnoseTranslationNetworkBtn,
   translateDisplayModeSelect,
   translateEnableToggle,
   translateEngineSelect,
