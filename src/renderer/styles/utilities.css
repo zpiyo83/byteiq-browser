@@ -235,27 +235,7 @@
     color: #1967d2;
 }
 
-@keyframes toastSlideIn {
-    from {
-        transform: translateX(100%) scale(0.9);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0) scale(1);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOut {
-    from {
-        transform: translateX(0) scale(1);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%) scale(0.9);
-        opacity: 0;
-    }
-}
+/* Toast 动画已移至 animations.css 统一管理 */
 
 /* 暗色模式下的 toast 样式 */
 .dark-mode .toast {

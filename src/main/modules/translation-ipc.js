@@ -70,6 +70,16 @@ function registerTranslationIpcHandlers(options) {
     const { texts, targetLanguage, endpoint, apiKey, requestType, model, streaming } =
       payload || {};
 
+    console.error('[AI翻译-IPC] 收到翻译请求:', {
+      textsCount: texts?.length,
+      targetLanguage,
+      endpoint,
+      apiKeyPresent: !!apiKey,
+      requestType,
+      model,
+      streaming
+    });
+
     if (!Array.isArray(texts) || texts.length === 0) {
       return { ok: true, translations: [] };
     }
