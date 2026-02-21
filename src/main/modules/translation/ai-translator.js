@@ -12,6 +12,16 @@ async function callAITranslation(options) {
     streaming
   } = options;
 
+  console.error('[AI翻译] 开始翻译:', {
+    textsCount: texts.length,
+    targetLanguage,
+    endpoint,
+    apiKeyLength: apiKey ? apiKey.length : 0,
+    requestType,
+    model,
+    streaming
+  });
+
   // 构建翻译请求
   let prompt = `请你帮我把以下文字翻译为${targetLanguage}，冒号后跟翻译后的内容，保持"翻译块:"的格式不变：\n`;
   texts.forEach((text, index) => {
@@ -148,7 +158,16 @@ async function callAITranslation(options) {
       }
     });
 
+    console.error('[AI翻译] 准备发送请求:', {
+      url: url,
+      hostname: requestOptions.hostname,
+      port: requestOptions.port,
+      path: requestOptions.path,
+      method: requestOptions.method
+    });
+
     const request = https.request(requestOptions, response => {
+      console.error('[AI翻译] 收到响应:', response.statusCode);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         const chunks = [];
         response.on('data', chunk => chunks.push(chunk));
@@ -219,12 +238,22 @@ async function callAITranslation(options) {
     });
 
     request.on('error', error => {
-      console.error('[AI翻译] 请求错误:', error.message);
+      console.error('[AI翻译] 请求错误:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+      });
       reject(error);
     });
 
+    console.error('[AI翻译] 开始写入请求体...');
     request.write(bodyString);
+    console.error('[AI翻译] 请求体已写入，发送请求...');
     request.end();
+    console.error('[AI翻译] 请求已发送');
   });
 
   // 最终解析翻译结果
@@ -292,7 +321,15 @@ async function callAITranslationNonStreaming(options) {
       }
     });
 
+    console.error('[AI翻译-非流式] 准备发送请求:', {
+      hostname: requestOptions.hostname,
+      port: requestOptions.port,
+      path: requestOptions.path,
+      method: requestOptions.method
+    });
+
     const request = https.request(requestOptions, response => {
+      console.error('[AI翻译-非流式] 收到响应:', response.statusCode);
       const chunks = [];
       response.on('data', chunk => chunks.push(chunk));
       response.on('end', () => {
@@ -305,9 +342,23 @@ async function callAITranslationNonStreaming(options) {
       response.on('error', reject);
     });
 
-    request.on('error', reject);
+    request.on('error', error => {
+      console.error('[AI翻译-非流式] 请求错误:', {
+        message: error.message,
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+      });
+      reject(error);
+    });
+
+    console.error('[AI翻译-非流式] 开始写入请求体...');
     request.write(bodyString);
+    console.error('[AI翻译-非流式] 请求体已写入，发送请求...');
     request.end();
+    console.error('[AI翻译-非流式] 请求已发送');
   });
 
   if (result.statusCode < 200 || result.statusCode >= 300) {

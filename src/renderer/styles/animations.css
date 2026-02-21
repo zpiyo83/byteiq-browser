@@ -173,23 +173,23 @@
 /* Toast 滑入滑出 */
 @keyframes toastSlideIn {
     from {
+        transform: translateX(100%) scale(0.9);
         opacity: 0;
-        transform: translateY(-20px);
     }
     to {
+        transform: translateX(0) scale(1);
         opacity: 1;
-        transform: translateY(0);
     }
 }
 
-@keyframes toastSlideOut {
+@keyframes slideOut {
     from {
+        transform: translateX(0) scale(1);
         opacity: 1;
-        transform: translateY(0);
     }
     to {
+        transform: translateX(100%) scale(0.9);
         opacity: 0;
-        transform: translateY(-20px);
     }
 }
 

@@ -456,15 +456,6 @@
     animation: progressShimmer 1.5s ease-in-out infinite;
 }
 
-@keyframes progressShimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
-}
-
 /* 不确定进度的动画 */
 #progress-bar.indeterminate {
     width: 30% !important;
@@ -518,19 +509,4 @@ body.dark-mode .close-tab:hover {
     border-top-color: currentColor;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes tab-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
 }
