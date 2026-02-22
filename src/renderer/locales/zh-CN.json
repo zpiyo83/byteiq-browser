@@ -17,7 +17,8 @@
     "devtools": "开发者工具",
     "settings": "设置",
     "downloads": "下载",
-    "aiAssistant": "AI 助手"
+    "aiAssistant": "AI 助手",
+    "translate": "翻译"
   },
   "tabs": {
     "newTab": "新标签页",
@@ -72,7 +73,33 @@
         "requestTypeDesc": "选择API的请求格式类型",
         "openaiChat": "OpenAI Chat 兼容",
         "openaiResponse": "OpenAI Response",
-        "anthropic": "Anthropic"
+        "anthropic": "Anthropic",
+        "modelId": "模型ID",
+        "modelIdDesc": "指定使用的模型名称"
+      },
+      "translation": {
+        "title": "翻译设置",
+        "apiEnabled": "启用翻译API",
+        "apiEnabledDesc": "开启后使用独立的翻译API配置，关闭则使用AI设置",
+        "endpoint": "API端点URL",
+        "endpointDesc": "翻译API的基础URL地址",
+        "apiKey": "API密钥",
+        "apiKeyDesc": "翻译API访问密钥",
+        "requestType": "请求方式",
+        "requestTypeDesc": "选择API的请求格式类型",
+        "modelId": "模型ID",
+        "modelIdDesc": "指定使用的模型名称",
+        "targetLanguage": "目标语言",
+        "targetLanguageDesc": "选择翻译的目标语言",
+        "advancedOptions": "高级选项",
+        "streamingTranslation": "流式翻译",
+        "streamingTranslationDesc": "启用后文字将逐个显示，提供实时翻译体验",
+        "maxTextsPerRequest": "每次请求最大文本块数",
+        "maxTextsPerRequestDesc": "单次翻译请求包含的最大文本块数量",
+        "maxCharsPerRequest": "每次请求最大字符数",
+        "maxCharsPerRequestDesc": "单次翻译请求的最大字符总数",
+        "requestTimeout": "请求超时时间（秒）",
+        "requestTimeoutDesc": "等待API响应的最大时间"
       }
     },
     "downloads": {
@@ -185,5 +212,20 @@
     "downloadComplete": "下载完成",
     "downloadFailed": "下载失败",
     "downloadCancelled": "下载已取消"
+  },
+  "translation": {
+    "translate": "翻译页面",
+    "translating": "翻译中...",
+    "translatingChunk": "���在翻译第 {current}/{total} 块",
+    "restore": "恢复原文",
+    "restored": "已恢复原文",
+    "collecting": "正在收集文本...",
+    "completed": "翻译完成",
+    "failed": "翻译失败",
+    "noPage": "请先打开一个网页",
+    "noText": "未找到可翻译的文本",
+    "texts": "个文本块",
+    "restoreFailed": "恢复失败",
+    "noApiKey": "请先在设置中配置 AI API"
   }
 }
