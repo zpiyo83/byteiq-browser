@@ -1,422 +1,490 @@
-﻿const {
-  AI_MAX_CHARS_PER_REQUEST,
-  AI_MAX_ITEMS_PER_REQUEST,
-  BING_MAX_CHARS_PER_REQUEST,
-  BING_MAX_ITEMS_PER_REQUEST
-} = require('./translation/constants');
-const {
-  COLLECT_TEXT_SCRIPT,
-  buildApplyScript,
-  buildRestoreScript,
-  buildStreamingApplyScript
-} = require('./translation/scripts');
-const { createDynamicTranslationController } = require('./translation/dynamic-listener');
+/**
+ * 翻译管理器
+ * 负责页面翻译、状态管理、UI 交互
+ */
 
-function createTranslationManager(options) {
-  const { getActiveWebview, ipcRenderer, showToast, store, onTranslationStatusChange } = options;
-
-  function getSettings() {
-    return {
-      enabled: store.get('settings.translation.enabled', false),
-      engine: store.get('settings.translation.engine', 'bing'),
-      targetLanguage: store.get('settings.translation.targetLanguage', 'zh-Hans'),
-      displayMode: store.get('settings.translation.displayMode', 'replace'),
-      aiEndpoint: store.get('settings.translation.aiEndpoint', ''),
-      aiApiKey: store.get('settings.translation.aiApiKey', ''),
-      aiRequestType: store.get('settings.translation.aiRequestType', 'openai-chat'),
-      aiModel: store.get('settings.translation.aiModel', ''),
-      streaming: store.get('settings.translation.streaming', true)
-    };
-  }
-
-  function saveSettings(partial) {
-    if (!partial || typeof partial !== 'object') return;
-    Object.entries(partial).forEach(([key, value]) => {
-      store.set(`settings.translation.${key}`, value);
-    });
-  }
-
-  function isTranslatableUrl(url) {
-    return typeof url === 'string' && /^https?:\/\//i.test(url);
-  }
-
-  function chunkTexts(texts, engine = 'bing') {
-    // 根据翻译引擎选择不同的限制
-    const maxItems = engine === 'ai' ? AI_MAX_ITEMS_PER_REQUEST : BING_MAX_ITEMS_PER_REQUEST;
-    const maxChars = engine === 'ai' ? AI_MAX_CHARS_PER_REQUEST : BING_MAX_CHARS_PER_REQUEST;
-
-    const chunks = [];
-    let current = [];
-    let currentChars = 0;
-
-    texts.forEach(text => {
-      const item = String(text || '').trim();
-      if (!item) return;
-
-      const nextChars = currentChars + item.length;
-      const shouldSplit = current.length >= maxItems || nextChars > maxChars;
-
-      if (shouldSplit && current.length > 0) {
-        chunks.push(current);
-        current = [];
-        currentChars = 0;
-      }
-
-      current.push(item);
-      currentChars += item.length;
-    });
-
-    if (current.length > 0) {
-      chunks.push(current);
-    }
-
-    return chunks;
-  }
-
-  async function translateTexts(settings, texts, onStreamUpdate) {
-    const chunks = chunkTexts(texts, settings.engine);
-    const allTranslations = [];
-
-    for (const chunk of chunks) {
-      let result;
-      try {
-        if (settings.engine === 'ai') {
-          // AI翻译
-          // 设置流式更新监听器（仅在流式模式下）
-          let streamHandler = null;
-          const useStreaming = settings.streaming !== false;
-
-          if (useStreaming && typeof onStreamUpdate === 'function') {
-            streamHandler = (_event, data) => {
-              onStreamUpdate(data);
-            };
-            ipcRenderer.on('translation-stream-update', streamHandler);
-          }
-
-          try {
-            result = await ipcRenderer.invoke('translate-text-ai', {
-              texts: chunk,
-              targetLanguage: settings.targetLanguage,
-              endpoint: settings.aiEndpoint,
-              apiKey: settings.aiApiKey,
-              requestType: settings.aiRequestType,
-              model: settings.aiModel,
-              streaming: useStreaming
-            });
-          } finally {
-            // 移除流式更新监听器
-            if (streamHandler) {
-              ipcRenderer.removeListener('translation-stream-update', streamHandler);
-            }
-          }
-        } else {
-          // Bing翻译
-          result = await ipcRenderer.invoke('translate-text-batch', {
-            engine: settings.engine,
-            targetLanguage: settings.targetLanguage,
-            texts: chunk
-          });
+// 文本收集脚本 - 收集页面中可翻译的文本节点
+const COLLECT_TEXT_SCRIPT = `
+(function() {
+  const texts = [];
+  const textNodes = [];
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        // 排除脚本、样式、代码元素
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        const tagName = parent.tagName.toLowerCase();
+        if (['script', 'style', 'noscript', 'code', 'pre', 'textarea', 'input', 'select'].includes(tagName)) {
+          return NodeFilter.FILTER_REJECT;
         }
-      } catch (ipcError) {
-        console.error('[翻译] IPC错误:', ipcError.message || ipcError);
-        throw new Error(`IPC调用失败: ${ipcError.message || ipcError}`);
-      }
-
-      if (!result || !result.ok) {
-        const message = result && result.message ? result.message : 'Translation request failed';
-        throw new Error(message);
-      }
-
-      const translated = Array.isArray(result.translations) ? result.translations : [];
-
-      if (translated.length !== chunk.length) {
-        throw new Error('Translation result count mismatch');
-      }
-
-      allTranslations.push(...translated);
-    }
-
-    return allTranslations;
-  }
-
-  async function translateWebview(webview, options = {}) {
-    const { force = false, notify = false } = options;
-
-    if (!webview || webview.tagName !== 'WEBVIEW') {
-      return { ok: false, skipped: true, reason: 'invalid-webview' };
-    }
-
-    const settings = getSettings();
-
-    if (!force && !settings.enabled) {
-      return { ok: false, skipped: true, reason: 'disabled' };
-    }
-    if (settings.engine !== 'bing' && settings.engine !== 'ai') {
-      return { ok: false, skipped: true, reason: 'engine' };
-    }
-    // AI翻译需要检查配置
-    if (settings.engine === 'ai' && (!settings.aiEndpoint || !settings.aiApiKey)) {
-      if (notify || force) {
-        showToast('AI翻译未配置，请先设置API端点和密钥', 'error');
-      }
-      return { ok: false, skipped: true, reason: 'ai-config' };
-    }
-
-    const url = webview.getURL();
-
-    if (!isTranslatableUrl(url)) {
-      return { ok: false, skipped: true, reason: 'url' };
-    }
-
-    const signature = `${url}|${settings.engine}|${settings.targetLanguage}|${settings.displayMode}`;
-
-    const now = Date.now();
-    const lastSignature = webview.dataset.translationLastRequestSignature;
-    const lastAtRaw = webview.dataset.translationLastRequestAt;
-    const lastAt = lastAtRaw ? Number(lastAtRaw) : 0;
-    if (lastSignature === signature && lastAt && now - lastAt < 4000) {
-      return { ok: true, skipped: true, reason: 'cooldown' };
-    }
-    webview.dataset.translationLastRequestSignature = signature;
-    webview.dataset.translationLastRequestAt = String(now);
-    if (!force && webview.dataset.translationSignature === signature) {
-      return { ok: true, skipped: true, reason: 'same-signature' };
-    }
-
-    // 检查是否正在翻译中
-    if (webview.dataset.isTranslating === 'true') {
-      return { ok: false, skipped: true, reason: 'in-progress' };
-    }
-
-    const requestId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
-    webview.dataset.translationRequestId = requestId;
-    webview.dataset.isTranslating = 'true';
-
-    // 通知翻译开始
-    if (typeof onTranslationStatusChange === 'function') {
-      onTranslationStatusChange(true);
-    }
-
-    try {
-      const collected = await webview.executeJavaScript(COLLECT_TEXT_SCRIPT, true);
-
-      const sourceTexts = collected && Array.isArray(collected.texts) ? collected.texts : [];
-
-      if (sourceTexts.length === 0) {
-        // 通知翻译结束（没有内容需要翻译）
-        if (typeof onTranslationStatusChange === 'function') {
-          onTranslationStatusChange(false);
+        // 排除隐藏元素
+        const style = window.getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return NodeFilter.FILTER_REJECT;
         }
-        return { ok: true, skipped: true, reason: 'empty' };
-      }
-
-      // 流式更新回调函数
-      let lastAppliedIndex = 0;
-      const onStreamUpdate = async data => {
-        if (!data || !Array.isArray(data.translations)) return;
-
-        // 检查请求是否仍然有效
-        if (webview.dataset.translationRequestId !== requestId) return;
-        if (webview.getURL() !== url) return;
-
-        const translations = data.translations;
-        const startIndex = data.startIndex || lastAppliedIndex;
-
-        if (translations.length <= lastAppliedIndex) return;
-
-        try {
-          // 流式应用翻译
-          await webview.executeJavaScript(
-            buildStreamingApplyScript({
-              translations: translations,
-              displayMode: settings.displayMode,
-              startIndex: startIndex
-            }),
-            true
-          );
-          lastAppliedIndex = translations.length;
-        } catch (err) {
-          console.error('[翻译] 流式应用错误:', err.message);
+        // 只接受有实际内容的文本
+        const text = node.textContent.trim();
+        if (text.length === 0) {
+          return NodeFilter.FILTER_REJECT;
         }
-      };
-
-      const translated = await translateTexts(settings, sourceTexts, onStreamUpdate);
-
-      if (webview.dataset.translationRequestId !== requestId) {
-        return { ok: true, skipped: true, reason: 'stale' };
+        return NodeFilter.FILTER_ACCEPT;
       }
-      if (webview.getURL() !== url) {
-        return { ok: true, skipped: true, reason: 'url-changed' };
-      }
+    }
+  );
 
-      // 对于AI翻译，流式更新已经应用了大部分翻译
-      // 但仍需确保所有翻译都已应用（处理最后一批）
-      let applyResult;
-      try {
-        // 如果是AI翻译且已通过流式应用了部分，只应用剩余部分
-        // 否则应用全部翻译
-        if (settings.engine === 'ai' && lastAppliedIndex > 0) {
-          // 流式翻译已应用部分，确保剩余部分应用
-          if (lastAppliedIndex < translated.length) {
-            applyResult = await webview.executeJavaScript(
-              buildStreamingApplyScript({
-                translations: translated,
-                displayMode: settings.displayMode,
-                startIndex: lastAppliedIndex
-              }),
-              true
-            );
-          } else {
-            applyResult = { ok: true, applied: lastAppliedIndex };
-          }
-        } else {
-          // 非流式翻译，一次性应用全部
-          applyResult = await webview.executeJavaScript(
-            buildApplyScript({
-              translations: translated,
-              displayMode: settings.displayMode
-            }),
-            true
-          );
+  let node;
+  while (node = walker.nextNode()) {
+    const text = node.textContent.trim();
+    if (text.length > 0) {
+      // 获取父元素和子节点索引
+      const parent = node.parentElement;
+      const parentXPath = getXPath(parent);
+      // 找到文本节点在父元素childNodes中的索引
+      let childIndex = -1;
+      for (let i = 0; i < parent.childNodes.length; i++) {
+        if (parent.childNodes[i] === node) {
+          childIndex = i;
+          break;
         }
-      } catch (applyError) {
-        console.error('[翻译] 应用错误:', applyError.message);
-        throw new Error(`应用翻译失败: ${applyError.message || applyError}`);
       }
 
-      if (!applyResult || !applyResult.ok) {
-        throw new Error('翻译应用返回失败结果');
+      if (childIndex >= 0) {
+        textNodes.push({
+          parentXPath: parentXPath,
+          childIndex: childIndex,
+          text: text
+        });
+        texts.push(text);
       }
-
-      webview.dataset.translationSignature = signature;
-
-      if (notify) {
-        showToast('页面翻译完成', 'success');
-      }
-      webview.dataset.isTranslating = 'false';
-
-      // 注入动态翻译监听器
-      injectDynamicTranslationListener(webview);
-
-      // 通知翻译结束
-      if (typeof onTranslationStatusChange === 'function') {
-        onTranslationStatusChange(false);
-      }
-
-      return { ok: true, translated: translated.length, applied: applyResult?.applied };
-    } catch (error) {
-      webview.dataset.isTranslating = 'false';
-
-      // 通知翻译结束
-      if (typeof onTranslationStatusChange === 'function') {
-        onTranslationStatusChange(false);
-      }
-
-      const message = error && error.message ? error.message : String(error);
-      if (notify || force) {
-        showToast(`翻译失败: ${message}`, 'error');
-      }
-      return { ok: false, message };
     }
   }
 
-  async function handleWebviewDidStopLoading(webview) {
-    await translateWebview(webview, { force: false, notify: false });
-  }
-
-  async function restoreOriginalText(webview) {
-    if (!webview || webview.tagName !== 'WEBVIEW') {
-      return { ok: false, skipped: true, reason: 'invalid-webview' };
+  // 获取元素的 XPath
+  function getXPath(element) {
+    if (element.id) {
+      return '//*[@id="' + element.id + '"]';
     }
 
-    // 停止动态翻译监听
-    stopDynamicTranslationListener(webview);
+    const paths = [];
+    let current = element;
 
-    try {
-      const result = await webview.executeJavaScript(buildRestoreScript(), true);
+    while (current && current.nodeType === Node.ELEMENT_NODE) {
+      let index = 0;
+      let sibling = current.previousSibling;
 
-      // 清理翻译签名
-      delete webview.dataset.translationSignature;
-      delete webview.dataset.translationLastRequestSignature;
-      delete webview.dataset.translationLastRequestAt;
-
-      return { ok: true, restored: result?.count || 0 };
-    } catch (error) {
-      console.error('[翻译] 恢复原文失败:', error.message);
-      return { ok: false, message: error.message };
-    }
-  }
-
-  async function translateActiveWebview() {
-    const webview = typeof getActiveWebview === 'function' ? getActiveWebview() : null;
-
-    if (!webview) {
-      showToast('无法找到当前页面的 webview', 'error');
-      return { ok: false, skipped: true, reason: 'no-webview' };
-    }
-
-    return translateWebview(webview, { force: true, notify: true });
-  }
-
-  async function diagnoseNetwork() {
-    const settings = getSettings();
-
-    if (settings.engine !== 'ai') {
-      showToast('网络诊断仅支持AI翻译引擎', 'warning');
-      return { ok: false, message: '仅支持AI翻译引擎' };
-    }
-
-    if (!settings.aiEndpoint) {
-      showToast('请先配置AI翻译端点', 'error');
-      return { ok: false, message: '缺少AI端点配置' };
-    }
-
-    try {
-      showToast('正在诊断网络连接...', 'info');
-      const result = await ipcRenderer.invoke('diagnose-translation-network', {
-        endpoint: settings.aiEndpoint
-      });
-
-      if (!result || !result.ok) {
-        const message = result?.message || '诊断失败';
-        showToast(`诊断失败: ${message}`, 'error');
-        return result;
+      while (sibling) {
+        if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === current.tagName) {
+          index++;
+        }
+        sibling = sibling.previousSibling;
       }
 
-      const diagnostics = result.diagnostics;
-      console.error('[网络诊断] 结果:', diagnostics);
+      const tagName = current.tagName.toLowerCase();
+      const pathIndex = (index ? '[' + (index + 1) + ']' : '');
+      paths.unshift(tagName + pathIndex);
 
-      // 显示诊断结果
-      if (diagnostics.suggestions && diagnostics.suggestions.length > 0) {
-        const firstSuggestion = diagnostics.suggestions[0];
-        showToast(`${firstSuggestion.issue}: ${firstSuggestion.suggestion}`, 'info', 8000);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('[网络诊断] 错误:', error);
-      showToast(`诊断错误: ${error.message}`, 'error');
-      return { ok: false, message: error.message };
+      current = current.parentElement;
     }
-  }
 
-  const dynamicTranslationController = createDynamicTranslationController({
-    getSettings,
-    ipcRenderer
-  });
-  const { injectDynamicTranslationListener, stopDynamicTranslationListener } =
-    dynamicTranslationController;
+    return '/' + paths.join('/');
+  }
 
   return {
-    getSettings,
-    handleWebviewDidStopLoading,
-    restoreOriginalText,
-    saveSettings,
-    injectDynamicTranslationListener,
-    stopDynamicTranslationListener,
-    translateActiveWebview,
-    translateWebview,
-    diagnoseNetwork
+    texts: texts,
+    nodes: textNodes
+  };
+})();
+`;
+
+// 应用翻译脚本 - 将翻译结果应用到页面
+const APPLY_TRANSLATION_SCRIPT = `
+(function(translations, nodeData) {
+  // 存储 original text 用于恢复
+  if (!window.__byteiqOriginalTexts) {
+    window.__byteiqOriginalTexts = [];
+  }
+
+  nodeData.forEach((nodeInfo, index) => {
+    try {
+      // 通过父元素XPath找到父元素
+      const parentResult = document.evaluate(
+        nodeInfo.parentXPath,
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+      );
+      const parent = parentResult.singleNodeValue;
+
+      if (parent && translations[index]) {
+        // 通过子节点索引找到文本节点
+        const textNode = parent.childNodes[nodeInfo.childIndex];
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          // 保存原文
+          window.__byteiqOriginalTexts.push({
+            parent: parent,
+            childIndex: nodeInfo.childIndex,
+            originalText: textNode.textContent
+          });
+
+          // 应用翻译
+          textNode.textContent = translations[index];
+        }
+      }
+    } catch (e) {
+      console.error('Failed to apply translation:', e);
+    }
+  });
+
+  return true;
+})(__TRANSLATIONS__, __NODE_DATA__);
+`;
+
+// 恢复原文脚本
+const RESTORE_ORIGINAL_SCRIPT = `
+(function() {
+  if (!window.__byteiqOriginalTexts) {
+    return false;
+  }
+
+  window.__byteiqOriginalTexts.forEach(item => {
+    try {
+      if (item.parent && item.parent.childNodes[item.childIndex]) {
+        const textNode = item.parent.childNodes[item.childIndex];
+        if (textNode.nodeType === Node.TEXT_NODE) {
+          textNode.textContent = item.originalText;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to restore text:', e);
+    }
+  });
+
+  window.__byteiqOriginalTexts = null;
+  return true;
+})();
+`;
+
+// 流式应用单个翻译结果脚本
+const APPLY_SINGLE_TRANSLATION_SCRIPT = `
+(function(translation, nodeInfo, index) {
+  // 存储 original text 用于恢复
+  if (!window.__byteiqOriginalTexts) {
+    window.__byteiqOriginalTexts = [];
+  }
+
+  // 如果这个索引还没有保存原文，保存它
+  if (!window.__byteiqOriginalTexts[index]) {
+    try {
+      const parentResult = document.evaluate(
+        nodeInfo.parentXPath,
+        document,
+        null,
+        XPathResult.FIRST_ORDERED_NODE_TYPE,
+        null
+      );
+      const parent = parentResult.singleNodeValue;
+
+      if (parent) {
+        const textNode = parent.childNodes[nodeInfo.childIndex];
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          window.__byteiqOriginalTexts[index] = {
+            parent: parent,
+            childIndex: nodeInfo.childIndex,
+            originalText: textNode.textContent
+          };
+          // 应用翻译
+          textNode.textContent = translation;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to apply streaming translation:', e);
+    }
+  } else {
+    // 已有原文记录，直接更新翻译
+    const item = window.__byteiqOriginalTexts[index];
+    if (item.parent && item.parent.childNodes[item.childIndex]) {
+      const textNode = item.parent.childNodes[item.childIndex];
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        textNode.textContent = translation;
+      }
+    }
+  }
+})(__TRANSLATION__, __NODE_INFO__, __INDEX__);
+`;
+
+function createTranslationManager(options) {
+  const { documentRef, store, t, showToast, ipcRenderer, getActiveTabId } = options;
+
+  // 翻译状态
+  const translationState = new Map(); // tabId -> { isTranslated, isTranslating, nodeData }
+
+  // 当前翻译任务信息（用于流式更新）
+  let currentTranslationNodes = null;
+  let streamingTranslationActive = false;
+  let currentTranslationTaskId = null;
+
+  /**
+   * 获取当前活跃的 webview
+   */
+  function getActiveWebview() {
+    const tabId = getActiveTabId();
+    return documentRef.getElementById(`webview-${tabId}`);
+  }
+
+  /**
+   * 获取翻译按钮
+   */
+  function getTranslateBtn() {
+    return documentRef.getElementById('translate-btn');
+  }
+
+  /**
+   * 更新翻译按钮状态
+   */
+  function updateTranslateBtnState(tabId, state) {
+    const btn = getTranslateBtn();
+    if (!btn) return;
+
+    const tabState = translationState.get(tabId);
+
+    btn.classList.remove('translating', 'translated');
+
+    if (state === 'translating' || tabState?.isTranslating) {
+      btn.classList.add('translating');
+      btn.setAttribute('data-i18n-title', 'translation.translating');
+    } else if (state === 'translated' || tabState?.isTranslated) {
+      btn.classList.add('translated');
+      btn.setAttribute('data-i18n-title', 'translation.restore');
+    } else {
+      btn.setAttribute('data-i18n-title', 'translation.translate');
+    }
+  }
+
+  /**
+   * 应用流式翻译结果
+   */
+  async function applyStreamingTranslation(webview, newTexts, startIndex) {
+    if (!currentTranslationNodes || !newTexts || newTexts.length === 0) return;
+
+    for (let i = 0; i < newTexts.length; i++) {
+      const globalIndex = startIndex + i;
+      const nodeInfo = currentTranslationNodes[globalIndex];
+      const translation = newTexts[i];
+
+      if (nodeInfo && translation) {
+        const script = APPLY_SINGLE_TRANSLATION_SCRIPT.replace(
+          '__TRANSLATION__',
+          JSON.stringify(translation)
+        )
+          .replace('__NODE_INFO__', JSON.stringify(nodeInfo))
+          .replace('__INDEX__', globalIndex.toString());
+
+        try {
+          await webview.executeJavaScript(script);
+        } catch (e) {
+          console.error('Failed to apply streaming translation:', e);
+        }
+      }
+    }
+  }
+
+  /**
+   * 执行翻译
+   */
+  async function handleTranslate() {
+    const webview = getActiveWebview();
+    if (!webview || webview.tagName !== 'WEBVIEW') {
+      showToast(t('translation.noPage') || '请先打开一个网页', 'warning');
+      return;
+    }
+
+    const tabId = getActiveTabId();
+    const tabState = translationState.get(tabId);
+
+    // 如果已翻译，则恢复原文
+    if (tabState?.isTranslated) {
+      await restoreOriginal(tabId, webview);
+      return;
+    }
+
+    // 如果正在翻译，再次点击视为取消
+    if (tabState?.isTranslating) {
+      if (currentTranslationTaskId) {
+        ipcRenderer.send('cancel-translation', { taskId: currentTranslationTaskId });
+      }
+      streamingTranslationActive = false;
+      currentTranslationTaskId = null;
+      translationState.set(tabId, { isTranslated: false, isTranslating: false });
+      updateTranslateBtnState(tabId, 'normal');
+      showToast(t('translation.cancelled') || '已取消翻译', 'info');
+      return;
+    }
+
+    try {
+      // 设置翻译中状态
+      translationState.set(tabId, { isTranslated: false, isTranslating: true });
+      updateTranslateBtnState(tabId, 'translating');
+      showToast(t('translation.collecting') || '正在收集文本...', 'info');
+
+      // 收集页面文本
+      const collectResult = await webview.executeJavaScript(COLLECT_TEXT_SCRIPT);
+
+      if (!collectResult || !collectResult.texts || collectResult.texts.length === 0) {
+        showToast(t('translation.noText') || '未找到可翻译的文本', 'warning');
+        translationState.set(tabId, { isTranslated: false, isTranslating: false });
+        updateTranslateBtnState(tabId, 'normal');
+        return;
+      }
+
+      const { texts, nodes } = collectResult;
+      currentTranslationNodes = nodes;
+      streamingTranslationActive = true;
+      currentTranslationTaskId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+      // 获取目标语言
+      const targetLanguage = store.get('settings.translationTargetLanguage', '简体中文');
+
+      showToast(
+        `${t('translation.translating') || '正在翻译'}... (${texts.length} ${t('translation.texts') || '个文本块'})`,
+        'info'
+      );
+
+      // 调用主进程翻译
+      const result = await ipcRenderer.invoke('translate-text', {
+        texts,
+        targetLanguage,
+        taskId: currentTranslationTaskId
+      });
+
+      streamingTranslationActive = false;
+      currentTranslationTaskId = null;
+
+      if (result && result.cancelled) {
+        translationState.set(tabId, { isTranslated: false, isTranslating: false });
+        updateTranslateBtnState(tabId, 'normal');
+        return;
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || '翻译失败');
+      }
+
+      // 如果不是流式翻译，或者流式更新没有完全应用，则应用完整翻译
+      // 流式翻译过程中已经逐步应用了结果，这里作为兜底确保所有翻译都已应用
+      const script = APPLY_TRANSLATION_SCRIPT.replace(
+        '__TRANSLATIONS__',
+        JSON.stringify(result.translations)
+      ).replace('__NODE_DATA__', JSON.stringify(nodes));
+
+      await webview.executeJavaScript(script);
+
+      // 更新状态
+      translationState.set(tabId, {
+        isTranslated: true,
+        isTranslating: false,
+        nodeData: nodes
+      });
+      updateTranslateBtnState(tabId, 'translated');
+      showToast(t('translation.completed') || '翻译完成', 'success');
+    } catch (error) {
+      console.error('Translation error:', error);
+      streamingTranslationActive = false;
+      currentTranslationTaskId = null;
+      translationState.set(tabId, { isTranslated: false, isTranslating: false });
+      updateTranslateBtnState(tabId, 'normal');
+      showToast(`${t('translation.failed') || '翻译失败'}: ${error.message}`, 'error');
+    }
+  }
+
+  /**
+   * 恢复原文
+   */
+  async function restoreOriginal(tabId, webview) {
+    try {
+      await webview.executeJavaScript(RESTORE_ORIGINAL_SCRIPT);
+
+      translationState.set(tabId, { isTranslated: false, isTranslating: false });
+      currentTranslationNodes = null;
+      updateTranslateBtnState(tabId, 'normal');
+      showToast(t('translation.restored') || '已恢复原文', 'success');
+    } catch (error) {
+      console.error('Restore error:', error);
+      showToast(t('translation.restoreFailed') || '恢复失败', 'error');
+    }
+  }
+
+  /**
+   * 监听翻译进度
+   */
+  function setupProgressListener() {
+    ipcRenderer.on('translation-progress', (event, data) => {
+      if (currentTranslationTaskId && data.taskId && data.taskId !== currentTranslationTaskId) {
+        return;
+      }
+      if (data.status === 'cancelled') {
+        showToast(t('translation.cancelled') || '已取消翻译', 'info');
+        return;
+      }
+      if (data.status === 'translating') {
+        showToast(
+          `${t('translation.translatingChunk') || '正在翻译'} ${data.current}/${data.total}`,
+          'info'
+        );
+      }
+    });
+
+    // 监听流式翻译更新
+    ipcRenderer.on('translation-streaming', async (_event, data) => {
+      if (!streamingTranslationActive || !currentTranslationNodes) return;
+      if (currentTranslationTaskId && data.taskId && data.taskId !== currentTranslationTaskId)
+        return;
+
+      const webview = getActiveWebview();
+      if (!webview || webview.tagName !== 'WEBVIEW') return;
+
+      // 应用新完成的翻译
+      const globalStartIndex =
+        data.startIndex +
+        (typeof data.newTextsStartIndex === 'number' ? data.newTextsStartIndex : 0);
+      await applyStreamingTranslation(webview, data.newTexts, globalStartIndex);
+    });
+  }
+
+  /**
+   * 绑定事件
+   */
+  function bindEvents() {
+    const translateBtn = getTranslateBtn();
+
+    if (translateBtn) {
+      translateBtn.style.display = 'flex';
+      translateBtn.addEventListener('click', handleTranslate);
+    }
+
+    setupProgressListener();
+  }
+
+  /**
+   * 清理标签页翻译状态
+   */
+  function clearTabState(tabId) {
+    translationState.delete(tabId);
+    if (getActiveTabId() === tabId) {
+      currentTranslationNodes = null;
+      streamingTranslationActive = false;
+      currentTranslationTaskId = null;
+    }
+  }
+
+  return {
+    bindEvents,
+    handleTranslate,
+    clearTabState,
+    updateTranslateBtnState
   };
 }
 

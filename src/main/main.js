@@ -12,8 +12,12 @@ const {
 const fs = require('fs');
 const path = require('path');
 const Store = require('electron-store');
-const { registerTranslationIpcHandlers } = require('./modules/translation-ipc');
 const { createExtensionsManager } = require('./modules/extensions-manager');
+const {
+  translateTexts,
+  translateTextsStreaming,
+  chunkTexts
+} = require('./modules/translation/ai-translator');
 
 // 持久化存储实例
 const store = new Store();
@@ -21,17 +25,13 @@ const store = new Store();
 // 全局变量
 let mainWindow; // 主窗口实例
 let devtoolsView = null; // 开发者工具视图
-let devtoolsWebContentsId = null; // 开发者工具关联的WebContents ID
 
 // 下载管理相关变量
 let downloadSeq = 0; // 下载序列号
 const downloadItemsById = new Map(); // 下载项映射表
 
-// 注册翻译相关的IPC处理器
-registerTranslationIpcHandlers({
-  app,
-  ipcMain
-});
+// 翻译任务取消控制
+const activeTranslationRequests = new Map(); // taskId -> ClientRequest
 
 // 创建扩展管理器实例
 const extensionsManager = createExtensionsManager({
@@ -98,6 +98,166 @@ ipcMain.on('download-retry', (event, url) => {
   } catch (error) {
     console.error('Failed to retry download:', error);
   }
+});
+
+// 翻译相关 IPC 处理器
+ipcMain.handle('translate-text', async (event, { texts, targetLanguage, taskId }) => {
+  const resolvedTaskId = taskId || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  try {
+    // 优先使用翻译专用API配置，如果未启用则使用AI设置
+    const translationApiEnabled = store.get('settings.translationApiEnabled', false);
+    let endpoint, apiKey, requestType, model;
+
+    if (translationApiEnabled) {
+      endpoint = store.get('settings.translationEndpoint', '');
+      apiKey = store.get('settings.translationApiKey', '');
+      requestType = store.get('settings.translationRequestType', 'openai-chat');
+      model = store.get('settings.translationModelId', 'gpt-3.5-turbo');
+    } else {
+      // 回退到AI设置
+      endpoint = store.get('settings.aiEndpoint', '');
+      apiKey = store.get('settings.aiApiKey', '');
+      requestType = store.get('settings.aiRequestType', 'openai-chat');
+      model = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+    }
+
+    if (!endpoint || !apiKey) {
+      return {
+        success: false,
+        error: '请先在设置中配置翻译 API 或 AI API 端点和密钥'
+      };
+    }
+
+    // 读取用户自定义的高级配置
+    const maxTextsPerRequest = store.get('settings.translationMaxTexts', 500);
+    const maxCharsPerRequest = store.get('settings.translationMaxChars', 50000);
+    const requestTimeout = store.get('settings.translationTimeout', 120);
+    const streamingEnabled = store.get('settings.translationStreaming', true);
+
+    // 分块处理，使用用户配置
+    const chunks = chunkTexts(texts, {
+      maxTexts: maxTextsPerRequest,
+      maxChars: maxCharsPerRequest
+    });
+    const results = new Array(texts.length);
+
+    // 逐块翻译
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+
+      // 发送进度
+      event.sender.send('translation-progress', {
+        taskId: resolvedTaskId,
+        current: i + 1,
+        total: chunks.length,
+        status: 'translating'
+      });
+
+      if (streamingEnabled) {
+        // 流式翻译
+        const translated = await translateTextsStreaming(
+          chunk.texts,
+          targetLanguage,
+          {
+            endpoint,
+            apiKey,
+            requestType,
+            model,
+            timeout: requestTimeout * 1000,
+            registerRequest: req => {
+              activeTranslationRequests.set(resolvedTaskId, req);
+            }
+          },
+          (newTexts, allTexts, newTextsStartIndex) => {
+            // 发送流式更新事件
+            event.sender.send('translation-streaming', {
+              taskId: resolvedTaskId,
+              chunkIndex: i,
+              startIndex: chunk.startIndex,
+              newTexts: newTexts,
+              allTexts: allTexts,
+              newTextsStartIndex
+            });
+          }
+        );
+
+        // 将结果放入正确位置
+        translated.forEach((text, idx) => {
+          results[chunk.startIndex + idx] = text;
+        });
+      } else {
+        // 非流式翻译
+        const translated = await translateTexts(chunk.texts, targetLanguage, {
+          endpoint,
+          apiKey,
+          requestType,
+          model,
+          timeout: requestTimeout * 1000
+        });
+
+        // 将结果放入正确位置
+        translated.forEach((text, idx) => {
+          results[chunk.startIndex + idx] = text;
+        });
+      }
+    }
+
+    event.sender.send('translation-progress', {
+      taskId: resolvedTaskId,
+      status: 'completed'
+    });
+
+    activeTranslationRequests.delete(resolvedTaskId);
+
+    return {
+      success: true,
+      translations: results,
+      taskId: resolvedTaskId
+    };
+  } catch (error) {
+    if (error && error.message === 'Cancelled') {
+      event.sender.send('translation-progress', {
+        taskId: resolvedTaskId,
+        status: 'cancelled'
+      });
+      activeTranslationRequests.delete(resolvedTaskId);
+      return {
+        success: false,
+        cancelled: true,
+        taskId: resolvedTaskId
+      };
+    }
+
+    console.error('Translation error:', error);
+    activeTranslationRequests.delete(resolvedTaskId);
+    return {
+      success: false,
+      error: error.message || '翻译失败'
+    };
+  }
+});
+
+ipcMain.on('cancel-translation', (_event, { taskId }) => {
+  if (!taskId) return;
+  const req = activeTranslationRequests.get(taskId);
+  if (!req) return;
+  activeTranslationRequests.delete(taskId);
+  try {
+    req.destroy(new Error('Cancelled'));
+  } catch (error) {
+    console.error('Cancel translation failed:', error);
+  }
+});
+
+// 获取版本信息
+ipcMain.handle('get-version-info', () => {
+  return {
+    appVersion: app.getVersion(),
+    electronVersion: process.versions.electron,
+    chromiumVersion: process.versions.chrome,
+    nodeVersion: process.versions.node,
+    v8Version: process.versions.v8
+  };
 });
 
 // 设置webview窗口处理器，处理弹窗和新窗口
@@ -319,7 +479,6 @@ ipcMain.on('toggle-devtools-sidebar', (event, { webContentsId, width }) => {
     mainWindow.removeBrowserView(devtoolsView);
     devtoolsView.webContents.destroy();
     devtoolsView = null;
-    devtoolsWebContentsId = null;
     mainWindow.webContents.send('devtools-sidebar-closed');
     return;
   }
@@ -354,7 +513,6 @@ ipcMain.on('toggle-devtools-sidebar', (event, { webContentsId, width }) => {
   const webContents = webContentsId ? require('electron').webContents.fromId(webContentsId) : null;
 
   if (webContents) {
-    devtoolsWebContentsId = webContentsId;
     webContents.setDevToolsWebContents(devtoolsView.webContents);
     webContents.openDevTools();
   }

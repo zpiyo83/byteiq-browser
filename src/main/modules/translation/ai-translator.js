@@ -1,461 +1,599 @@
-﻿const https = require('https');
+/**
+ * AI 翻译引擎模块
+ * 支持 OpenAI Chat 兼容格式、OpenAI Response 格式、Anthropic 格式
+ */
 
-async function callAITranslation(options) {
-  const {
-    texts,
-    targetLanguage,
-    endpoint,
-    apiKey,
-    requestType,
+const https = require('https');
+const http = require('http');
+
+// 翻译配置常量
+const TRANSLATION_CONFIG = {
+  MAX_TEXTS_PER_REQUEST: 500, // 每次请求最多文本块数
+  MAX_CHARS_PER_REQUEST: 50000, // 每次请求最大字符数
+  REQUEST_TIMEOUT: 120000 // 请求超时时间（毫秒）
+};
+
+/**
+ * 构建 OpenAI Chat 兼��格式的请求体
+ */
+function buildOpenAIChatRequest(texts, targetLanguage, model = 'gpt-3.5-turbo', stream = false) {
+  const textsJson = JSON.stringify(texts);
+  return {
     model,
-    senderWebContents,
-    streaming
-  } = options;
-
-  console.error('[AI翻译] 开始翻译:', {
-    textsCount: texts.length,
-    targetLanguage,
-    endpoint,
-    apiKeyLength: apiKey ? apiKey.length : 0,
-    requestType,
-    model,
-    streaming
-  });
-
-  // 构建翻译请求
-  let prompt = `请你帮我把以下文字翻译为${targetLanguage}，冒号后跟翻译后的内容，保持"翻译块:"的格式不变：\n`;
-  texts.forEach((text, index) => {
-    prompt += `翻译块: ${text}\n`;
-  });
-
-  let requestBody;
-  let url = endpoint;
-
-  // 根据请求类型设置默认模型
-  const defaultModels = {
-    'openai-chat': 'gpt-3.5-turbo',
-    'openai-response': 'gpt-3.5-turbo-instruct',
-    anthropic: 'claude-3-haiku-20240307'
-  };
-  const actualModel = model || defaultModels[requestType] || defaultModels['openai-chat'];
-
-  if (requestType === 'openai-chat') {
-    // OpenAI Chat 兼容格式
-    if (endpoint.endsWith('/chat/completions')) {
-      url = endpoint;
-    } else if (endpoint.endsWith('/v1') || endpoint.endsWith('/v1/')) {
-      url = endpoint.replace(/\/$/, '') + '/chat/completions';
-    } else {
-      url = endpoint + (endpoint.endsWith('/') ? 'chat/completions' : '/chat/completions');
-    }
-    requestBody = {
-      model: actualModel,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      stream: !!streaming
-    };
-  } else if (requestType === 'anthropic') {
-    // Anthropic 格式
-    if (endpoint.endsWith('/messages')) {
-      url = endpoint;
-    } else {
-      url = endpoint + (endpoint.endsWith('/') ? 'messages' : '/messages');
-    }
-    requestBody = {
-      model: actualModel,
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-      stream: !!streaming
-    };
-  } else {
-    // OpenAI Response 格式（简单文本补全）
-    if (endpoint.endsWith('/completions')) {
-      url = endpoint;
-    } else {
-      url = endpoint + (endpoint.endsWith('/') ? 'completions' : '/completions');
-    }
-    requestBody = {
-      model: actualModel,
-      prompt: prompt,
-      max_tokens: 4096,
-      temperature: 0.3,
-      stream: !!streaming
-    };
-  }
-
-  const bodyString = JSON.stringify(requestBody);
-  const parsedUrl = new URL(url);
-
-  // 如果是非流式模式，直接请求并解析
-  if (!streaming) {
-    return await callAITranslationNonStreaming({
-      url,
-      parsedUrl,
-      bodyString,
-      apiKey,
-      requestType,
-      texts
-    });
-  }
-
-  // 流式模式
-  // 用于存储流式响应内容
-  let fullContent = '';
-  const translations = [];
-  let lastSentCount = 0;
-
-  // 解析并提取翻译块的辅助函数
-  const parseAndNotify = content => {
-    const lines = content.split('\n');
-    // 流式响应时，最后一行可能还没输出完整（没有换行结尾），不要提前解析
-    if (!content.endsWith('\n')) {
-      lines.pop();
-    }
-    const newTranslations = [];
-
-    for (const line of lines) {
-      const match = line.match(/^翻译块:\s*(.+)$/);
-      if (match) {
-        newTranslations.push(match[1].trim());
-      }
-    }
-
-    // 如果有新的翻译块，发送增量更新
-    if (newTranslations.length > lastSentCount && senderWebContents) {
-      const incremental = newTranslations.slice(lastSentCount);
-      senderWebContents.send('translation-stream-update', {
-        translations: newTranslations,
-        incremental: incremental,
-        startIndex: lastSentCount,
-        total: texts.length
-      });
-      lastSentCount = newTranslations.length;
-    }
-
-    return newTranslations;
-  };
-
-  await new Promise((resolve, reject) => {
-    const requestOptions = {
-      protocol: parsedUrl.protocol,
-      hostname: parsedUrl.hostname,
-      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-      path: `${parsedUrl.pathname}${parsedUrl.search}`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyString),
-        Authorization: `Bearer ${apiKey}`,
-        'x-api-key': requestType === 'anthropic' ? apiKey : undefined
+    messages: [
+      {
+        role: 'system',
+        content: `You are a professional translator. Translate the following JSON array of texts to ${targetLanguage}. Return ONLY a valid JSON array with the same number of elements, maintaining the original order. Do not add any explanation or markdown formatting.`
       },
-      rejectUnauthorized: false,
-      timeout: 60000 // 60秒超时
+      {
+        role: 'user',
+        content: textsJson
+      }
+    ],
+    max_tokens: 8192,
+    temperature: 0.3,
+    stream
+  };
+}
+
+/**
+ * 构建 OpenAI Response 格式的请求体
+ */
+function buildOpenAIResponseRequest(texts, targetLanguage, model = 'gpt-4') {
+  const textsJson = JSON.stringify(texts);
+  return {
+    model,
+    input: `Translate the following JSON array of texts to ${targetLanguage}. Return ONLY a valid JSON array with the same number of elements, maintaining the original order.\n\n${textsJson}`
+  };
+}
+
+/**
+ * 构建 Anthropic 格式的请求体
+ */
+function buildAnthropicRequest(texts, targetLanguage, model = 'claude-3-sonnet-20240229') {
+  const textsJson = JSON.stringify(texts);
+  return {
+    model,
+    max_tokens: 8192,
+    messages: [
+      {
+        role: 'user',
+        content: `Translate the following JSON array of texts to ${targetLanguage}. Return ONLY a valid JSON array with the same number of elements, maintaining the original order. Do not add any explanation or markdown formatting.\n\n${textsJson}`
+      }
+    ]
+  };
+}
+
+/**
+ * 解析 API 响应
+ */
+function parseAPIResponse(data, requestType) {
+  try {
+    const parsed = JSON.parse(data);
+
+    switch (requestType) {
+      case 'openai-chat':
+      case 'openai-response':
+        // OpenAI 格式: choices[0].message.content 或 output
+        if (parsed.choices && parsed.choices[0]?.message?.content) {
+          return JSON.parse(parsed.choices[0].message.content);
+        }
+        if (parsed.output) {
+          return JSON.parse(parsed.output);
+        }
+        throw new Error('Invalid OpenAI response format');
+
+      case 'anthropic':
+        // Anthropic 格式: content[0].text
+        if (parsed.content && parsed.content[0]?.text) {
+          return JSON.parse(parsed.content[0].text);
+        }
+        throw new Error('Invalid Anthropic response format');
+
+      default:
+        throw new Error(`Unknown request type: ${requestType}`);
+    }
+  } catch (error) {
+    throw new Error(`Failed to parse translation response: ${error.message}`);
+  }
+}
+
+/**
+ * 获取请求头
+ */
+function getHeaders(requestType, apiKey) {
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
+  switch (requestType) {
+    case 'openai-chat':
+    case 'openai-response':
+      headers['Authorization'] = `Bearer ${apiKey}`;
+      break;
+    case 'anthropic':
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      break;
+  }
+
+  return headers;
+}
+
+function getStreamingHeaders(requestType, apiKey) {
+  return {
+    ...getHeaders(requestType, apiKey),
+    Accept: 'text/event-stream',
+    Connection: 'keep-alive',
+    'Cache-Control': 'no-cache'
+  };
+}
+
+/**
+ * 获取请求路径
+ */
+function getRequestPath(endpoint, requestType) {
+  const url = new URL(endpoint);
+  const path = url.pathname;
+
+  // 如果端点已经包含完整路径，直接使用
+  if (
+    path.includes('/chat/completions') ||
+    path.includes('/responses') ||
+    path.includes('/messages')
+  ) {
+    return path + url.search;
+  }
+
+  // 否则根据类型添加路径
+  switch (requestType) {
+    case 'openai-chat':
+      return '/v1/chat/completions';
+    case 'openai-response':
+      return '/v1/responses';
+    case 'anthropic':
+      return '/v1/messages';
+    default:
+      return '/v1/chat/completions';
+  }
+}
+
+/**
+ * 发送 HTTP 请求
+ */
+function sendRequest(endpoint, requestBody, requestType, apiKey, timeout) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(endpoint);
+    const isHttps = url.protocol === 'https:';
+    const httpModule = isHttps ? https : http;
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (isHttps ? 443 : 80),
+      path: getRequestPath(endpoint, requestType),
+      method: 'POST',
+      headers: getHeaders(requestType, apiKey),
+      timeout: timeout || TRANSLATION_CONFIG.REQUEST_TIMEOUT
     };
 
-    // 移除undefined的header
-    Object.keys(requestOptions.headers).forEach(key => {
-      if (requestOptions.headers[key] === undefined) {
-        delete requestOptions.headers[key];
-      }
+    const req = httpModule.request(options, res => {
+      let data = '';
+      res.on('data', chunk => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+            const result = parseAPIResponse(data, requestType);
+            resolve(result);
+          } catch (error) {
+            reject(new Error(`Parse error: ${error.message}`));
+          }
+        } else {
+          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+        }
+      });
     });
 
-    console.error('[AI翻译] 准备发送请求:', {
-      url: url,
-      hostname: requestOptions.hostname,
-      port: requestOptions.port,
-      path: requestOptions.path,
-      method: requestOptions.method
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
     });
 
-    const request = https.request(requestOptions, response => {
-      console.error('[AI翻译] 收到响应:', response.statusCode);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        const chunks = [];
-        response.on('data', chunk => chunks.push(chunk));
-        response.on('end', () => {
-          const errorText = Buffer.concat(chunks).toString('utf8');
-          reject(
-            new Error(`AI API请求失败 (${response.statusCode}): ${errorText.substring(0, 200)}`)
-          );
-        });
-        return;
-      }
+    req.write(JSON.stringify(requestBody));
+    req.end();
+  });
+}
 
+/**
+ * 翻译文本数组
+ * @param {string[]} texts - 待翻译文本数组
+ * @param {string} targetLanguage - 目标语言
+ * @param {object} config - AI 配置
+ * @returns {Promise<string[]>} - 翻译结果数组
+ */
+async function translateTexts(texts, targetLanguage, config) {
+  const { endpoint, apiKey, requestType, model, timeout } = config;
+
+  if (!endpoint || !apiKey) {
+    throw new Error('AI endpoint and API key are required');
+  }
+
+  // 构建请求体
+  let requestBody;
+  switch (requestType) {
+    case 'openai-chat':
+      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model);
+      break;
+    case 'openai-response':
+      requestBody = buildOpenAIResponseRequest(texts, targetLanguage, model);
+      break;
+    case 'anthropic':
+      requestBody = buildAnthropicRequest(texts, targetLanguage, model);
+      break;
+    default:
+      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model);
+  }
+
+  return sendRequest(endpoint, requestBody, requestType, apiKey, timeout);
+}
+
+/**
+ * 文本分块
+ * @param {string[]} texts - 待翻译文本数组
+ * @param {object} options - 可选配置
+ * @param {number} options.maxTexts - 每块最大文本数
+ * @param {number} options.maxChars - 每块最大字符数
+ * @returns {Array<{texts: string[], startIndex: number}>} - 分块后的文本数组
+ */
+function chunkTexts(texts, options = {}) {
+  const maxTexts = options.maxTexts || TRANSLATION_CONFIG.MAX_TEXTS_PER_REQUEST;
+  const maxChars = options.maxChars || TRANSLATION_CONFIG.MAX_CHARS_PER_REQUEST;
+
+  const chunks = [];
+  let currentChunk = [];
+  let currentChars = 0;
+  let startIndex = 0;
+
+  for (let i = 0; i < texts.length; i++) {
+    const text = texts[i];
+    const textLength = text.length;
+
+    // 检查是否需要开始新块
+    if (currentChunk.length >= maxTexts || currentChars + textLength > maxChars) {
+      if (currentChunk.length > 0) {
+        chunks.push({ texts: currentChunk, startIndex });
+        currentChunk = [];
+        currentChars = 0;
+        startIndex = i;
+      }
+    }
+
+    currentChunk.push(text);
+    currentChars += textLength;
+  }
+
+  // 添加最后一个块
+  if (currentChunk.length > 0) {
+    chunks.push({ texts: currentChunk, startIndex });
+  }
+
+  return chunks;
+}
+
+/**
+ * 解析流式响应的单个数据块
+ */
+function parseStreamChunk(line, requestType) {
+  if (!line) {
+    return null;
+  }
+
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed === 'data: [DONE]' || trimmed === '[DONE]') {
+    return null;
+  }
+
+  if (!trimmed.startsWith('data:')) {
+    return null;
+  }
+
+  try {
+    // 移除 "data: " 前缀
+    const jsonStr = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed.slice(5).trim();
+    const parsed = JSON.parse(jsonStr);
+
+    switch (requestType) {
+      case 'openai-chat':
+        // OpenAI 流式格式: choices[0].delta.content
+        if (parsed.choices && parsed.choices[0]?.delta?.content) {
+          return parsed.choices[0].delta.content;
+        }
+        return null;
+
+      case 'openai-response':
+        // OpenAI Responses API 流式格式:
+        // type: 'response.output_text.delta' -> delta
+        // type: 'response.output_text.done' -> text
+        if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
+          return parsed.delta;
+        }
+        if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
+          return parsed.text;
+        }
+        return null;
+
+      case 'anthropic':
+        // Anthropic 流式格式: delta.text
+        if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+          return parsed.delta.text;
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 尝试从累积的内容中提取已完成的JSON数组元素
+ * @param {string} content - 累积的内容
+ * @param {number} _expectedCount - 预期的元素数量（保留供未来使用）
+ * @returns {{completed: string[], remaining: string}} - 已完成的元素和剩余内容
+ */
+function extractCompletedElements(content, _expectedCount) {
+  // 尝试解析部分JSON数组
+  const completed = [];
+  let remaining = content;
+
+  // 查找已完成的双引号包裹的字符串元素
+  // JSON数组格式: ["text1", "text2", ...]
+  const trimmed = content.trim();
+
+  // 如果不以 [ 开头，等待
+  if (!trimmed.startsWith('[')) {
+    return { completed: [], remaining: content };
+  }
+
+  // 尝试逐个提取字符串元素
+  let pos = 1; // 跳过 [
+  let inString = false;
+  let escape = false;
+  let currentElement = '';
+
+  while (pos < trimmed.length) {
+    const char = trimmed[pos];
+
+    if (escape) {
+      currentElement += char;
+      escape = false;
+    } else if (char === '\\') {
+      currentElement += char;
+      escape = true;
+    } else if (char === '"' && !inString) {
+      inString = true;
+      currentElement += char;
+    } else if (char === '"' && inString) {
+      inString = false;
+      currentElement += char;
+      // 完成一个字符串元素
+      try {
+        const element = JSON.parse(currentElement);
+        completed.push(element);
+        currentElement = '';
+
+        // 跳过可能的逗号和空格
+        pos++;
+        while (
+          pos < trimmed.length &&
+          (trimmed[pos] === ',' || trimmed[pos] === ' ' || trimmed[pos] === '\n')
+        ) {
+          pos++;
+        }
+        continue;
+      } catch {
+        // 解析失败，继续累积
+      }
+    } else if (inString) {
+      currentElement += char;
+    } else if (char === ']') {
+      // 数组结束
+      break;
+    }
+
+    pos++;
+  }
+
+  // 如果找到了完整元素，更新remaining
+  if (completed.length > 0) {
+    // 计算已解析部分在原字符串中的位置
+    remaining = trimmed.substring(pos);
+  }
+
+  return { completed, remaining };
+}
+
+/**
+ * 发送流式 HTTP 请求
+ * @param {string} endpoint - API端点
+ * @param {object} requestBody - 请求体
+ * @param {string} requestType - 请求类型
+ * @param {string} apiKey - API密钥
+ * @param {number} timeout - 超时时间
+ * @param {function} onProgress - 进度回调 (completedTexts, allTexts)
+ * @param {number} expectedCount - 预期的翻译结果数量
+ */
+function sendStreamingRequest(
+  endpoint,
+  requestBody,
+  requestType,
+  apiKey,
+  timeout,
+  onProgress,
+  expectedCount,
+  registerRequest
+) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(endpoint);
+    const isHttps = url.protocol === 'https:';
+    const httpModule = isHttps ? https : http;
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (isHttps ? 443 : 80),
+      path: getRequestPath(endpoint, requestType),
+      method: 'POST',
+      headers: getStreamingHeaders(requestType, apiKey),
+      timeout: timeout || TRANSLATION_CONFIG.REQUEST_TIMEOUT
+    };
+
+    const req = httpModule.request(options, res => {
+      res.setEncoding('utf8');
       let buffer = '';
+      let contentBuffer = ''; // 累积的内容
+      let completedTexts = [];
+      let lastReportedCount = 0;
+      let errorData = '';
 
-      response.on('data', chunk => {
-        buffer += chunk.toString('utf8');
+      res.on('data', chunk => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          errorData += chunk;
+          return;
+        }
+
+        buffer += chunk;
+
+        // 按行分割处理SSE
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 保留不完整的行
+        buffer = lines.pop() || ''; // 保留最后一个不完整的行
 
         for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
+          const content = parseStreamChunk(line, requestType);
+          if (content !== null) {
+            contentBuffer += content;
 
-          // 处理 SSE 格式
-          if (trimmed.startsWith('data: ')) {
-            const data = trimmed.slice(6);
-            if (data === '[DONE]') continue;
+            // 尝试提取已完成的元素
+            const result = extractCompletedElements(contentBuffer, expectedCount);
 
-            try {
-              const json = JSON.parse(data);
-              let contentDelta = '';
+            if (result.completed.length > lastReportedCount) {
+              // 有新完成的元素
+              const newStartIndex = lastReportedCount;
+              const newCompleted = result.completed.slice(lastReportedCount);
+              completedTexts = result.completed;
+              lastReportedCount = result.completed.length;
 
-              if (requestType === 'anthropic') {
-                // Anthropic stream format
-                if (json.type === 'content_block_delta' && json.delta?.text) {
-                  contentDelta = json.delta.text;
-                }
-              } else if (requestType === 'openai-response') {
-                // OpenAI completions stream format
-                contentDelta = json.choices?.[0]?.text || '';
-              } else {
-                // OpenAI chat stream format
-                contentDelta = json.choices?.[0]?.delta?.content || '';
+              // 调用进度回调，传递新完成的元素
+              if (onProgress && newCompleted.length > 0) {
+                onProgress(newCompleted, completedTexts, newStartIndex);
               }
-
-              if (contentDelta) {
-                fullContent += contentDelta;
-                parseAndNotify(fullContent);
-              }
-            } catch (e) {
-              // 忽略解析错误，可能是部分数据
             }
-          } else if (trimmed.startsWith('event:')) {
-            // 忽略事件类型行
-            continue;
           }
         }
       });
 
-      response.on('end', () => {
-        resolve();
-      });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          // 处理最后的缓冲区
+          if (buffer) {
+            const content = parseStreamChunk(buffer, requestType);
+            if (content !== null) {
+              contentBuffer += content;
+            }
+          }
 
-      response.on('error', error => {
-        console.error('[AI翻译] 响应错误:', error.message);
-        reject(error);
-      });
-    });
-
-    request.on('error', error => {
-      console.error('[AI翻译] 请求错误:', {
-        message: error.message,
-        code: error.code,
-        errno: error.errno,
-        syscall: error.syscall,
-        address: error.address,
-        port: error.port
-      });
-
-      // 提供更友好的错误信息
-      let errorMessage = error.message;
-      if (error.code === 'ETIMEDOUT') {
-        errorMessage = `连接超时: 无法连接到 ${parsedUrl.hostname}。请检查网络连接、防火墙设置或代理配置。`;
-      } else if (error.code === 'ENOTFOUND') {
-        errorMessage = `DNS解析失败: 无法解析域名 ${parsedUrl.hostname}。请检查网络连接或DNS设置。`;
-      } else if (error.code === 'ECONNREFUSED') {
-        errorMessage = `连接被拒绝: 服务器 ${parsedUrl.hostname} 拒绝连接。请检查API端点是否正确。`;
-      }
-
-      reject(new Error(errorMessage));
-    });
-
-    request.on('timeout', () => {
-      console.error('[AI翻译] 请求超时');
-      request.destroy();
-      reject(new Error(`请求超时: 连接到 ${parsedUrl.hostname} 超过60秒未响应`));
-    });
-
-    console.error('[AI翻译] 开始写入请求体...');
-    request.write(bodyString);
-    console.error('[AI翻译] 请求体已写入，发送请求...');
-    request.end();
-    console.error('[AI翻译] 请求已发送');
-  });
-
-  // 最终解析翻译结果
-  const finalTranslations = [];
-  const lines = fullContent.split('\n');
-
-  for (const line of lines) {
-    const match = line.match(/^翻译块:\s*(.+)$/);
-    if (match) {
-      finalTranslations.push(match[1].trim());
-    }
-  }
-
-  // 如果解析失败，尝试其他方式
-  if (finalTranslations.length !== texts.length) {
-    finalTranslations.length = 0;
-
-    const allMatches = fullContent.match(/翻译块:\s*.+/g);
-    if (allMatches && allMatches.length >= texts.length) {
-      for (let i = 0; i < texts.length; i++) {
-        const match = allMatches[i]?.match(/^翻译块:\s*(.+)$/);
-        if (match) {
-          finalTranslations.push(match[1].trim());
+          // 最终解析
+          try {
+            // 尝试解析完整的JSON
+            const finalResult = JSON.parse(contentBuffer);
+            if (Array.isArray(finalResult)) {
+              resolve(finalResult);
+            } else {
+              // 如果解析成功但不是数组，尝试提取元素
+              const result = extractCompletedElements(contentBuffer, expectedCount);
+              resolve(result.completed);
+            }
+          } catch {
+            // 解析失败，使用已提取的元素
+            resolve(completedTexts);
+          }
+        } else {
+          const message = errorData || buffer;
+          reject(new Error(`HTTP ${res.statusCode}: ${message}`));
         }
-      }
-    }
-  }
+      });
+    });
 
-  if (finalTranslations.length !== texts.length) {
-    console.error(
-      `[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`
-    );
-    while (finalTranslations.length < texts.length) {
-      finalTranslations.push(texts[finalTranslations.length]);
+    if (typeof registerRequest === 'function') {
+      registerRequest(req);
     }
-  }
 
-  return finalTranslations;
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+
+    req.write(JSON.stringify(requestBody));
+    req.end();
+  });
 }
 
-// 非流式翻译
-async function callAITranslationNonStreaming(options) {
-  const { parsedUrl, bodyString, apiKey, requestType, texts } = options;
+/**
+ * 流式翻译文本数组
+ * @param {string[]} texts - 待翻译文本数组
+ * @param {string} targetLanguage - 目标语言
+ * @param {object} config - AI 配置
+ * @param {function} onProgress - 进度回调
+ * @returns {Promise<string[]>} - 翻译结果数组
+ */
+async function translateTextsStreaming(texts, targetLanguage, config, onProgress) {
+  const { endpoint, apiKey, requestType, model, timeout, registerRequest } = config;
 
-  const result = await new Promise((resolve, reject) => {
-    const requestOptions = {
-      protocol: parsedUrl.protocol,
-      hostname: parsedUrl.hostname,
-      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-      path: `${parsedUrl.pathname}${parsedUrl.search}`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyString),
-        Authorization: `Bearer ${apiKey}`,
-        'x-api-key': requestType === 'anthropic' ? apiKey : undefined
-      },
-      rejectUnauthorized: false,
-      timeout: 60000 // 60秒超时
-    };
-
-    // 移除undefined的header
-    Object.keys(requestOptions.headers).forEach(key => {
-      if (requestOptions.headers[key] === undefined) {
-        delete requestOptions.headers[key];
-      }
-    });
-
-    console.error('[AI翻译-非流式] 准备发送请求:', {
-      hostname: requestOptions.hostname,
-      port: requestOptions.port,
-      path: requestOptions.path,
-      method: requestOptions.method
-    });
-
-    const request = https.request(requestOptions, response => {
-      console.error('[AI翻译-非流式] 收到响应:', response.statusCode);
-      const chunks = [];
-      response.on('data', chunk => chunks.push(chunk));
-      response.on('end', () => {
-        const responseText = Buffer.concat(chunks).toString('utf8');
-        resolve({
-          statusCode: response.statusCode || 500,
-          bodyText: responseText
-        });
-      });
-      response.on('error', reject);
-    });
-
-    request.on('error', error => {
-      console.error('[AI翻译-非流式] 请求错误:', {
-        message: error.message,
-        code: error.code,
-        errno: error.errno,
-        syscall: error.syscall,
-        address: error.address,
-        port: error.port
-      });
-
-      // 提供更友好的错误信息
-      let errorMessage = error.message;
-      if (error.code === 'ETIMEDOUT') {
-        errorMessage = `连接超时: 无法连接到 ${parsedUrl.hostname}。请检查网络连接、防火墙设置或代理配置。`;
-      } else if (error.code === 'ENOTFOUND') {
-        errorMessage = `DNS解析失败: 无法解析域名 ${parsedUrl.hostname}。请检查网络连接或DNS设置。`;
-      } else if (error.code === 'ECONNREFUSED') {
-        errorMessage = `连接被拒绝: 服务器 ${parsedUrl.hostname} 拒绝连接。请检查API端点是否正确。`;
-      }
-
-      reject(new Error(errorMessage));
-    });
-
-    request.on('timeout', () => {
-      console.error('[AI翻译-非流式] 请求超时');
-      request.destroy();
-      reject(new Error(`请求超时: 连接到 ${parsedUrl.hostname} 超过60秒未响应`));
-    });
-
-    console.error('[AI翻译-非流式] 开始写入请求体...');
-    request.write(bodyString);
-    console.error('[AI翻译-非流式] 请求体已写入，发送请求...');
-    request.end();
-    console.error('[AI翻译-非流式] 请求已发送');
-  });
-
-  if (result.statusCode < 200 || result.statusCode >= 300) {
-    throw new Error(`AI API请求失败 (${result.statusCode}): ${result.bodyText.substring(0, 200)}`);
+  if (!endpoint || !apiKey) {
+    throw new Error('AI endpoint and API key are required');
   }
 
-  // 解析响应
-  let responseContent = '';
-  try {
-    const jsonResponse = JSON.parse(result.bodyText);
-
-    if (requestType === 'anthropic') {
-      responseContent = jsonResponse.content?.[0]?.text || '';
-    } else if (requestType === 'openai-response') {
-      responseContent = jsonResponse.choices?.[0]?.text || '';
-    } else {
-      // OpenAI Chat 格式
-      responseContent = jsonResponse.choices?.[0]?.message?.content || '';
-    }
-  } catch (parseError) {
-    throw new Error('AI API响应解析失败');
+  // 构建流式请求体
+  let requestBody;
+  switch (requestType) {
+    case 'openai-chat':
+      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model, true);
+      break;
+    case 'openai-response':
+      requestBody = buildOpenAIResponseRequest(texts, targetLanguage, model);
+      requestBody.stream = true;
+      break;
+    case 'anthropic':
+      requestBody = buildAnthropicRequest(texts, targetLanguage, model);
+      requestBody.stream = true;
+      break;
+    default:
+      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model, true);
   }
 
-  // 解析翻译结果
-  const finalTranslations = [];
-  const lines = responseContent.split('\n');
-
-  for (const line of lines) {
-    const match = line.match(/^翻译块:\s*(.+)$/);
-    if (match) {
-      finalTranslations.push(match[1].trim());
-    }
-  }
-
-  // 如果解析失败，尝试其他方式
-  if (finalTranslations.length !== texts.length) {
-    finalTranslations.length = 0;
-
-    const allMatches = responseContent.match(/翻译块:\s*.+/g);
-    if (allMatches && allMatches.length >= texts.length) {
-      for (let i = 0; i < texts.length; i++) {
-        const match = allMatches[i]?.match(/^翻译块:\s*(.+)$/);
-        if (match) {
-          finalTranslations.push(match[1].trim());
-        }
-      }
-    }
-  }
-
-  if (finalTranslations.length !== texts.length) {
-    console.error(
-      `[AI翻译] 解析数量不匹配: 期望 ${texts.length}, 实际 ${finalTranslations.length}`
-    );
-    while (finalTranslations.length < texts.length) {
-      finalTranslations.push(texts[finalTranslations.length]);
-    }
-  }
-
-  return finalTranslations;
+  return sendStreamingRequest(
+    endpoint,
+    requestBody,
+    requestType,
+    apiKey,
+    timeout,
+    onProgress,
+    texts.length,
+    registerRequest
+  );
 }
 
 module.exports = {
-  callAITranslation
+  translateTexts,
+  translateTextsStreaming,
+  chunkTexts,
+  TRANSLATION_CONFIG
 };

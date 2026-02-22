@@ -250,74 +250,6 @@
     transform: scale(1.05);
 }
 
-#translate-toggle-btn {
-    overflow: visible;
-}
-
-#translate-toggle-btn.active {
-    background: #e8f0fe;
-    color: #1a73e8;
-}
-
-#translate-toggle-btn .translate-check {
-    position: absolute;
-    right: -1px;
-    top: -1px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #34a853;
-    color: #fff;
-    font-size: 10px;
-    line-height: 14px;
-    text-align: center;
-    opacity: 0;
-    transform: scale(0.7);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: none;
-}
-
-#translate-toggle-btn.active .translate-check {
-    opacity: 1;
-    transform: scale(1);
-}
-
-/* 翻译加载动画 */
-#translate-toggle-btn .translate-loading {
-    position: absolute;
-    right: -4px;
-    top: -4px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    border-top-color: #1a73e8;
-    border-right-color: #1a73e8;
-    opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: none;
-    animation: translate-spin 0.8s linear infinite;
-}
-
-#translate-toggle-btn.loading .translate-loading {
-    opacity: 1;
-    transform: scale(1);
-}
-
-#translate-toggle-btn.loading .translate-check {
-    opacity: 0;
-    transform: scale(0.5);
-}
-
-@keyframes translate-spin {
-    0% {
-        transform: scale(1) rotate(0deg);
-    }
-    100% {
-        transform: scale(1) rotate(360deg);
-    }
-}
 
 /* 高级设置折叠样式 */
 .advanced-settings {
@@ -509,4 +441,135 @@ body.dark-mode .close-tab:hover {
     border-top-color: currentColor;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+}
+
+/* 翻译按钮状态 */
+#translate-btn {
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+/* 默认显示翻译图标 */
+#translate-btn .translate-icon {
+    display: block;
+}
+
+#translate-btn .loading-icon,
+#translate-btn .success-icon {
+    display: none;
+}
+
+/* 翻译中状态 */
+#translate-btn.translating {
+    color: #4285f4;
+}
+
+#translate-btn.translating .translate-icon,
+#translate-btn.translating .success-icon {
+    display: none;
+}
+
+#translate-btn.translating .loading-icon {
+    display: block;
+    animation: spin 1s linear infinite;
+}
+
+/* 翻译完成状态 */
+#translate-btn.translated {
+    color: #34a853;
+}
+
+#translate-btn.translated .translate-icon,
+#translate-btn.translated .loading-icon {
+    display: none;
+}
+
+#translate-btn.translated .success-icon {
+    display: block;
+    animation: checkmark 0.3s ease;
+}
+
+/* 旋转动画 */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 打勾动画 */
+@keyframes checkmark {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 高级选项样式 */
+.advanced-options {
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.advanced-options summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    background: #f8f9fa;
+    font-weight: 500;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.advanced-options summary:hover {
+    background: #f1f3f4;
+}
+
+.advanced-options[open] summary {
+    border-bottom: 1px solid #e0e0e0;
+    background: #f1f3f4;
+}
+
+.advanced-options .setting-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.advanced-options .setting-item:last-child {
+    border-bottom: none;
+}
+
+.advanced-options input[type="number"] {
+    width: 120px;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.advanced-options input[type="number"]:focus {
+    outline: none;
+    border-color: #4285f4;
+}
+
+/* 深色模式下的高级选项 */
+.dark-mode .advanced-options {
+    border-color: #3c4043;
+}
+
+.dark-mode .advanced-options summary {
+    background: #2d2e30;
+}
+
+.dark-mode .advanced-options summary:hover,
+.dark-mode .advanced-options[open] summary {
+    background: #35363a;
+}
+
+.dark-mode .advanced-options .setting-item {
+    border-bottom-color: #3c4043;
+}
+
+.dark-mode .advanced-options input[type="number"] {
+    background: #2d2e30;
+    border-color: #3c4043;
+    color: #e8eaed;
 }

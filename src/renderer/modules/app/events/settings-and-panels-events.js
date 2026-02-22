@@ -2,8 +2,8 @@
   const {
     aiApiKeyInput,
     aiEndpointInput,
+    aiModelIdInput,
     aiRequestTypeSelect,
-    aiTranslationConfig,
     bookmarkBtn,
     bookmarksList,
     bookmarksListBtn,
@@ -30,26 +30,21 @@
     restoreSessionToggle,
     searchEngineSelect,
     setLocale,
-    setTranslateToggleActive,
     settingsPanel,
     settingsBtn,
     startupUrlInput,
     store,
     tabManager,
-    translateAiApiKeyInput,
-    translateAiEndpointInput,
-    translateAiModelInput,
-    translateAiRequestTypeSelect,
-    translateCurrentPageBtn,
-    diagnoseTranslationNetworkBtn,
-    translateDisplayModeSelect,
-    translateEnableToggle,
-    translateEngineSelect,
-    translateStreamingToggle,
-    translateTargetLangSelect,
-    translateToggleBtn,
-    translationAdvancedToggle,
-    translationManager,
+    translationApiEnabledToggle,
+    translationApiKeyInput,
+    translationEndpointInput,
+    translationMaxCharsInput,
+    translationMaxTextsInput,
+    translationModelIdInput,
+    translationRequestTypeSelect,
+    translationStreamingToggle,
+    translationTargetLanguageSelect,
+    translationTimeoutInput,
     updateBookmarkIcon,
     updateZoomUI,
     zoomInBtn,
@@ -131,41 +126,46 @@
     aiEndpointInput.value = store.get('settings.aiEndpoint', '');
     aiApiKeyInput.value = store.get('settings.aiApiKey', '');
     aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
-    if (translationManager) {
-      const translationSettings = translationManager.getSettings();
-      if (translateEnableToggle) {
-        translateEnableToggle.checked = translationSettings.enabled;
-        setTranslateToggleActive(translationSettings.enabled);
-      }
-      if (translateEngineSelect) {
-        translateEngineSelect.value = translationSettings.engine;
-      }
-      if (translateTargetLangSelect) {
-        translateTargetLangSelect.value = translationSettings.targetLanguage;
-      }
-      if (translateDisplayModeSelect) {
-        translateDisplayModeSelect.value = translationSettings.displayMode;
-      }
-      // 加载AI翻译配置
-      if (translateAiEndpointInput) {
-        translateAiEndpointInput.value = translationSettings.aiEndpoint || '';
-      }
-      if (translateAiApiKeyInput) {
-        translateAiApiKeyInput.value = translationSettings.aiApiKey || '';
-      }
-      if (translateAiRequestTypeSelect) {
-        translateAiRequestTypeSelect.value = translationSettings.aiRequestType || 'openai-chat';
-      }
-      if (translateAiModelInput) {
-        translateAiModelInput.value = translationSettings.aiModel || '';
-      }
-      if (translateStreamingToggle) {
-        translateStreamingToggle.checked = translationSettings.streaming !== false;
-      }
-      // 显示/隐藏AI翻译配置
-      if (aiTranslationConfig) {
-        aiTranslationConfig.style.display = translationSettings.engine === 'ai' ? 'block' : 'none';
-      }
+    if (aiModelIdInput) {
+      aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+    }
+    // 加载翻译设置
+    if (translationApiEnabledToggle) {
+      translationApiEnabledToggle.checked = store.get('settings.translationApiEnabled', false);
+    }
+    if (translationEndpointInput) {
+      translationEndpointInput.value = store.get('settings.translationEndpoint', '');
+    }
+    if (translationApiKeyInput) {
+      translationApiKeyInput.value = store.get('settings.translationApiKey', '');
+    }
+    if (translationRequestTypeSelect) {
+      translationRequestTypeSelect.value = store.get(
+        'settings.translationRequestType',
+        'openai-chat'
+      );
+    }
+    if (translationModelIdInput) {
+      translationModelIdInput.value = store.get('settings.translationModelId', 'gpt-3.5-turbo');
+    }
+    if (translationTargetLanguageSelect) {
+      translationTargetLanguageSelect.value = store.get(
+        'settings.translationTargetLanguage',
+        '简体中文'
+      );
+    }
+    // 加载翻译高级选项
+    if (translationStreamingToggle) {
+      translationStreamingToggle.checked = store.get('settings.translationStreaming', true);
+    }
+    if (translationMaxTextsInput) {
+      translationMaxTextsInput.value = store.get('settings.translationMaxTexts', 500);
+    }
+    if (translationMaxCharsInput) {
+      translationMaxCharsInput.value = store.get('settings.translationMaxChars', 50000);
+    }
+    if (translationTimeoutInput) {
+      translationTimeoutInput.value = store.get('settings.translationTimeout', 120);
     }
     // 获取版本信息
     ipcRenderer.invoke('get-version-info').then(versions => {
@@ -290,140 +290,80 @@
     store.set('settings.aiRequestType', aiRequestTypeSelect.value);
   });
 
-  if (translateEnableToggle) {
-    translateEnableToggle.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        enabled: translateEnableToggle.checked
-      });
-      setTranslateToggleActive(translateEnableToggle.checked);
+  if (aiModelIdInput) {
+    aiModelIdInput.addEventListener('change', () => {
+      store.set('settings.aiModelId', aiModelIdInput.value);
     });
   }
 
-  if (translateEngineSelect) {
-    translateEngineSelect.addEventListener('change', () => {
-      if (!translationManager) return;
-      const engine = translateEngineSelect.value || 'bing';
-      translationManager.saveSettings({
-        engine
-      });
-      // 显示/隐藏AI翻译配置
-      if (aiTranslationConfig) {
-        aiTranslationConfig.style.display = engine === 'ai' ? 'block' : 'none';
-      }
+  if (translationTargetLanguageSelect) {
+    translationTargetLanguageSelect.addEventListener('change', () => {
+      store.set('settings.translationTargetLanguage', translationTargetLanguageSelect.value);
     });
   }
 
-  if (translateTargetLangSelect) {
-    translateTargetLangSelect.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        targetLanguage: translateTargetLangSelect.value || 'zh-Hans'
-      });
+  // 翻译设置事件绑定
+  if (translationApiEnabledToggle) {
+    translationApiEnabledToggle.addEventListener('change', () => {
+      store.set('settings.translationApiEnabled', translationApiEnabledToggle.checked);
     });
   }
 
-  if (translateDisplayModeSelect) {
-    translateDisplayModeSelect.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        displayMode: translateDisplayModeSelect.value || 'replace'
-      });
+  if (translationEndpointInput) {
+    translationEndpointInput.addEventListener('change', () => {
+      store.set('settings.translationEndpoint', translationEndpointInput.value);
     });
   }
 
-  // AI翻译配置事件
-  if (translateAiEndpointInput) {
-    translateAiEndpointInput.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        aiEndpoint: translateAiEndpointInput.value
-      });
+  if (translationApiKeyInput) {
+    translationApiKeyInput.addEventListener('change', () => {
+      store.set('settings.translationApiKey', translationApiKeyInput.value);
     });
   }
 
-  if (translateAiApiKeyInput) {
-    translateAiApiKeyInput.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        aiApiKey: translateAiApiKeyInput.value
-      });
+  if (translationRequestTypeSelect) {
+    translationRequestTypeSelect.addEventListener('change', () => {
+      store.set('settings.translationRequestType', translationRequestTypeSelect.value);
     });
   }
 
-  if (translateAiRequestTypeSelect) {
-    translateAiRequestTypeSelect.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        aiRequestType: translateAiRequestTypeSelect.value
-      });
+  if (translationModelIdInput) {
+    translationModelIdInput.addEventListener('change', () => {
+      store.set('settings.translationModelId', translationModelIdInput.value);
     });
   }
 
-  if (translateAiModelInput) {
-    translateAiModelInput.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        aiModel: translateAiModelInput.value
-      });
+  // 翻译高级选项事件绑定
+  if (translationStreamingToggle) {
+    translationStreamingToggle.addEventListener('change', () => {
+      store.set('settings.translationStreaming', translationStreamingToggle.checked);
     });
   }
 
-  // 流式翻译开关
-  if (translateStreamingToggle) {
-    translateStreamingToggle.addEventListener('change', () => {
-      if (!translationManager) return;
-      translationManager.saveSettings({
-        streaming: translateStreamingToggle.checked
-      });
+  if (translationMaxTextsInput) {
+    translationMaxTextsInput.addEventListener('change', () => {
+      const value = Math.max(10, Math.min(1000, parseInt(translationMaxTextsInput.value) || 500));
+      translationMaxTextsInput.value = value;
+      store.set('settings.translationMaxTexts', value);
     });
   }
 
-  // 高级设置折叠
-  if (translationAdvancedToggle) {
-    translationAdvancedToggle.addEventListener('click', () => {
-      const parent = translationAdvancedToggle.closest('.advanced-settings');
-      if (parent) {
-        parent.classList.toggle('expanded');
-      }
+  if (translationMaxCharsInput) {
+    translationMaxCharsInput.addEventListener('change', () => {
+      const value = Math.max(
+        1000,
+        Math.min(100000, parseInt(translationMaxCharsInput.value) || 50000)
+      );
+      translationMaxCharsInput.value = value;
+      store.set('settings.translationMaxChars', value);
     });
   }
 
-  if (translateCurrentPageBtn) {
-    translateCurrentPageBtn.addEventListener('click', () => {
-      if (!translationManager) return;
-      translationManager.translateActiveWebview();
-    });
-  }
-
-  if (diagnoseTranslationNetworkBtn) {
-    diagnoseTranslationNetworkBtn.addEventListener('click', () => {
-      if (!translationManager) return;
-      translationManager.diagnoseNetwork();
-    });
-  }
-
-  if (translateToggleBtn) {
-    translateToggleBtn.addEventListener('click', () => {
-      if (!translationManager) return;
-      const currentEnabled = translationManager.getSettings().enabled;
-      const nextEnabled = !currentEnabled;
-      translationManager.saveSettings({
-        enabled: nextEnabled
-      });
-      if (translateEnableToggle) {
-        translateEnableToggle.checked = nextEnabled;
-      }
-      setTranslateToggleActive(nextEnabled);
-      if (nextEnabled) {
-        translationManager.translateActiveWebview();
-      } else {
-        // 关闭翻译时恢复原文
-        const webview = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
-        if (webview && webview.tagName === 'WEBVIEW') {
-          translationManager.restoreOriginalText(webview);
-        }
-      }
+  if (translationTimeoutInput) {
+    translationTimeoutInput.addEventListener('change', () => {
+      const value = Math.max(30, Math.min(300, parseInt(translationTimeoutInput.value) || 120));
+      translationTimeoutInput.value = value;
+      store.set('settings.translationTimeout', value);
     });
   }
 
