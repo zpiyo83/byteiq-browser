@@ -12,7 +12,6 @@ const { createOverlayManager } = require('./modules/ui/overlay-manager');
 const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
 const { createExtensionsManager } = require('./modules/extensions/extensions-manager');
-const { createTranslationManager } = require('./modules/ui/translation-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
 const { bindSettingsAndPanelEvents } = require('./modules/app/events/settings-and-panels-events');
@@ -37,7 +36,6 @@ const bookmarksListBtn = document.getElementById('bookmarks-list-btn');
 const devtoolsBtn = document.getElementById('devtools-btn');
 const settingsBtn = document.getElementById('settings-btn');
 const downloadsBtn = document.getElementById('downloads-btn');
-const translateToggleBtn = document.getElementById('translate-toggle-btn');
 const bookmarkBtn = document.getElementById('bookmark-btn');
 const clearUrlBtn = document.getElementById('clear-url-btn');
 const progressBar = document.getElementById('progress-bar');
@@ -76,20 +74,6 @@ const extensionsEmpty = document.getElementById('extensions-empty');
 const aiEndpointInput = document.getElementById('ai-endpoint-input');
 const aiApiKeyInput = document.getElementById('ai-api-key-input');
 const aiRequestTypeSelect = document.getElementById('ai-request-type-select');
-const translateEnableToggle = document.getElementById('translate-enable-toggle');
-const translateEngineSelect = document.getElementById('translate-engine-select');
-const translateTargetLangSelect = document.getElementById('translate-target-lang-select');
-const translateDisplayModeSelect = document.getElementById('translate-display-mode-select');
-const translateCurrentPageBtn = document.getElementById('translate-current-page-btn');
-const diagnoseTranslationNetworkBtn = document.getElementById('diagnose-translation-network-btn');
-const aiTranslationConfig = document.getElementById('ai-translation-config');
-const translateAiEndpointInput = document.getElementById('translate-ai-endpoint-input');
-const translateAiApiKeyInput = document.getElementById('translate-ai-api-key-input');
-const translateAiRequestTypeSelect = document.getElementById('translate-ai-request-type-select');
-const translateAiModelInput = document.getElementById('translate-ai-model-input');
-const translateStreamingToggle = document.getElementById('translate-streaming-toggle');
-const translationAdvancedToggle = document.getElementById('translation-advanced-toggle');
-const translationAdvancedContent = document.getElementById('translation-advanced-content');
 // 标签页和webview相关元素
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
@@ -116,7 +100,6 @@ const overlayBackdrop = document.getElementById('overlay-backdrop');
 // 全局状态变量
 let isIncognito = false; // 隐私模式状态
 let browserManager = null; // 浏览器管理器实例
-let translationManager = null; // 翻译管理器实例
 
 // 初始化国际化
 initI18n();
@@ -144,32 +127,6 @@ function showToast(message, type = 'info', duration = 3000) {
     toast.style.animation = 'slideOut 0.3s ease forwards';
     setTimeout(() => toast.remove(), 300);
   }, duration);
-}
-
-// 设置翻译切换按钮状态
-function setTranslateToggleActive(enabled) {
-  if (!translateToggleBtn) return;
-  const active = !!enabled;
-  translateToggleBtn.classList.toggle('active', active);
-  translateToggleBtn.classList.remove('loading');
-  translateToggleBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
-  translateToggleBtn.setAttribute('title', active ? '翻译已开启' : '翻译已关闭');
-}
-
-// 设置翻译加载状态
-function setTranslateLoading(loading) {
-  if (!translateToggleBtn) return;
-  if (loading) {
-    translateToggleBtn.classList.add('loading');
-    translateToggleBtn.classList.add('active');
-    translateToggleBtn.setAttribute('title', '正在翻译...');
-  } else {
-    translateToggleBtn.classList.remove('loading');
-    const settings = translationManager ? translationManager.getSettings() : null;
-    const enabled = settings ? settings.enabled : false;
-    translateToggleBtn.classList.toggle('active', enabled);
-    translateToggleBtn.setAttribute('title', enabled ? '翻译已开启' : '翻译已关闭');
-  }
 }
 
 // 更新书签图标状态
@@ -202,11 +159,6 @@ const tabManager = createTabManager({
   onActiveWebviewChanged: webview => {
     if (browserManager) {
       browserManager.onActiveWebviewChanged(webview);
-    }
-  },
-  onWebviewDidStopLoading: webview => {
-    if (translationManager) {
-      translationManager.handleWebviewDidStopLoading(webview);
     }
   },
   progressBar,
@@ -322,21 +274,6 @@ const extensionsManager = createExtensionsManager({
   emptyEl: extensionsEmpty
 });
 
-translationManager = createTranslationManager({
-  getActiveWebview: () => {
-    const activeTabId = tabManager.getActiveTabId();
-    const webview = document.getElementById(`webview-${activeTabId}`);
-    return webview && webview.tagName === 'WEBVIEW' ? webview : null;
-  },
-  ipcRenderer,
-  showToast,
-  store,
-  onTranslationStatusChange: isTranslating => {
-    setTranslateLoading(isTranslating);
-  }
-});
-setTranslateToggleActive(translationManager.getSettings().enabled);
-
 extensionsManager.init();
 
 const shortcutsManager = createShortcutsManager({
@@ -421,7 +358,6 @@ bindSettingsAndPanelEvents({
   aiApiKeyInput,
   aiEndpointInput,
   aiRequestTypeSelect,
-  aiTranslationConfig,
   bookmarkBtn,
   bookmarksList,
   bookmarksListBtn,
@@ -448,26 +384,11 @@ bindSettingsAndPanelEvents({
   restoreSessionToggle,
   searchEngineSelect,
   setLocale,
-  setTranslateToggleActive,
   settingsPanel,
   settingsBtn,
   startupUrlInput,
   store,
   tabManager,
-  translateAiApiKeyInput,
-  translateAiEndpointInput,
-  translateAiModelInput,
-  translateAiRequestTypeSelect,
-  translateCurrentPageBtn,
-  diagnoseTranslationNetworkBtn,
-  translateDisplayModeSelect,
-  translateEnableToggle,
-  translateEngineSelect,
-  translateStreamingToggle,
-  translateTargetLangSelect,
-  translateToggleBtn,
-  translationAdvancedToggle,
-  translationManager,
   updateBookmarkIcon,
   updateZoomUI,
   zoomInBtn,

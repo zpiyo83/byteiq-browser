@@ -48,16 +48,6 @@ body.dark-mode .toolbar button:hover {
     color: #fff;
 }
 
-body.dark-mode #translate-toggle-btn.active {
-    background: rgba(138, 180, 248, 0.2);
-    color: #8ab4f8;
-}
-
-body.dark-mode #translate-toggle-btn .translate-loading {
-    border-top-color: #8ab4f8;
-    border-right-color: #8ab4f8;
-}
-
 /* 深色模式 - 高级设置 */
 body.dark-mode .advanced-settings {
     border-color: #3c4043;
