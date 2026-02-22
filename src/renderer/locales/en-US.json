@@ -17,7 +17,8 @@
     "devtools": "DevTools",
     "settings": "Settings",
     "downloads": "Downloads",
-    "aiAssistant": "AI Assistant"
+    "aiAssistant": "AI Assistant",
+    "translate": "Translate"
   },
   "tabs": {
     "newTab": "New Tab",
@@ -72,7 +73,33 @@
         "requestTypeDesc": "Select the API request format type",
         "openaiChat": "OpenAI Chat Compatible",
         "openaiResponse": "OpenAI Response",
-        "anthropic": "Anthropic"
+        "anthropic": "Anthropic",
+        "modelId": "Model ID",
+        "modelIdDesc": "Specify the model name to use"
+      },
+      "translation": {
+        "title": "Translation Settings",
+        "apiEnabled": "Enable Translation API",
+        "apiEnabledDesc": "Use separate translation API config when enabled, fallback to AI settings when disabled",
+        "endpoint": "API Endpoint URL",
+        "endpointDesc": "Base URL for translation API",
+        "apiKey": "API Key",
+        "apiKeyDesc": "Translation API access key",
+        "requestType": "Request Type",
+        "requestTypeDesc": "Select the API request format type",
+        "modelId": "Model ID",
+        "modelIdDesc": "Specify the model name to use",
+        "targetLanguage": "Target Language",
+        "targetLanguageDesc": "Select the target language for translation",
+        "advancedOptions": "Advanced Options",
+        "streamingTranslation": "Streaming Translation",
+        "streamingTranslationDesc": "When enabled, text appears word by word for real-time translation experience",
+        "maxTextsPerRequest": "Max Texts Per Request",
+        "maxTextsPerRequestDesc": "Maximum number of text blocks per translation request",
+        "maxCharsPerRequest": "Max Characters Per Request",
+        "maxCharsPerRequestDesc": "Maximum total characters per translation request",
+        "requestTimeout": "Request Timeout (seconds)",
+        "requestTimeoutDesc": "Maximum time to wait for API response"
       }
     },
     "downloads": {
@@ -185,5 +212,20 @@
     "downloadComplete": "Download complete",
     "downloadFailed": "Download failed",
     "downloadCancelled": "Download cancelled"
+  },
+  "translation": {
+    "translate": "Translate Page",
+    "translating": "Translating...",
+    "translatingChunk": "Translating chunk {current}/{total}",
+    "restore": "Restore Original",
+    "restored": "Original text restored",
+    "collecting": "Collecting text...",
+    "completed": "Translation completed",
+    "failed": "Translation failed",
+    "noPage": "Please open a webpage first",
+    "noText": "No translatable text found",
+    "texts": "text blocks",
+    "restoreFailed": "Restore failed",
+    "noApiKey": "Please configure AI API in settings first"
   }
 }

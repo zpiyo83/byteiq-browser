@@ -12,6 +12,7 @@ const { createOverlayManager } = require('./modules/ui/overlay-manager');
 const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
 const { createExtensionsManager } = require('./modules/extensions/extensions-manager');
+const { createTranslationManager } = require('./modules/ui/translation-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
 const { bindSettingsAndPanelEvents } = require('./modules/app/events/settings-and-panels-events');
@@ -74,6 +75,21 @@ const extensionsEmpty = document.getElementById('extensions-empty');
 const aiEndpointInput = document.getElementById('ai-endpoint-input');
 const aiApiKeyInput = document.getElementById('ai-api-key-input');
 const aiRequestTypeSelect = document.getElementById('ai-request-type-select');
+const aiModelIdInput = document.getElementById('ai-model-id-input');
+// 翻译设置相关元素
+const translationApiEnabledToggle = document.getElementById('translation-api-enabled-toggle');
+const translationEndpointInput = document.getElementById('translation-endpoint-input');
+const translationApiKeyInput = document.getElementById('translation-api-key-input');
+const translationRequestTypeSelect = document.getElementById('translation-request-type-select');
+const translationModelIdInput = document.getElementById('translation-model-id-input');
+const translationTargetLanguageSelect = document.getElementById(
+  'translation-target-language-select'
+);
+// 翻译高级选项元素
+const translationStreamingToggle = document.getElementById('translation-streaming-toggle');
+const translationMaxTextsInput = document.getElementById('translation-max-texts-input');
+const translationMaxCharsInput = document.getElementById('translation-max-chars-input');
+const translationTimeoutInput = document.getElementById('translation-timeout-input');
 // 标签页和webview相关元素
 const tabsBar = document.getElementById('tabs-bar');
 const newTabBtn = document.getElementById('new-tab-btn');
@@ -276,6 +292,17 @@ const extensionsManager = createExtensionsManager({
 
 extensionsManager.init();
 
+const translationManager = createTranslationManager({
+  documentRef: document,
+  store,
+  t,
+  showToast,
+  ipcRenderer,
+  getActiveTabId: tabManager.getActiveTabId
+});
+
+translationManager.bindEvents();
+
 const shortcutsManager = createShortcutsManager({
   actions: {
     closeActiveTab: () => {
@@ -357,6 +384,7 @@ function refreshCurrentPage() {
 bindSettingsAndPanelEvents({
   aiApiKeyInput,
   aiEndpointInput,
+  aiModelIdInput,
   aiRequestTypeSelect,
   bookmarkBtn,
   bookmarksList,
@@ -389,6 +417,16 @@ bindSettingsAndPanelEvents({
   startupUrlInput,
   store,
   tabManager,
+  translationApiEnabledToggle,
+  translationApiKeyInput,
+  translationEndpointInput,
+  translationMaxCharsInput,
+  translationMaxTextsInput,
+  translationModelIdInput,
+  translationRequestTypeSelect,
+  translationStreamingToggle,
+  translationTargetLanguageSelect,
+  translationTimeoutInput,
   updateBookmarkIcon,
   updateZoomUI,
   zoomInBtn,
