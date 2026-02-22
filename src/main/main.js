@@ -12,7 +12,6 @@ const {
 const fs = require('fs');
 const path = require('path');
 const Store = require('electron-store');
-const { registerTranslationIpcHandlers } = require('./modules/translation-ipc');
 const { createExtensionsManager } = require('./modules/extensions-manager');
 
 // 持久化存储实例
@@ -26,12 +25,6 @@ let devtoolsWebContentsId = null; // 开发者工具关联的WebContents ID
 // 下载管理相关变量
 let downloadSeq = 0; // 下载序列号
 const downloadItemsById = new Map(); // 下载项映射表
-
-// 注册翻译相关的IPC处理器
-registerTranslationIpcHandlers({
-  app,
-  ipcMain
-});
 
 // 创建扩展管理器实例
 const extensionsManager = createExtensionsManager({
