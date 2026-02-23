@@ -153,9 +153,13 @@
     "send": "Send",
     "close": "Close",
     "welcome": "Hello! I'm Byteiq AI Assistant. I can help you summarize web pages, answer questions, or assist with browsing.",
-    "summaryPrompt": "Attempting to read page content for summary... (This feature requires AI API)",
-    "noPage": "Please open a webpage first, then I can summarize it for you.",
-    "prototype": "Received! I'm currently a prototype version, soon I'll be able to connect to large models via API to serve you."
+    "systemPrompt": "You are a helpful AI assistant. You can help users summarize web content, answer questions, and provide information. Please respond in a clear and concise manner.",
+    "pageContext": "Current page information",
+    "contextLoaded": "Page loaded",
+    "contextCleared": "Page context cleared",
+    "error": "Error occurred",
+    "cancelled": "Cancelled",
+    "noConfig": "Please configure AI API in settings first"
   },
   "newTab": {
     "searchPlaceholder": "Search or enter URL...",
