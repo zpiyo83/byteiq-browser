@@ -1,17 +1,10 @@
 ﻿function createShortcutsManager(options) {
-  const {
-    actions,
-    documentRef,
-    getActiveTabId,
-    urlInput,
-    windowRef
-  } = options;
+  const { actions, documentRef, getActiveTabId, urlInput, windowRef } = options;
 
   function bindEvents() {
-    windowRef.addEventListener('keydown', (e) => {
+    windowRef.addEventListener('keydown', e => {
       const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-      const tag =
-        e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+      const tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
       const isInputFocused = tag === 'input' || tag === 'textarea';
 
       if (e.key === 'Escape') {

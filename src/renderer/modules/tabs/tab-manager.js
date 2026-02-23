@@ -18,6 +18,7 @@ function createTabManager(options) {
     applyStoredZoom,
     getIncognito,
     onWebviewDidStopLoading,
+    onWebviewUrlChanged,
     onActiveWebviewChanged,
     updateBookmarkIcon
   } = options;
@@ -342,10 +343,26 @@ function createTabManager(options) {
     webview.addEventListener('did-navigate', e => {
       updateTabUrl(id, e.url);
       applyStoredZoom(webview);
+      if (typeof onWebviewUrlChanged === 'function') {
+        onWebviewUrlChanged({
+          id,
+          kind: 'did-navigate',
+          url: e.url,
+          webview
+        });
+      }
     });
 
     webview.addEventListener('did-navigate-in-page', e => {
       updateTabUrl(id, e.url);
+      if (typeof onWebviewUrlChanged === 'function') {
+        onWebviewUrlChanged({
+          id,
+          kind: 'did-navigate-in-page',
+          url: e.url,
+          webview
+        });
+      }
     });
 
     webview.addEventListener('did-fail-load', e => {

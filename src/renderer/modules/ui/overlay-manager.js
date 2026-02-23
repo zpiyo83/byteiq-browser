@@ -11,7 +11,7 @@
   }
 
   function closeAllOverlays() {
-    documentRef.querySelectorAll('.overlay-panel').forEach((panel) => {
+    documentRef.querySelectorAll('.overlay-panel').forEach(panel => {
       panel.classList.remove('active');
     });
     setOverlayBackdropActive(false);
@@ -19,7 +19,7 @@
 
   function openOverlay(panelEl) {
     if (!panelEl) return;
-    documentRef.querySelectorAll('.overlay-panel').forEach((panel) => {
+    documentRef.querySelectorAll('.overlay-panel').forEach(panel => {
       if (panel !== panelEl) panel.classList.remove('active');
     });
     panelEl.classList.add('active');

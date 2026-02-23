@@ -91,6 +91,8 @@
         "modelIdDesc": "Specify the model name to use",
         "targetLanguage": "Target Language",
         "targetLanguageDesc": "Select the target language for translation",
+        "dynamicTranslation": "Dynamic Translation",
+        "dynamicTranslationDesc": "Automatically detect and translate new content after initial translation",
         "advancedOptions": "Advanced Options",
         "streamingTranslation": "Streaming Translation",
         "streamingTranslationDesc": "When enabled, text appears word by word for real-time translation experience",
