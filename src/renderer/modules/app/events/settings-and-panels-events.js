@@ -25,6 +25,8 @@
     ipcRenderer,
     listPanelManager,
     modalManager,
+    moreMenuBtn,
+    moreMenuDropdown,
     overlayBackdrop,
     overlayManager,
     restoreSessionToggle,
@@ -66,6 +68,161 @@
     });
   }
 
+  // 更多按钮下拉菜单事件处理
+  if (moreMenuBtn && moreMenuDropdown) {
+    moreMenuBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      moreMenuDropdown.classList.toggle('show');
+    });
+
+    // 点击下拉菜单外部时关闭
+    document.addEventListener('click', () => {
+      moreMenuDropdown.classList.remove('show');
+    });
+
+    // 阻止点击下拉菜单内部时关闭
+    moreMenuDropdown.addEventListener('click', e => {
+      e.stopPropagation();
+    });
+
+    // 下拉菜单内的按钮点击事件
+    const historyBtnInMenu = moreMenuDropdown.querySelector('#history-btn');
+    const bookmarksBtnInMenu = moreMenuDropdown.querySelector('#bookmarks-list-btn');
+    const devtoolsBtnInMenu = moreMenuDropdown.querySelector('#devtools-btn');
+    const settingsBtnInMenu = moreMenuDropdown.querySelector('#settings-btn');
+    const downloadsBtnInMenu = moreMenuDropdown.querySelector('#downloads-btn');
+
+    if (historyBtnInMenu) {
+      historyBtnInMenu.addEventListener('click', () => {
+        moreMenuDropdown.classList.remove('show');
+        listPanelManager.showPanel(
+          historyPanel,
+          historyList,
+          'history',
+          historySearchInput?.value || ''
+        );
+        overlayManager.openOverlay(historyPanel);
+      });
+    }
+
+    if (bookmarksBtnInMenu) {
+      bookmarksBtnInMenu.addEventListener('click', () => {
+        moreMenuDropdown.classList.remove('show');
+        listPanelManager.showPanel(
+          bookmarksPanel,
+          bookmarksList,
+          'bookmarks',
+          bookmarksSearchInput?.value || ''
+        );
+        overlayManager.openOverlay(bookmarksPanel);
+      });
+    }
+
+    if (devtoolsBtnInMenu) {
+      devtoolsBtnInMenu.addEventListener('click', () => {
+        moreMenuDropdown.classList.remove('show');
+        const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
+        if (wv) wv.openDevTools();
+      });
+    }
+
+    if (settingsBtnInMenu) {
+      settingsBtnInMenu.addEventListener('click', () => {
+        moreMenuDropdown.classList.remove('show');
+        searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
+        startupUrlInput.value = store.get('settings.startupUrl', '');
+        if (restoreSessionToggle) {
+          restoreSessionToggle.checked = store.get('settings.restoreSession', true);
+        }
+        if (langSelect) {
+          langSelect.value = store.get('settings.language', 'zh-CN');
+        }
+        // 加载 AI 设置
+        aiEndpointInput.value = store.get('settings.aiEndpoint', '');
+        aiApiKeyInput.value = store.get('settings.aiApiKey', '');
+        aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
+        if (aiModelIdInput) {
+          aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+        }
+        // 加载翻译设置
+        if (translationApiEnabledToggle) {
+          translationApiEnabledToggle.checked = store.get('settings.translationApiEnabled', false);
+        }
+        if (translationEndpointInput) {
+          translationEndpointInput.value = store.get('settings.translationEndpoint', '');
+        }
+        if (translationApiKeyInput) {
+          translationApiKeyInput.value = store.get('settings.translationApiKey', '');
+        }
+        if (translationRequestTypeSelect) {
+          translationRequestTypeSelect.value = store.get(
+            'settings.translationRequestType',
+            'openai-chat'
+          );
+        }
+        if (translationModelIdInput) {
+          translationModelIdInput.value = store.get('settings.translationModelId', 'gpt-3.5-turbo');
+        }
+        if (translationTargetLanguageSelect) {
+          translationTargetLanguageSelect.value = store.get(
+            'settings.translationTargetLanguage',
+            '简体中文'
+          );
+        }
+        if (translationDynamicEnabledToggle) {
+          translationDynamicEnabledToggle.checked = store.get(
+            'settings.translationDynamicEnabled',
+            true
+          );
+        }
+        // 加载翻译高级选项
+        if (translationStreamingToggle) {
+          translationStreamingToggle.checked = store.get('settings.translationStreaming', true);
+        }
+        if (translationConcurrencyToggle) {
+          translationConcurrencyToggle.checked = store.get(
+            'settings.translationConcurrencyEnabled',
+            false
+          );
+        }
+        if (translationConcurrencyCountInput) {
+          translationConcurrencyCountInput.value = store.get('settings.translationConcurrency', 2);
+        }
+        if (translationMaxTextsInput) {
+          translationMaxTextsInput.value = store.get('settings.translationMaxTexts', 500);
+        }
+        if (translationMaxCharsInput) {
+          translationMaxCharsInput.value = store.get('settings.translationMaxChars', 50000);
+        }
+        if (translationTimeoutInput) {
+          translationTimeoutInput.value = store.get('settings.translationTimeout', 120);
+        }
+        // 获取版本信息
+        ipcRenderer.invoke('get-version-info').then(versions => {
+          const appVersionEl = document.getElementById('about-app-version');
+          const electronVersionEl = document.getElementById('about-electron-version');
+          const chromiumVersionEl = document.getElementById('about-chromium-version');
+          const nodeVersionEl = document.getElementById('about-node-version');
+          const v8VersionEl = document.getElementById('about-v8-version');
+          if (appVersionEl) appVersionEl.textContent = versions.appVersion;
+          if (electronVersionEl) electronVersionEl.textContent = versions.electronVersion;
+          if (chromiumVersionEl) chromiumVersionEl.textContent = versions.chromiumVersion;
+          if (nodeVersionEl) nodeVersionEl.textContent = versions.nodeVersion;
+          if (v8VersionEl) v8VersionEl.textContent = versions.v8Version;
+        });
+        extensionsManager.refresh();
+        overlayManager.openOverlay(settingsPanel);
+      });
+    }
+
+    if (downloadsBtnInMenu) {
+      downloadsBtnInMenu.addEventListener('click', () => {
+        moreMenuDropdown.classList.remove('show');
+        downloadsManager.openDownloadsPanel();
+      });
+    }
+  }
+
   if (restoreSessionToggle) {
     restoreSessionToggle.checked = store.get('settings.restoreSession', true);
     restoreSessionToggle.addEventListener('change', () => {
@@ -91,118 +248,6 @@
     store.set('bookmarks', bookmarks);
     updateBookmarkIcon(url);
   });
-
-  historyBtn.addEventListener('click', () => {
-    listPanelManager.showPanel(
-      historyPanel,
-      historyList,
-      'history',
-      historySearchInput?.value || ''
-    );
-    overlayManager.openOverlay(historyPanel);
-  });
-
-  bookmarksListBtn.addEventListener('click', () => {
-    listPanelManager.showPanel(
-      bookmarksPanel,
-      bookmarksList,
-      'bookmarks',
-      bookmarksSearchInput?.value || ''
-    );
-    overlayManager.openOverlay(bookmarksPanel);
-  });
-
-  downloadsBtn.addEventListener('click', () => {
-    downloadsManager.openDownloadsPanel();
-  });
-
-  settingsBtn.addEventListener('click', () => {
-    searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
-    startupUrlInput.value = store.get('settings.startupUrl', '');
-    if (restoreSessionToggle) {
-      restoreSessionToggle.checked = store.get('settings.restoreSession', true);
-    }
-    if (langSelect) {
-      langSelect.value = store.get('settings.language', 'zh-CN');
-    }
-    // 加载AI设置
-    aiEndpointInput.value = store.get('settings.aiEndpoint', '');
-    aiApiKeyInput.value = store.get('settings.aiApiKey', '');
-    aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
-    if (aiModelIdInput) {
-      aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
-    }
-    // 加载翻译设置
-    if (translationApiEnabledToggle) {
-      translationApiEnabledToggle.checked = store.get('settings.translationApiEnabled', false);
-    }
-    if (translationEndpointInput) {
-      translationEndpointInput.value = store.get('settings.translationEndpoint', '');
-    }
-    if (translationApiKeyInput) {
-      translationApiKeyInput.value = store.get('settings.translationApiKey', '');
-    }
-    if (translationRequestTypeSelect) {
-      translationRequestTypeSelect.value = store.get(
-        'settings.translationRequestType',
-        'openai-chat'
-      );
-    }
-    if (translationModelIdInput) {
-      translationModelIdInput.value = store.get('settings.translationModelId', 'gpt-3.5-turbo');
-    }
-    if (translationTargetLanguageSelect) {
-      translationTargetLanguageSelect.value = store.get(
-        'settings.translationTargetLanguage',
-        '简体中文'
-      );
-    }
-    if (translationDynamicEnabledToggle) {
-      translationDynamicEnabledToggle.checked = store.get(
-        'settings.translationDynamicEnabled',
-        true
-      );
-    }
-    // 加载翻译高级选项
-    if (translationStreamingToggle) {
-      translationStreamingToggle.checked = store.get('settings.translationStreaming', true);
-    }
-    if (translationConcurrencyToggle) {
-      translationConcurrencyToggle.checked = store.get(
-        'settings.translationConcurrencyEnabled',
-        false
-      );
-    }
-    if (translationConcurrencyCountInput) {
-      translationConcurrencyCountInput.value = store.get('settings.translationConcurrency', 2);
-    }
-    if (translationMaxTextsInput) {
-      translationMaxTextsInput.value = store.get('settings.translationMaxTexts', 500);
-    }
-    if (translationMaxCharsInput) {
-      translationMaxCharsInput.value = store.get('settings.translationMaxChars', 50000);
-    }
-    if (translationTimeoutInput) {
-      translationTimeoutInput.value = store.get('settings.translationTimeout', 120);
-    }
-    // 获取版本信息
-    ipcRenderer.invoke('get-version-info').then(versions => {
-      const appVersionEl = document.getElementById('about-app-version');
-      const electronVersionEl = document.getElementById('about-electron-version');
-      const chromiumVersionEl = document.getElementById('about-chromium-version');
-      const nodeVersionEl = document.getElementById('about-node-version');
-      const v8VersionEl = document.getElementById('about-v8-version');
-      if (appVersionEl) appVersionEl.textContent = versions.appVersion;
-      if (electronVersionEl) electronVersionEl.textContent = versions.electronVersion;
-      if (chromiumVersionEl) chromiumVersionEl.textContent = versions.chromiumVersion;
-      if (nodeVersionEl) nodeVersionEl.textContent = versions.nodeVersion;
-      if (v8VersionEl) v8VersionEl.textContent = versions.v8Version;
-    });
-    extensionsManager.refresh();
-    overlayManager.openOverlay(settingsPanel);
-  });
-
-  // Settings navigation
   document.querySelectorAll('.settings-nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
       const section = btn.getAttribute('data-section');
