@@ -27,7 +27,6 @@ if (store.get('settings.darkMode')) {
 
 // DOM 元素引用
 const urlInput = document.getElementById('url-input');
-const goBtn = document.getElementById('go-btn');
 const backBtn = document.getElementById('back-btn');
 const forwardBtn = document.getElementById('forward-btn');
 const refreshBtn = document.getElementById('refresh-btn');
@@ -119,6 +118,9 @@ const findClose = document.getElementById('find-close');
 const contextMenu = document.getElementById('context-menu');
 const tabContextMenu = document.getElementById('tab-context-menu');
 const overlayBackdrop = document.getElementById('overlay-backdrop');
+// 更多按钮相关元素
+const moreMenuBtn = document.getElementById('more-menu-btn');
+const moreMenuDropdown = document.getElementById('more-menu-dropdown');
 
 // 全局状态变量
 let isIncognito = false; // 隐私模式状态
@@ -428,6 +430,8 @@ bindSettingsAndPanelEvents({
   ipcRenderer,
   listPanelManager,
   modalManager,
+  moreMenuBtn,
+  moreMenuDropdown,
   overlayBackdrop,
   overlayManager,
   restoreSessionToggle,
@@ -466,7 +470,6 @@ bindNavigationAndDevtoolsEvents({
   devtoolsBtn,
   documentRef: document,
   forwardBtn,
-  goBtn,
   homeBtn,
   ipcRenderer,
   newTabBtn,
