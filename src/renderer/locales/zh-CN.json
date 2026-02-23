@@ -91,6 +91,8 @@
         "modelIdDesc": "指定使用的模型名称",
         "targetLanguage": "目标语言",
         "targetLanguageDesc": "选择翻译的目标语言",
+        "dynamicTranslation": "动态翻译",
+        "dynamicTranslationDesc": "翻译完成后自动检测并翻译页面新内容",
         "advancedOptions": "高级选项",
         "streamingTranslation": "流式翻译",
         "streamingTranslationDesc": "启用后文字将逐个显示，提供实时翻译体验",

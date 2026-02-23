@@ -85,6 +85,9 @@ const translationModelIdInput = document.getElementById('translation-model-id-in
 const translationTargetLanguageSelect = document.getElementById(
   'translation-target-language-select'
 );
+const translationDynamicEnabledToggle = document.getElementById(
+  'translation-dynamic-enabled-toggle'
+);
 // 翻译高级选项元素
 const translationStreamingToggle = document.getElementById('translation-streaming-toggle');
 const translationMaxTextsInput = document.getElementById('translation-max-texts-input');
@@ -116,6 +119,7 @@ const overlayBackdrop = document.getElementById('overlay-backdrop');
 // 全局状态变量
 let isIncognito = false; // 隐私模式状态
 let browserManager = null; // 浏览器管理器实例
+let translationManager = null;
 
 // 初始化国际化
 initI18n();
@@ -172,6 +176,16 @@ const tabManager = createTabManager({
   ipcRenderer,
   newTabBtn,
   newTabTemplate,
+  onWebviewDidStopLoading: (webview, tabId) => {
+    if (translationManager && typeof translationManager.onWebviewDidStopLoading === 'function') {
+      translationManager.onWebviewDidStopLoading(webview, tabId);
+    }
+  },
+  onWebviewUrlChanged: payload => {
+    if (translationManager && typeof translationManager.onWebviewUrlChanged === 'function') {
+      translationManager.onWebviewUrlChanged(payload);
+    }
+  },
   onActiveWebviewChanged: webview => {
     if (browserManager) {
       browserManager.onActiveWebviewChanged(webview);
@@ -292,7 +306,7 @@ const extensionsManager = createExtensionsManager({
 
 extensionsManager.init();
 
-const translationManager = createTranslationManager({
+translationManager = createTranslationManager({
   documentRef: document,
   store,
   t,
@@ -419,6 +433,7 @@ bindSettingsAndPanelEvents({
   tabManager,
   translationApiEnabledToggle,
   translationApiKeyInput,
+  translationDynamicEnabledToggle,
   translationEndpointInput,
   translationMaxCharsInput,
   translationMaxTextsInput,
