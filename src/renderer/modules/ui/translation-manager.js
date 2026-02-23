@@ -469,6 +469,11 @@ function createTranslationManager(options) {
     }
   }
 
+  function onActiveTabChanged(tabId) {
+    if (!tabId) return;
+    updateTranslateBtnState(tabId, 'normal');
+  }
+
   /**
    * 设置动态翻译监听器
    */
@@ -885,6 +890,7 @@ function createTranslationManager(options) {
     handleTranslate,
     clearTabState,
     updateTranslateBtnState,
+    onActiveTabChanged,
     onWebviewUrlChanged,
     onWebviewDidStopLoading,
     setupDynamicTranslation,

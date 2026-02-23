@@ -37,6 +37,8 @@
     tabManager,
     translationApiEnabledToggle,
     translationApiKeyInput,
+    translationConcurrencyCountInput,
+    translationConcurrencyToggle,
     translationDynamicEnabledToggle,
     translationEndpointInput,
     translationMaxCharsInput,
@@ -164,6 +166,15 @@
     // 加载翻译高级选项
     if (translationStreamingToggle) {
       translationStreamingToggle.checked = store.get('settings.translationStreaming', true);
+    }
+    if (translationConcurrencyToggle) {
+      translationConcurrencyToggle.checked = store.get(
+        'settings.translationConcurrencyEnabled',
+        false
+      );
+    }
+    if (translationConcurrencyCountInput) {
+      translationConcurrencyCountInput.value = store.get('settings.translationConcurrency', 2);
     }
     if (translationMaxTextsInput) {
       translationMaxTextsInput.value = store.get('settings.translationMaxTexts', 500);
@@ -350,6 +361,23 @@
   if (translationStreamingToggle) {
     translationStreamingToggle.addEventListener('change', () => {
       store.set('settings.translationStreaming', translationStreamingToggle.checked);
+    });
+  }
+
+  if (translationConcurrencyToggle) {
+    translationConcurrencyToggle.addEventListener('change', () => {
+      store.set('settings.translationConcurrencyEnabled', translationConcurrencyToggle.checked);
+    });
+  }
+
+  if (translationConcurrencyCountInput) {
+    translationConcurrencyCountInput.addEventListener('change', () => {
+      const value = Math.max(
+        1,
+        Math.min(10, parseInt(translationConcurrencyCountInput.value) || 2)
+      );
+      translationConcurrencyCountInput.value = value;
+      store.set('settings.translationConcurrency', value);
     });
   }
 
