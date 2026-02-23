@@ -6,7 +6,6 @@
     devtoolsBtn,
     documentRef,
     forwardBtn,
-    goBtn,
     homeBtn,
     ipcRenderer,
     newTabBtn,
@@ -34,10 +33,6 @@
     urlInput.value = '';
     urlInput.focus();
     clearUrlBtn.style.display = 'none';
-  });
-
-  goBtn.addEventListener('click', () => {
-    if (urlInput.value) browserManager.navigateTo(urlInput.value);
   });
 
   urlInput.addEventListener('keypress', e => {
