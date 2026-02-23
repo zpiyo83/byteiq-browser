@@ -72,6 +72,8 @@
     font-size: 14px;
     line-height: 1.5;
     animation: messageSlideIn 0.3s ease forwards;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 @keyframes messageSlideIn {
@@ -99,6 +101,96 @@
     border-bottom-right-radius: 4px;
 }
 
+/* 页面信息消息样式 */
+.chat-message.page-info {
+    background: #e8f0fe;
+    color: #1967d2;
+    font-size: 13px;
+    border-radius: 8px;
+    border-bottom-left-radius: 8px;
+}
+
+.chat-message.page-info strong {
+    color: #1a73e8;
+}
+
+/* 流式消息样式 */
+.chat-message.streaming {
+    position: relative;
+}
+
+.chat-message.streaming::after {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 14px;
+    background: #5f6368;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+/* 取消状态样式 */
+.chat-message.cancelled {
+    color: #5f6368;
+    font-style: italic;
+    background: #f8f9fa;
+}
+
+/* 错误状态样式 */
+.chat-message.error {
+    background: #fce8e6;
+    color: #d93025;
+}
+
+/* 上下文状态栏 */
+.ai-context-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: #e8f0fe;
+    border-top: 1px solid #d2e3fc;
+    font-size: 12px;
+    color: #1967d2;
+}
+
+.ai-context-bar .context-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ai-context-bar .context-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    color: #5f6368;
+    transition: all 0.2s ease;
+}
+
+.ai-context-bar .context-clear-btn:hover {
+    background: #d2e3fc;
+    color: #1967d2;
+}
+
 .ai-input-area {
     padding: 16px;
     border-top: 1px solid #e8eaed;
@@ -122,6 +214,12 @@
     box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
 }
 
+.ai-input-area input:disabled {
+    background: #f8f9fa;
+    color: #5f6368;
+    cursor: not-allowed;
+}
+
 .ai-input-area button {
     background: #4285f4;
     color: white;
@@ -134,12 +232,99 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.ai-input-area button:hover {
+.ai-input-area button:hover:not(:disabled) {
     background: #3367d6;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
 }
 
-.ai-input-area button:active {
+.ai-input-area button:active:not(:disabled) {
     transform: translateY(0) scale(0.98);
+}
+
+.ai-input-area button:disabled {
+    background: #bdc1c6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 深色模式适配 */
+.dark-mode .ai-sidebar {
+    background: #202124;
+    border-left-color: #3c4043;
+    box-shadow: -4px 0 12px rgba(0,0,0,0.3);
+}
+
+.dark-mode .ai-header {
+    background: #292a2d;
+    border-bottom-color: #3c4043;
+}
+
+.dark-mode .ai-header h3 {
+    color: #e8eaed;
+}
+
+.dark-mode .ai-header button {
+    color: #9aa0a6;
+}
+
+.dark-mode .ai-header button:hover {
+    background: #3c4043;
+    color: #e8eaed;
+}
+
+.dark-mode .chat-message.ai {
+    background: #3c4043;
+    color: #e8eaed;
+}
+
+.dark-mode .chat-message.streaming::after {
+    background: #9aa0a6;
+}
+
+.dark-mode .chat-message.page-info {
+    background: #1a3a5c;
+    color: #8ab4f8;
+}
+
+.dark-mode .chat-message.page-info strong {
+    color: #aecbfa;
+}
+
+.dark-mode .ai-input-area {
+    background: #292a2d;
+    border-top-color: #3c4043;
+}
+
+.dark-mode .ai-input-area input {
+    background: #3c4043;
+    border-color: #5f6368;
+    color: #e8eaed;
+}
+
+.dark-mode .ai-input-area input:focus {
+    border-color: #8ab4f8;
+    box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.15);
+}
+
+.dark-mode .ai-input-area input:disabled {
+    background: #292a2d;
+    color: #5f6368;
+}
+
+/* 深色模式 - 上下文状态栏 */
+.dark-mode .ai-context-bar {
+    background: #1a3a5c;
+    border-top-color: #2d5a87;
+    color: #8ab4f8;
+}
+
+.dark-mode .ai-context-bar .context-clear-btn {
+    color: #8ab4f8;
+}
+
+.dark-mode .ai-context-bar .context-clear-btn:hover {
+    background: #2d5a87;
+    color: #aecbfa;
 }

@@ -18,6 +18,7 @@ const {
   translateTextsStreaming,
   chunkTexts
 } = require('./modules/translation/ai-translator');
+const { sendStreamingChatRequest } = require('./modules/ai-chat');
 
 // 持久化存储实例
 const store = new Store();
@@ -477,6 +478,9 @@ ipcMain.handle('translate-single-text', async (event, { texts, targetLanguage })
   }
 });
 
+// AI对话任务取消控制
+const activeChatRequests = new Map(); // taskId -> ClientRequest
+
 // 获取版本信息
 ipcMain.handle('get-version-info', () => {
   return {
@@ -486,6 +490,90 @@ ipcMain.handle('get-version-info', () => {
     nodeVersion: process.versions.node,
     v8Version: process.versions.v8
   };
+});
+
+// AI 对话 IPC 处理器
+ipcMain.handle('ai-chat', async (event, { messages, taskId }) => {
+  const resolvedTaskId = taskId || `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  try {
+    // 使用AI设置
+    const endpoint = store.get('settings.aiEndpoint', '');
+    const apiKey = store.get('settings.aiApiKey', '');
+    const requestType = store.get('settings.aiRequestType', 'openai-chat');
+    const model = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+    const timeout = (store.get('settings.translationTimeout', 120) || 120) * 1000;
+
+    if (!endpoint || !apiKey) {
+      return {
+        success: false,
+        error: '请先在设置中配置 AI API 端点和密钥'
+      };
+    }
+
+    // 发送流式对话请求
+    const fullContent = await sendStreamingChatRequest(
+      messages,
+      {
+        endpoint,
+        apiKey,
+        requestType,
+        model,
+        timeout
+      },
+      (chunk, accumulated) => {
+        // 发送流式更新事件
+        event.sender.send('ai-chat-streaming', {
+          taskId: resolvedTaskId,
+          chunk,
+          accumulated
+        });
+      },
+      req => {
+        // 注册请求以便取消
+        activeChatRequests.set(resolvedTaskId, req);
+      }
+    );
+
+    activeChatRequests.delete(resolvedTaskId);
+
+    return {
+      success: true,
+      content: fullContent,
+      taskId: resolvedTaskId
+    };
+  } catch (error) {
+    if (error && error.message === 'Cancelled') {
+      activeChatRequests.delete(resolvedTaskId);
+      return {
+        success: false,
+        cancelled: true,
+        taskId: resolvedTaskId
+      };
+    }
+
+    console.error('AI chat error:', error);
+    activeChatRequests.delete(resolvedTaskId);
+    return {
+      success: false,
+      error: error.message || '对话请求失败'
+    };
+  }
+});
+
+// 取消AI对话
+ipcMain.on('cancel-ai-chat', (_event, { taskId }) => {
+  if (!taskId) return;
+  const req = activeChatRequests.get(taskId);
+  if (!req) return;
+  activeChatRequests.delete(taskId);
+  try {
+    if (req && typeof req.destroy === 'function') {
+      req.destroy(new Error('Cancelled'));
+    }
+  } catch (error) {
+    console.error('Cancel AI chat failed:', error);
+  }
 });
 
 // 设置webview窗口处理器，处理弹窗和新窗口
