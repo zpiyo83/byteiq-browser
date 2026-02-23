@@ -199,6 +199,17 @@ const tabManager = createTabManager({
     if (translationManager && typeof translationManager.onActiveTabChanged === 'function') {
       translationManager.onActiveTabChanged(tabManager.getActiveTabId());
     }
+    if (aiManager && typeof aiManager.onTabChanged === 'function') {
+      aiManager.onTabChanged(tabManager.getActiveTabId());
+    }
+  },
+  onTabClosed: tabId => {
+    if (translationManager && typeof translationManager.clearTabState === 'function') {
+      translationManager.clearTabState(tabId);
+    }
+    if (aiManager && typeof aiManager.clearTabConversation === 'function') {
+      aiManager.clearTabConversation(tabId);
+    }
   },
   progressBar,
   showToast,
@@ -281,7 +292,11 @@ const aiManager = createAiManager({
   documentRef: document,
   getActiveTabId: tabManager.getActiveTabId,
   t,
-  toggleAiBtn
+  toggleAiBtn,
+  ipcRenderer,
+  store,
+  showToast,
+  tabManager
 });
 
 const findManager = createFindManager({
