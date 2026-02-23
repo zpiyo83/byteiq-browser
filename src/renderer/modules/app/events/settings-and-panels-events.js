@@ -37,6 +37,7 @@
     tabManager,
     translationApiEnabledToggle,
     translationApiKeyInput,
+    translationDynamicEnabledToggle,
     translationEndpointInput,
     translationMaxCharsInput,
     translationMaxTextsInput,
@@ -152,6 +153,12 @@
       translationTargetLanguageSelect.value = store.get(
         'settings.translationTargetLanguage',
         '简体中文'
+      );
+    }
+    if (translationDynamicEnabledToggle) {
+      translationDynamicEnabledToggle.checked = store.get(
+        'settings.translationDynamicEnabled',
+        true
       );
     }
     // 加载翻译高级选项
@@ -299,6 +306,12 @@
   if (translationTargetLanguageSelect) {
     translationTargetLanguageSelect.addEventListener('change', () => {
       store.set('settings.translationTargetLanguage', translationTargetLanguageSelect.value);
+    });
+  }
+
+  if (translationDynamicEnabledToggle) {
+    translationDynamicEnabledToggle.addEventListener('change', () => {
+      store.set('settings.translationDynamicEnabled', translationDynamicEnabledToggle.checked);
     });
   }
 

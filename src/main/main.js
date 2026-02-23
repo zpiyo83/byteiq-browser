@@ -249,6 +249,58 @@ ipcMain.on('cancel-translation', (_event, { taskId }) => {
   }
 });
 
+// 动态翻译处理器 - 用于翻译动态检测到的新文本
+ipcMain.handle('translate-single-text', async (event, { texts, targetLanguage }) => {
+  try {
+    // 优先使用翻译专用API配置
+    const translationApiEnabled = store.get('settings.translationApiEnabled', false);
+    let endpoint, apiKey, requestType, model;
+
+    if (translationApiEnabled) {
+      endpoint = store.get('settings.translationEndpoint', '');
+      apiKey = store.get('settings.translationApiKey', '');
+      requestType = store.get('settings.translationRequestType', 'openai-chat');
+      model = store.get('settings.translationModelId', 'gpt-3.5-turbo');
+    } else {
+      // 回退到AI设置
+      endpoint = store.get('settings.aiEndpoint', '');
+      apiKey = store.get('settings.aiApiKey', '');
+      requestType = store.get('settings.aiRequestType', 'openai-chat');
+      model = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+    }
+
+    if (!endpoint || !apiKey) {
+      return {
+        success: false,
+        error: '请先在设置中配置翻译 API 或 AI API 端点和密钥'
+      };
+    }
+
+    // 读取用户配置
+    const requestTimeout = store.get('settings.translationTimeout', 120);
+
+    // 直接翻译，不分块（动态翻译通常是小批量）
+    const translations = await translateTexts(texts, targetLanguage, {
+      endpoint,
+      apiKey,
+      requestType,
+      model,
+      timeout: requestTimeout * 1000
+    });
+
+    return {
+      success: true,
+      translations: translations
+    };
+  } catch (error) {
+    console.error('Dynamic translation error:', error);
+    return {
+      success: false,
+      error: error.message || '翻译失败'
+    };
+  }
+});
+
 // 获取版本信息
 ipcMain.handle('get-version-info', () => {
   return {
