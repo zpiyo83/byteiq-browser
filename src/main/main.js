@@ -133,72 +133,233 @@ ipcMain.handle('translate-text', async (event, { texts, targetLanguage, taskId }
     const maxCharsPerRequest = store.get('settings.translationMaxChars', 50000);
     const requestTimeout = store.get('settings.translationTimeout', 120);
     const streamingEnabled = store.get('settings.translationStreaming', true);
+    const concurrencyEnabled = store.get('settings.translationConcurrencyEnabled', false);
+    const concurrency = Math.max(1, Math.min(10, store.get('settings.translationConcurrency', 2)));
 
-    // 分块处理，使用用户配置
-    const chunks = chunkTexts(texts, {
-      maxTexts: maxTextsPerRequest,
-      maxChars: maxCharsPerRequest
-    });
     const results = new Array(texts.length);
 
-    // 逐块翻译
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
+    function registerRequestForTask(req) {
+      const existing = activeTranslationRequests.get(resolvedTaskId);
+      if (existing && typeof existing.add === 'function') {
+        existing.add(req);
+        return;
+      }
+      const set = new Set();
+      set.add(req);
+      activeTranslationRequests.set(resolvedTaskId, set);
+    }
 
-      // 发送进度
-      event.sender.send('translation-progress', {
-        taskId: resolvedTaskId,
-        current: i + 1,
-        total: chunks.length,
-        status: 'translating'
+    function buildConcurrentGroups(allTexts, offset, limitTexts, limitChars, groupCount) {
+      const remainingTexts = Math.max(0, allTexts.length - offset);
+      const roundTextLimit = Math.min(limitTexts, remainingTexts);
+      const actualGroups = Math.max(1, Math.min(groupCount, roundTextLimit));
+
+      const base = Math.floor(roundTextLimit / actualGroups);
+      const extra = roundTextLimit % actualGroups;
+      const desiredCounts = Array.from({ length: actualGroups }, (_v, idx) => {
+        return base + (idx < extra ? 1 : 0);
       });
 
-      if (streamingEnabled) {
-        // 流式翻译
-        const translated = await translateTextsStreaming(
-          chunk.texts,
-          targetLanguage,
-          {
+      const groups = desiredCounts.map(() => {
+        return {
+          texts: [],
+          startIndex: -1,
+          chars: 0
+        };
+      });
+
+      let globalIndex = offset;
+      let takenChars = 0;
+
+      for (let g = 0; g < groups.length; g++) {
+        const group = groups[g];
+        if (globalIndex >= allTexts.length) break;
+        group.startIndex = globalIndex;
+
+        while (globalIndex < allTexts.length) {
+          if (group.texts.length >= desiredCounts[g]) break;
+          if (group.texts.length >= maxTextsPerRequest) break;
+          if (group.chars >= maxCharsPerRequest) break;
+          if (takenChars >= limitChars) break;
+
+          const nextText = allTexts[globalIndex];
+          const nextLen = nextText.length;
+
+          if (group.texts.length > 0 && group.chars + nextLen > maxCharsPerRequest) {
+            break;
+          }
+          if (takenChars > 0 && takenChars + nextLen > limitChars) {
+            break;
+          }
+
+          group.texts.push(nextText);
+          group.chars += nextLen;
+          takenChars += nextLen;
+          globalIndex++;
+        }
+      }
+
+      const nonEmptyGroups = groups.filter(group => group.texts.length > 0);
+      return {
+        groups: nonEmptyGroups,
+        nextIndex: globalIndex
+      };
+    }
+
+    if (!concurrencyEnabled || concurrency <= 1) {
+      // 分块处理，使用用户配置
+      const chunks = chunkTexts(texts, {
+        maxTexts: maxTextsPerRequest,
+        maxChars: maxCharsPerRequest
+      });
+
+      // 逐块翻译
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+
+        // 发送进度
+        event.sender.send('translation-progress', {
+          taskId: resolvedTaskId,
+          current: i + 1,
+          total: chunks.length,
+          status: 'translating'
+        });
+
+        if (streamingEnabled) {
+          // 流式翻译
+          const translated = await translateTextsStreaming(
+            chunk.texts,
+            targetLanguage,
+            {
+              endpoint,
+              apiKey,
+              requestType,
+              model,
+              timeout: requestTimeout * 1000,
+              registerRequest: req => {
+                registerRequestForTask(req);
+              }
+            },
+            (newTexts, allTexts, newTextsStartIndex) => {
+              // 发送流式更新事件
+              event.sender.send('translation-streaming', {
+                taskId: resolvedTaskId,
+                chunkIndex: i,
+                startIndex: chunk.startIndex,
+                newTexts: newTexts,
+                allTexts: allTexts,
+                newTextsStartIndex
+              });
+            }
+          );
+
+          // 将结果放入正确位置
+          translated.forEach((text, idx) => {
+            results[chunk.startIndex + idx] = text;
+          });
+        } else {
+          // 非流式翻译
+          const translated = await translateTexts(chunk.texts, targetLanguage, {
             endpoint,
             apiKey,
             requestType,
             model,
-            timeout: requestTimeout * 1000,
-            registerRequest: req => {
-              activeTranslationRequests.set(resolvedTaskId, req);
-            }
-          },
-          (newTexts, allTexts, newTextsStartIndex) => {
-            // 发送流式更新事件
-            event.sender.send('translation-streaming', {
-              taskId: resolvedTaskId,
-              chunkIndex: i,
-              startIndex: chunk.startIndex,
-              newTexts: newTexts,
-              allTexts: allTexts,
-              newTextsStartIndex
-            });
-          }
+            timeout: requestTimeout * 1000
+          });
+
+          // 将结果放入正确位置
+          translated.forEach((text, idx) => {
+            results[chunk.startIndex + idx] = text;
+          });
+        }
+      }
+    } else {
+      const perRoundMaxTexts = concurrency * maxTextsPerRequest;
+      const perRoundMaxChars = concurrency * maxCharsPerRequest;
+      const estimatedTotalRounds = Math.max(1, Math.ceil(texts.length / perRoundMaxTexts));
+
+      let roundIndex = 0;
+      let cursor = 0;
+
+      while (cursor < texts.length) {
+        const { groups, nextIndex } = buildConcurrentGroups(
+          texts,
+          cursor,
+          perRoundMaxTexts,
+          perRoundMaxChars,
+          concurrency
         );
 
-        // 将结果放入正确位置
-        translated.forEach((text, idx) => {
-          results[chunk.startIndex + idx] = text;
-        });
-      } else {
-        // 非流式翻译
-        const translated = await translateTexts(chunk.texts, targetLanguage, {
-          endpoint,
-          apiKey,
-          requestType,
-          model,
-          timeout: requestTimeout * 1000
+        if (groups.length === 0) {
+          break;
+        }
+
+        roundIndex++;
+        event.sender.send('translation-progress', {
+          taskId: resolvedTaskId,
+          current: roundIndex,
+          total: estimatedTotalRounds,
+          status: 'translating'
         });
 
-        // 将结果放入正确位置
-        translated.forEach((text, idx) => {
-          results[chunk.startIndex + idx] = text;
-        });
+        if (streamingEnabled) {
+          const translatedGroups = await Promise.all(
+            groups.map((group, groupIndex) => {
+              return translateTextsStreaming(
+                group.texts,
+                targetLanguage,
+                {
+                  endpoint,
+                  apiKey,
+                  requestType,
+                  model,
+                  timeout: requestTimeout * 1000,
+                  registerRequest: req => {
+                    registerRequestForTask(req);
+                  }
+                },
+                (newTexts, allTexts, newTextsStartIndex) => {
+                  event.sender.send('translation-streaming', {
+                    taskId: resolvedTaskId,
+                    chunkIndex: (roundIndex - 1) * concurrency + groupIndex,
+                    startIndex: group.startIndex,
+                    newTexts: newTexts,
+                    allTexts: allTexts,
+                    newTextsStartIndex
+                  });
+                }
+              );
+            })
+          );
+
+          translatedGroups.forEach((translated, idx) => {
+            const group = groups[idx];
+            translated.forEach((text, localIndex) => {
+              results[group.startIndex + localIndex] = text;
+            });
+          });
+        } else {
+          const translatedGroups = await Promise.all(
+            groups.map(group => {
+              return translateTexts(group.texts, targetLanguage, {
+                endpoint,
+                apiKey,
+                requestType,
+                model,
+                timeout: requestTimeout * 1000
+              });
+            })
+          );
+
+          translatedGroups.forEach((translated, idx) => {
+            const group = groups[idx];
+            translated.forEach((text, localIndex) => {
+              results[group.startIndex + localIndex] = text;
+            });
+          });
+        }
+
+        cursor = nextIndex;
       }
     }
 
@@ -243,7 +404,22 @@ ipcMain.on('cancel-translation', (_event, { taskId }) => {
   if (!req) return;
   activeTranslationRequests.delete(taskId);
   try {
-    req.destroy(new Error('Cancelled'));
+    if (req && typeof req.destroy === 'function') {
+      req.destroy(new Error('Cancelled'));
+      return;
+    }
+
+    if (req && typeof req.forEach === 'function') {
+      req.forEach(r => {
+        try {
+          if (r && typeof r.destroy === 'function') {
+            r.destroy(new Error('Cancelled'));
+          }
+        } catch (error) {
+          console.error('Cancel translation failed:', error);
+        }
+      });
+    }
   } catch (error) {
     console.error('Cancel translation failed:', error);
   }

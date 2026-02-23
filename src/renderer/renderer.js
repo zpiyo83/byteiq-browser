@@ -90,6 +90,10 @@ const translationDynamicEnabledToggle = document.getElementById(
 );
 // 翻译高级选项元素
 const translationStreamingToggle = document.getElementById('translation-streaming-toggle');
+const translationConcurrencyToggle = document.getElementById('translation-concurrency-toggle');
+const translationConcurrencyCountInput = document.getElementById(
+  'translation-concurrency-count-input'
+);
 const translationMaxTextsInput = document.getElementById('translation-max-texts-input');
 const translationMaxCharsInput = document.getElementById('translation-max-chars-input');
 const translationTimeoutInput = document.getElementById('translation-timeout-input');
@@ -189,6 +193,9 @@ const tabManager = createTabManager({
   onActiveWebviewChanged: webview => {
     if (browserManager) {
       browserManager.onActiveWebviewChanged(webview);
+    }
+    if (translationManager && typeof translationManager.onActiveTabChanged === 'function') {
+      translationManager.onActiveTabChanged(tabManager.getActiveTabId());
     }
   },
   progressBar,
@@ -435,6 +442,8 @@ bindSettingsAndPanelEvents({
   translationApiKeyInput,
   translationDynamicEnabledToggle,
   translationEndpointInput,
+  translationConcurrencyCountInput,
+  translationConcurrencyToggle,
   translationMaxCharsInput,
   translationMaxTextsInput,
   translationModelIdInput,
