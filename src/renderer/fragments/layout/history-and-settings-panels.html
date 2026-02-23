@@ -297,6 +297,23 @@
                         </div>
                         <div class="setting-item">
                             <div class="setting-info">
+                                <label data-i18n="panels.settings.translation.concurrencyEnabled">并发翻译</label>
+                                <div class="setting-desc" data-i18n="panels.settings.translation.concurrencyEnabledDesc">开启后将按并发数拆分为多个请求并行发送</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="translation-concurrency-toggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label data-i18n="panels.settings.translation.concurrencyCount">并发数</label>
+                                <div class="setting-desc" data-i18n="panels.settings.translation.concurrencyCountDesc">每轮同时发起的请求数量</div>
+                            </div>
+                            <input type="number" id="translation-concurrency-count-input" placeholder="2" min="1" max="10">
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
                                 <label data-i18n="panels.settings.translation.maxTextsPerRequest">每次请求最大文本块数</label>
                                 <div class="setting-desc" data-i18n="panels.settings.translation.maxTextsPerRequestDesc">单次翻译请求包含的最大文本块数量</div>
                             </div>
