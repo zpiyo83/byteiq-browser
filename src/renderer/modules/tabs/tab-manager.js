@@ -20,6 +20,7 @@ function createTabManager(options) {
     onWebviewDidStopLoading,
     onWebviewUrlChanged,
     onActiveWebviewChanged,
+    onTabClosed,
     updateBookmarkIcon
   } = options;
 
@@ -494,6 +495,11 @@ function createTabManager(options) {
 
     const webviewEl = documentRef.getElementById(`webview-${id}`);
     if (webviewEl) webviewEl.remove();
+
+    // 调用标签页关闭回调
+    if (typeof onTabClosed === 'function') {
+      onTabClosed(id);
+    }
 
     if (activeTabId === id) {
       if (tabs.length > 0) {

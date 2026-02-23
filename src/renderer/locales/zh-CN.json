@@ -153,9 +153,13 @@
     "send": "发送",
     "close": "关闭",
     "welcome": "你好！我是 Byteiq AI 助手。我可以帮你总结网页内容、回答问题，或辅助浏览。",
-    "summaryPrompt": "正在尝试读取页面内容并生成摘要...（该功能需要配置 AI API）",
-    "noPage": "请先打开一个网页，我才能为你总结。",
-    "prototype": "收到！我目前还是原型版本，后续将可通过 API 连接大模型为你服务。"
+    "systemPrompt": "你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。请用简洁清晰的语言回答用户问题。",
+    "pageContext": "当前页面信息",
+    "contextLoaded": "已加载本页面",
+    "contextCleared": "已清除页面上下文",
+    "error": "发生错误",
+    "cancelled": "已取消",
+    "noConfig": "请先在设置中配置 AI API"
   },
   "newTab": {
     "searchPlaceholder": "搜索或输入 URL...",
