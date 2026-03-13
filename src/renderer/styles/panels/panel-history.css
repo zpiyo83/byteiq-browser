@@ -1,0 +1,182 @@
+/**
+ * 历史记录面板样式
+ */
+
+/* 历史记录分组标题 */
+.history-group-header {
+  padding: 12px 16px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #5f6368;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e8eaed;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 历史记录项 */
+.history-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.history-item:hover {
+  background: #f1f3f4;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+/* 历史记录图标 */
+.history-item-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f0fe;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.history-item-icon svg {
+  color: #1a73e8;
+}
+
+/* 历史记录内容 */
+.history-item-content {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.history-item-title {
+  font-size: 14px;
+  color: #202124;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-item-url {
+  font-size: 12px;
+  color: #5f6368;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* 历史记录时间 */
+.history-item-time {
+  font-size: 12px;
+  color: #80868b;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+/* 历史记录删除按钮 */
+.history-item-delete {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #5f6368;
+  opacity: 0;
+  transition: all 0.15s ease;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.history-item:hover .history-item-delete {
+  opacity: 1;
+}
+
+.history-item-delete:hover {
+  background: #fce8e6;
+  color: #d93025;
+}
+
+/* 历史记录空状态 */
+.history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #80868b;
+}
+
+.history-empty svg {
+  color: #dadce0;
+  margin-bottom: 16px;
+}
+
+.history-empty p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* 深色模式适配 */
+.dark-mode .history-group-header {
+  background: #292a2d;
+  color: #9aa0a6;
+  border-bottom-color: #3c4043;
+}
+
+.dark-mode .history-item {
+  border-bottom-color: #3c4043;
+}
+
+.dark-mode .history-item:hover {
+  background: #3c4043;
+}
+
+.dark-mode .history-item-icon {
+  background: #1a3a5c;
+}
+
+.dark-mode .history-item-icon svg {
+  color: #8ab4f8;
+}
+
+.dark-mode .history-item-title {
+  color: #e8eaed;
+}
+
+.dark-mode .history-item-url {
+  color: #9aa0a6;
+}
+
+.dark-mode .history-item-time {
+  color: #80868b;
+}
+
+.dark-mode .history-item-delete {
+  color: #9aa0a6;
+}
+
+.dark-mode .history-item-delete:hover {
+  background: #5c2626;
+  color: #f28b82;
+}
+
+.dark-mode .history-empty {
+  color: #9aa0a6;
+}
+
+.dark-mode .history-empty svg {
+  color: #5f6368;
+}

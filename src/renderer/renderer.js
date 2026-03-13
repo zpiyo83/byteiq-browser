@@ -8,6 +8,7 @@ const { createDownloadsManager } = require('./modules/downloads/downloads-manage
 const { createAiManager } = require('./modules/ui/ai-manager');
 const { createFindManager } = require('./modules/ui/find-manager');
 const { createListPanelManager } = require('./modules/ui/list-panel-manager');
+const { createHistoryPanelManager } = require('./modules/ui/history-panel-manager');
 const { createOverlayManager } = require('./modules/ui/overlay-manager');
 const { createShortcutsManager } = require('./modules/ui/shortcuts-manager');
 const { createTabManager } = require('./modules/tabs/tab-manager');
@@ -317,6 +318,13 @@ const listPanelManager = createListPanelManager({
   t
 });
 
+const historyPanelManager = createHistoryPanelManager({
+  documentRef: document,
+  openTab: tabManager.createTab,
+  store,
+  t
+});
+
 const extensionsManager = createExtensionsManager({
   documentRef: document,
   ipcRenderer,
@@ -359,12 +367,7 @@ const shortcutsManager = createShortcutsManager({
     },
     openDownloads: downloadsManager.openDownloadsPanel,
     openHistory: () => {
-      listPanelManager.showPanel(
-        historyPanel,
-        historyList,
-        'history',
-        historySearchInput?.value || ''
-      );
+      historyPanelManager.showPanel(historyPanel, historyList, historySearchInput?.value || '');
       overlayManager.openOverlay(historyPanel);
     },
     refreshCurrentPage,
@@ -440,6 +443,7 @@ bindSettingsAndPanelEvents({
   historyBtn,
   historyList,
   historyPanel,
+  historyPanelManager,
   historySearchInput,
   incognitoToggleBtn,
   ipcRenderer,

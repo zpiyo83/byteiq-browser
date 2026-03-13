@@ -76,6 +76,7 @@
     const ctxBack = documentRef.getElementById('ctx-back');
     const ctxForward = documentRef.getElementById('ctx-forward');
     const ctxReload = documentRef.getElementById('ctx-reload');
+    const ctxAskAiSelection = documentRef.getElementById('ctx-ask-ai-selection');
     const ctxCopy = documentRef.getElementById('ctx-copy');
     const ctxPaste = documentRef.getElementById('ctx-paste');
     const ctxInspect = documentRef.getElementById('ctx-inspect');
@@ -99,6 +100,37 @@
       ctxReload.addEventListener('click', () => {
         const wv = documentRef.getElementById(`webview-${getActiveTabId()}`);
         if (wv) wv.reload();
+      });
+    }
+
+    if (ctxAskAiSelection) {
+      ctxAskAiSelection.addEventListener('click', async () => {
+        try {
+          const wv = documentRef.getElementById(`webview-${getActiveTabId()}`);
+          if (!wv || wv.tagName !== 'WEBVIEW') {
+            return;
+          }
+
+          const selectedText = await wv.executeJavaScript(
+            '(() => { try { return window.getSelection ? String(window.getSelection().toString() || "") : ""; } catch { return ""; } })();'
+          );
+
+          windowRef.dispatchEvent(
+            new CustomEvent('ai-ask-selection', {
+              detail: {
+                text: selectedText || ''
+              }
+            })
+          );
+        } catch {
+          windowRef.dispatchEvent(
+            new CustomEvent('ai-ask-selection', {
+              detail: { text: '' }
+            })
+          );
+        } finally {
+          hideContextMenus();
+        }
       });
     }
 

@@ -20,6 +20,7 @@
     historyBtn,
     historyList,
     historyPanel,
+    historyPanelManager,
     historySearchInput,
     incognitoToggleBtn,
     ipcRenderer,
@@ -95,12 +96,7 @@
     if (historyBtnInMenu) {
       historyBtnInMenu.addEventListener('click', () => {
         moreMenuDropdown.classList.remove('show');
-        listPanelManager.showPanel(
-          historyPanel,
-          historyList,
-          'history',
-          historySearchInput?.value || ''
-        );
+        historyPanelManager.showPanel(historyPanel, historyList, historySearchInput?.value || '');
         overlayManager.openOverlay(historyPanel);
       });
     }
@@ -268,7 +264,7 @@
 
   if (historySearchInput) {
     historySearchInput.addEventListener('input', () => {
-      listPanelManager.showPanel(historyPanel, historyList, 'history', historySearchInput.value);
+      historyPanelManager.showPanel(historyPanel, historyList, historySearchInput.value);
     });
   }
 
