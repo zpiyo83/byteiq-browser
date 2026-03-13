@@ -34,7 +34,14 @@
       "title": "History",
       "close": "Close",
       "empty": "No history",
-      "search": "Search history..."
+      "search": "Search history...",
+      "group": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "thisWeek": "This Week",
+        "thisMonth": "This Month",
+        "older": "Older"
+      }
     },
     "bookmarks": {
       "title": "My Bookmarks",
@@ -145,7 +152,8 @@
     "copy": "Copy",
     "paste": "Paste",
     "mute": "Mute/Unmute Tab",
-    "inspect": "Inspect Element"
+    "inspect": "Inspect Element",
+    "askAiSelection": "Ask AI (Selection)"
   },
   "ai": {
     "title": "Byteiq AI Assistant",
@@ -159,7 +167,30 @@
     "contextCleared": "Page context cleared",
     "error": "Error occurred",
     "cancelled": "Cancelled",
-    "noConfig": "Please configure AI API in settings first"
+    "noConfig": "Please configure AI API in settings first",
+    "history": "History",
+    "historyTitle": "History",
+    "newSession": "New Session",
+    "sessionUntitled": "New Session",
+    "sessionForTab": "Current Tab",
+    "sessionCreated": "Session created",
+    "pinned": "Pinned",
+    "mode": "Mode",
+    "renameSession": "Rename Session",
+    "selectionTitle": "Selected Text",
+    "noSelection": "No selection detected",
+    "defaultAskSelection": "Please explain and summarize this selected content, and answer the key questions.",
+    "modeOutline": "Please output a structured outline with key points.",
+    "modeCompare": "Please perform comparative/aggregate analysis and provide conclusions.",
+    "modeTranslatePage": "Please translate/localize the content into Chinese, maintaining accuracy and readability.",
+    "modeCodeDocs": "Please respond in API documentation/code analysis style, providing key interfaces and examples.",
+    "modeQa": "Please answer user questions based on context, quoting original text when necessary.",
+    "deleteSession": "Delete Session",
+    "restoreSession": "Restore Session",
+    "sessionDeleted": "Session deleted",
+    "sessionRestored": "Session restored",
+    "confirmPermanentDelete": "Are you sure you want to permanently delete this session? This action cannot be undone.",
+    "sessionPermanentlyDeleted": "Session permanently deleted"
   },
   "newTab": {
     "searchPlaceholder": "Search or enter URL...",

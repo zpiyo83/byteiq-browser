@@ -34,7 +34,14 @@
       "title": "历史记录",
       "close": "关闭",
       "empty": "暂无历史记录",
-      "search": "搜索历史..."
+      "search": "搜索历史...",
+      "group": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "thisWeek": "本周",
+        "thisMonth": "本月",
+        "older": "更早"
+      }
     },
     "bookmarks": {
       "title": "我的书签",
@@ -145,7 +152,8 @@
     "copy": "复制",
     "paste": "粘贴",
     "mute": "静音/取消静音标签页",
-    "inspect": "检查元素"
+    "inspect": "检查元素",
+    "askAiSelection": "询问 AI（选区内容）"
   },
   "ai": {
     "title": "Byteiq AI 助手",
@@ -159,7 +167,30 @@
     "contextCleared": "已清除页面上下文",
     "error": "发生错误",
     "cancelled": "已取消",
-    "noConfig": "请先在设置中配置 AI API"
+    "noConfig": "请先在设置中配置 AI API",
+    "history": "历史会话",
+    "historyTitle": "历史会话",
+    "newSession": "新建会话",
+    "sessionUntitled": "新会话",
+    "sessionForTab": "当前标签页",
+    "sessionCreated": "已新建会话",
+    "pinned": "置顶",
+    "mode": "模式",
+    "renameSession": "重命名会话",
+    "selectionTitle": "选区内容",
+    "noSelection": "未检测到选区文本",
+    "defaultAskSelection": "请解释并总结这段选区内容，并回答其中关键问题。",
+    "modeOutline": "请输出结构化提纲与关键要点。",
+    "modeCompare": "请进行对比/聚合分析，并给出结论。",
+    "modeTranslatePage": "请将内容翻译/本地化为中文，保持准确与可读性。",
+    "modeCodeDocs": "请以 API 文档/代码解读风格回答，给出关键接口与示例。",
+    "modeQa": "请结合上下文回答用户问题，必要时引用原文。",
+    "deleteSession": "删除会话",
+    "restoreSession": "恢复会话",
+    "sessionDeleted": "会话已删除",
+    "sessionRestored": "会话已恢复",
+    "confirmPermanentDelete": "确定要永久删除此会话吗？此操作不可撤销。",
+    "sessionPermanentlyDeleted": "会话已永久删除"
   },
   "newTab": {
     "searchPlaceholder": "搜索或输入 URL...",
