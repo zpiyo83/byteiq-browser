@@ -102,6 +102,43 @@
     color: #202124;
 }
 
+/* AI模式选择下拉框样式 */
+.ai-sidebar-toolbar .ai-mode-select {
+    flex: 1;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    background: #ffffff;
+    font-size: 13px;
+    padding: 0 8px;
+    outline: none;
+    cursor: pointer;
+    color: #202124;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-sidebar-toolbar .ai-mode-select:hover {
+    border-color: #4285f4;
+}
+
+.ai-sidebar-toolbar .ai-mode-select:focus {
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+}
+
+/* 深色模式适配 */
+.dark-mode .ai-sidebar-toolbar .ai-mode-select {
+    background: #3c4043;
+    border-color: #5f6368;
+    color: #e8eaed;
+}
+
+.dark-mode .ai-sidebar-toolbar .ai-mode-select:hover,
+.dark-mode .ai-sidebar-toolbar .ai-mode-select:focus {
+    border-color: #8ab4f8;
+    box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.15);
+}
+
 .ai-body {
     flex: 1;
     display: flex;
@@ -207,6 +244,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
  }
 
 .ai-history-popup {
@@ -351,6 +389,33 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0;
+}
+
+/* 滚动条样式（浅色模式） */
+.ai-chat-area::-webkit-scrollbar,
+.ai-history-list::-webkit-scrollbar,
+.ai-sessions-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ai-chat-area::-webkit-scrollbar-track,
+.ai-history-list::-webkit-scrollbar-track,
+.ai-sessions-list::-webkit-scrollbar-track {
+    background: #f1f3f4;
+}
+
+.ai-chat-area::-webkit-scrollbar-thumb,
+.ai-history-list::-webkit-scrollbar-thumb,
+.ai-sessions-list::-webkit-scrollbar-thumb {
+    background: #c6c9cc;
+    border-radius: 6px;
+}
+
+.ai-chat-area::-webkit-scrollbar-thumb:hover,
+.ai-history-list::-webkit-scrollbar-thumb:hover,
+.ai-sessions-list::-webkit-scrollbar-thumb:hover {
+    background: #aeb3b7;
 }
 
 .chat-message {
