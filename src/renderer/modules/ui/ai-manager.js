@@ -124,6 +124,7 @@ function createAiManager(options) {
     updateSession,
     renderSessionsList: (...args) => renderSessionsList(...args),
     addChatMessage,
+    documentRef,
     t,
     buildSystemPrompt,
     setInputEnabled
