@@ -209,6 +209,23 @@
                         </div>
                         <input type="text" id="ai-model-id-input" placeholder="gpt-3.5-turbo">
                     </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label>模型列表</label>
+                            <div class="setting-desc">从 API 获取可用模型列表</div>
+                        </div>
+                        <div class="setting-controls column">
+                            <div class="model-list-actions">
+                                <button id="ai-model-refresh-btn" class="setting-action-btn">
+                                    获取列表
+                                </button>
+                                <select id="ai-model-list-select">
+                                    <option value="">未获取</option>
+                                </select>
+                            </div>
+                            <div class="model-list-status" id="ai-model-list-status">等待获取</div>
+                        </div>
+                    </div>
                 </div>
                 <!-- 翻译设置 -->
                 <div id="settings-translation" class="settings-section">

@@ -3,6 +3,9 @@
     aiApiKeyInput,
     aiEndpointInput,
     aiModelIdInput,
+    aiModelListSelect,
+    aiModelListStatus,
+    aiModelRefreshBtn,
     aiRequestTypeSelect,
     bookmarkBtn,
     bookmarksList,
@@ -67,6 +70,88 @@
     langSelect.addEventListener('change', () => {
       setLocale(langSelect.value);
     });
+  }
+
+  function setAiModelStatus(text, state) {
+    if (!aiModelListStatus) return;
+    aiModelListStatus.textContent = text || '';
+    aiModelListStatus.classList.remove('loading', 'success', 'error');
+    if (state) {
+      aiModelListStatus.classList.add(state);
+    }
+  }
+
+  function updateAiModelOptions(models) {
+    if (!aiModelListSelect) return;
+    aiModelListSelect.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = models.length > 0 ? '选择模型' : '暂无模型';
+    aiModelListSelect.appendChild(placeholder);
+
+    models.forEach(modelId => {
+      const option = document.createElement('option');
+      option.value = modelId;
+      option.textContent = modelId;
+      aiModelListSelect.appendChild(option);
+    });
+  }
+
+  function syncAiModelSelection() {
+    if (!aiModelListSelect || !aiModelIdInput) return;
+    const value = aiModelIdInput.value.trim();
+    if (!value) return;
+    const hasOption = Array.from(aiModelListSelect.options).some(option => {
+      return option.value === value;
+    });
+    if (hasOption) {
+      aiModelListSelect.value = value;
+    }
+  }
+
+  async function refreshAiModelList() {
+    if (!aiModelRefreshBtn || !aiModelListSelect) return;
+
+    const endpoint = aiEndpointInput.value.trim();
+    const apiKey = aiApiKeyInput.value.trim();
+    const requestType = aiRequestTypeSelect.value;
+
+    if (!endpoint || !apiKey) {
+      setAiModelStatus('请先配置端点和密钥', 'error');
+      return;
+    }
+
+    aiModelRefreshBtn.disabled = true;
+    setAiModelStatus('正在获取模型列表...', 'loading');
+
+    try {
+      const result = await ipcRenderer.invoke('ai-list-models', {
+        endpoint,
+        apiKey,
+        requestType
+      });
+
+      if (!result?.success) {
+        setAiModelStatus(result?.error || '获取失败', 'error');
+        updateAiModelOptions([]);
+        return;
+      }
+
+      const models = Array.isArray(result.models) ? result.models : [];
+      updateAiModelOptions(models);
+      syncAiModelSelection();
+
+      if (models.length > 0) {
+        setAiModelStatus(`已获取 ${models.length} 个模型`, 'success');
+      } else {
+        setAiModelStatus('未获取到模型', 'error');
+      }
+    } catch (error) {
+      setAiModelStatus(error.message || '获取失败', 'error');
+    } finally {
+      aiModelRefreshBtn.disabled = false;
+    }
   }
 
   // 更多按钮下拉菜单事件处理
@@ -139,6 +224,12 @@
         aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
         if (aiModelIdInput) {
           aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+        }
+        if (aiModelListSelect) {
+          syncAiModelSelection();
+          if (aiModelListSelect.options.length <= 1) {
+            setAiModelStatus('等待获取', '');
+          }
         }
         // 加载翻译设置
         if (translationApiEnabledToggle) {
@@ -339,19 +430,49 @@
 
   aiEndpointInput.addEventListener('change', () => {
     store.set('settings.aiEndpoint', aiEndpointInput.value);
+    if (aiModelListSelect) {
+      updateAiModelOptions([]);
+      setAiModelStatus('等待获取', '');
+    }
   });
 
   aiApiKeyInput.addEventListener('change', () => {
     store.set('settings.aiApiKey', aiApiKeyInput.value);
+    if (aiModelListSelect) {
+      updateAiModelOptions([]);
+      setAiModelStatus('等待获取', '');
+    }
   });
 
   aiRequestTypeSelect.addEventListener('change', () => {
     store.set('settings.aiRequestType', aiRequestTypeSelect.value);
+    if (aiModelListSelect) {
+      updateAiModelOptions([]);
+      setAiModelStatus('等待获取', '');
+    }
   });
 
   if (aiModelIdInput) {
     aiModelIdInput.addEventListener('change', () => {
       store.set('settings.aiModelId', aiModelIdInput.value);
+      syncAiModelSelection();
+    });
+  }
+
+  if (aiModelListSelect) {
+    aiModelListSelect.addEventListener('change', () => {
+      const value = aiModelListSelect.value;
+      if (!value) return;
+      if (aiModelIdInput) {
+        aiModelIdInput.value = value;
+      }
+      store.set('settings.aiModelId', value);
+    });
+  }
+
+  if (aiModelRefreshBtn) {
+    aiModelRefreshBtn.addEventListener('click', () => {
+      refreshAiModelList();
     });
   }
 

@@ -19,6 +19,7 @@ const {
   chunkTexts
 } = require('./modules/translation/ai-translator');
 const { sendStreamingChatRequest, sendChatRequest } = require('./modules/ai-chat');
+const { fetchAiModels } = require('./modules/ai-models');
 const { createDownloadsManager } = require('./modules/ipc/downloads-ipc');
 const { registerTranslationIpc } = require('./modules/ipc/translation-ipc');
 const { registerAiIpc } = require('./modules/ipc/ai-ipc');
@@ -61,7 +62,8 @@ registerAiIpc({
   ipcMain,
   store,
   sendStreamingChatRequest,
-  sendChatRequest
+  sendChatRequest,
+  fetchAiModels
 });
 registerVersionIpc({
   ipcMain,

@@ -7,7 +7,8 @@ function registerAiIpc(options) {
     ipcMain,
     store,
     sendStreamingChatRequest,
-    sendChatRequest
+    sendChatRequest,
+    fetchAiModels
   } = options;
 
   const activeChatRequests = new Map(); // taskId -> ClientRequest
@@ -153,6 +154,48 @@ function registerAiIpc(options) {
       return {
         success: false,
         error: error.message || 'Agent请求失败'
+      };
+    }
+  });
+
+  ipcMain.handle('ai-list-models', async (_event, payload = {}) => {
+    try {
+      const endpoint = payload.endpoint || store.get('settings.aiEndpoint', '');
+      const apiKey = payload.apiKey || store.get('settings.aiApiKey', '');
+      const requestType =
+        payload.requestType || store.get('settings.aiRequestType', 'openai-chat');
+      const timeout = (store.get('settings.translationTimeout', 120) || 120) * 1000;
+
+      if (!endpoint || !apiKey) {
+        return {
+          success: false,
+          error: '请先在设置中配置 AI API 端点和密钥'
+        };
+      }
+
+      if (typeof fetchAiModels !== 'function') {
+        return {
+          success: false,
+          error: '模型列表功能未初始化'
+        };
+      }
+
+      const models = await fetchAiModels({
+        endpoint,
+        apiKey,
+        requestType,
+        timeout
+      });
+
+      return {
+        success: true,
+        models
+      };
+    } catch (error) {
+      console.error('AI list models error:', error);
+      return {
+        success: false,
+        error: error.message || '获取模型列表失败'
       };
     }
   });
