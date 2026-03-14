@@ -58,7 +58,14 @@ function createTabWebviewEvents(options) {
   } = options;
 
   function setupWebviewEvents(webview, id) {
+    if (webview.dataset && typeof webview.isLoading === 'function') {
+      webview.dataset.domReady = webview.isLoading() ? 'false' : 'true';
+    }
+
     webview.addEventListener('did-start-loading', () => {
+      if (webview.dataset) {
+        webview.dataset.domReady = 'false';
+      }
       setTabLoading(id, true);
       if (id === getActiveTabId()) {
         progressBar.style.opacity = '1';
@@ -85,6 +92,12 @@ function createTabWebviewEvents(options) {
       updateBookmarkIcon(webview.getURL());
       if (typeof onWebviewDidStopLoading === 'function') {
         onWebviewDidStopLoading(webview, id);
+      }
+    });
+
+    webview.addEventListener('dom-ready', () => {
+      if (webview.dataset) {
+        webview.dataset.domReady = 'true';
       }
     });
 

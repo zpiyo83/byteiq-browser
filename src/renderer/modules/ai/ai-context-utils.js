@@ -187,6 +187,51 @@ async function extractPageContent(webview) {
   }
 
   try {
+    if (!webview.isConnected) {
+      const start = Date.now();
+      await new Promise((resolve, reject) => {
+        const timer = setInterval(() => {
+          if (webview.isConnected) {
+            clearInterval(timer);
+            resolve();
+            return;
+          }
+          if (Date.now() - start > 100000) {
+            clearInterval(timer);
+            reject(new Error('Webview attach timeout'));
+          }
+        }, 50);
+      });
+    }
+
+    if (webview.dataset && webview.dataset.domReady !== 'true') {
+      if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
+        webview.dataset.domReady = 'true';
+      } else {
+        await new Promise((resolve, reject) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            webview.removeEventListener('dom-ready', onReady);
+            reject(new Error('Webview dom-ready timeout'));
+          }, 100000);
+
+          function onReady() {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (webview.dataset) {
+              webview.dataset.domReady = 'true';
+            }
+            webview.removeEventListener('dom-ready', onReady);
+            resolve();
+          }
+
+          webview.addEventListener('dom-ready', onReady);
+        });
+      }
+    }
     const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
     return content;
   } catch (error) {
@@ -212,35 +257,29 @@ function buildSelectionContext(options) {
 }
 
 function buildSystemPrompt(options) {
-  const {
-    mode,
-    pageContext,
-    pageList,
-    includePageContext = true,
-    t
-  } = options;
+  const { mode, pageContext, pageList, includePageContext = true, t } = options;
   const base =
     t('ai.systemPrompt') ||
     '你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。';
 
   let modePrompt = '';
   switch (mode) {
-  case 'outline':
-    modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
-    break;
-  case 'compare':
-    modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
-    break;
-  case 'translate_page':
-    modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
-    break;
-  case 'code_docs':
-    modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
-    break;
-  case 'qa':
-  default:
-    modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
-    break;
+    case 'outline':
+      modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
+      break;
+    case 'compare':
+      modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
+      break;
+    case 'translate_page':
+      modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
+      break;
+    case 'code_docs':
+      modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
+      break;
+    case 'qa':
+    default:
+      modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
+      break;
   }
 
   let systemPrompt = `${base}\n\n${modePrompt}`;

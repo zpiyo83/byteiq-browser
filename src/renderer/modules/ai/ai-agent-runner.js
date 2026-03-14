@@ -60,29 +60,29 @@ function createAiAgentRunner(options) {
 
   function getToolStatusLabel(status) {
     switch (status) {
-    case 'success':
-      return '已完成';
-    case 'error':
-      return '失败';
-    case 'pending':
-      return '执行中';
-    default:
-      return '状态';
+      case 'success':
+        return '已完成';
+      case 'error':
+        return '失败';
+      case 'pending':
+        return '执行中';
+      default:
+        return '状态';
     }
   }
 
   function getToolTitle(toolName) {
     switch (toolName) {
-    case 'get_page_info':
-      return '获取页面信息';
-    case 'click_element':
-      return '点击元素';
-    case 'input_text':
-      return '输入文本';
-    case 'end_session':
-      return '结束会话';
-    default:
-      return toolName || '工具';
+      case 'get_page_info':
+        return '获取页面信息';
+      case 'click_element':
+        return '点击元素';
+      case 'input_text':
+        return '输入文本';
+      case 'end_session':
+        return '结束会话';
+      default:
+        return toolName || '工具';
     }
   }
 
@@ -134,23 +134,23 @@ function createAiAgentRunner(options) {
     if (!toolCall) return '准备执行工具';
     const args = toolCall.arguments || {};
     switch (toolCall.name) {
-    case 'get_page_info':
-      return `获取页面信息（标题、URL、摘要、控件），${buildPageHintFromArgs(args)}`;
-    case 'click_element': {
-      const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
-      const pageHint = buildPageHintFromArgs(args);
-      return `准备点击元素，${selector}，${pageHint}`;
-    }
-    case 'input_text': {
-      const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
-      const text = args.text ? `输入: ${truncateText(args.text, 32)}` : '未提供文本';
-      const pageHint = buildPageHintFromArgs(args);
-      return `准备输入文本，${selector}，${text}，${pageHint}`;
-    }
-    case 'end_session':
-      return '准备结束当前会话';
-    default:
-      return '准备执行工具';
+      case 'get_page_info':
+        return `获取页面信息（标题、URL、摘要、控件），${buildPageHintFromArgs(args)}`;
+      case 'click_element': {
+        const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
+        const pageHint = buildPageHintFromArgs(args);
+        return `准备点击元素，${selector}，${pageHint}`;
+      }
+      case 'input_text': {
+        const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
+        const text = args.text ? `输入: ${truncateText(args.text, 32)}` : '未提供文本';
+        const pageHint = buildPageHintFromArgs(args);
+        return `准备输入文本，${selector}，${text}，${pageHint}`;
+      }
+      case 'end_session':
+        return '准备结束当前会话';
+      default:
+        return '准备执行工具';
     }
   }
 
@@ -175,9 +175,8 @@ function createAiAgentRunner(options) {
     }
 
     if (toolName === 'click_element') {
-      const tagName = toolResult && toolResult.tagName
-        ? `目标: ${toolResult.tagName.toLowerCase()}`
-        : '';
+      const tagName =
+        toolResult && toolResult.tagName ? `目标: ${toolResult.tagName.toLowerCase()}` : '';
       const role = toolResult && toolResult.role ? `role=${toolResult.role}` : '';
       const type = toolResult && toolResult.type ? `type=${toolResult.type}` : '';
       const pageHint = buildPageHintFromResult(toolResult, toolCall);
@@ -222,26 +221,29 @@ function createAiAgentRunner(options) {
   async function runAgentConversation(session, userText) {
     isAgentProcessing = true;
 
-    const systemPrompt = buildSystemPrompt({
-      mode: 'agent',
-      pageContext: session.pageContext,
-      pageList: typeof getPageList === 'function' ? getPageList() : [],
-      includePageContext: false,
-      t
-    }) +
+    const systemPrompt =
+      buildSystemPrompt({
+        mode: 'agent',
+        pageContext: session.pageContext,
+        pageList: typeof getPageList === 'function' ? getPageList() : [],
+        includePageContext: false,
+        t
+      }) +
       '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面' +
-      '信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束' +
-      '会话）。当你需要结束任务时，请调用end_session工具。' +
+      '信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束会话）。' +
+      '当你需要结束任务时，请调用end_session工具。' +
       '\n\n操作规范：' +
       '\n1. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
       '\n2. get_page_info支持tab_id参数，可选择具体页面。' +
-      '\n3. 仅使用controls中提供的selector或用户明确给出的selector。' +
-      '\n4. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
-      '\n5. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
+      '\n3. 如果不是当前页面，请在工具参数中提供tab_id以切换到目标页面。' +
+      '\n4. 仅使用controls中提供的selector或用户明确给出的selector。' +
+      '\n5. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
+      '\n6. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出“等待X秒”。' +
+      '\n7. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
 
     agentMessageHistory = [
       { role: 'system', content: systemPrompt },
-      ...await historyStorage.getMessages(session.id, { limit: 50 }),
+      ...(await historyStorage.getMessages(session.id, { limit: 50 })),
       { role: 'user', content: userText }
     ];
 
