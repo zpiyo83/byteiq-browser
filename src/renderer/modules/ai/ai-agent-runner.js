@@ -12,6 +12,7 @@ function createAiAgentRunner(options) {
     updateSession,
     renderSessionsList,
     addChatMessage,
+    documentRef,
     t,
     buildSystemPrompt,
     setInputEnabled
@@ -19,6 +20,78 @@ function createAiAgentRunner(options) {
 
   let isAgentProcessing = false;
   let agentMessageHistory = [];
+
+  function renderToolCard(target, options) {
+    if (!target) return;
+    if (!documentRef) {
+      target.classList.remove('streaming');
+      target.innerText = options.description || '';
+      return;
+    }
+
+    const { title, description, status } = options;
+    target.classList.remove('streaming');
+    target.classList.add('tool-card');
+    target.innerHTML = '';
+
+    const header = documentRef.createElement('div');
+    header.className = 'tool-card-header';
+
+    const titleEl = documentRef.createElement('div');
+    titleEl.className = 'tool-card-title';
+    titleEl.textContent = `工具：${title}`;
+    header.appendChild(titleEl);
+
+    if (status) {
+      const statusEl = documentRef.createElement('span');
+      statusEl.className = `tool-card-status ${status}`;
+      statusEl.textContent = getToolStatusLabel(status);
+      header.appendChild(statusEl);
+    }
+
+    const descEl = documentRef.createElement('div');
+    descEl.className = 'tool-card-desc';
+    descEl.textContent = description || '';
+
+    target.appendChild(header);
+    target.appendChild(descEl);
+  }
+
+  function getToolStatusLabel(status) {
+    switch (status) {
+    case 'success':
+      return '已完成';
+    case 'error':
+      return '失败';
+    case 'pending':
+      return '执行中';
+    default:
+      return '状态';
+    }
+  }
+
+  function buildToolResultSummary(toolName, toolResult) {
+    if (toolName === 'get_page_info') {
+      return {
+        status: toolResult && toolResult.success === false ? 'error' : 'success',
+        text: toolResult && toolResult.success === false
+          ? (toolResult.error || '获取页面信息失败')
+          : '已获取页面信息'
+      };
+    }
+
+    if (toolResult && toolResult.success === false) {
+      return {
+        status: 'error',
+        text: toolResult.error || '工具执行失败'
+      };
+    }
+
+    return {
+      status: 'success',
+      text: '工具已执行'
+    };
+  }
 
   async function sendAgentRequest(messages) {
     setInputEnabled(false);
@@ -84,7 +157,12 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'tool_calls') {
-          aiMsgElement.innerText = `[调用工具: ${result.toolCalls.map(tl => tl.name).join(', ')}]`;
+          const toolNames = result.toolCalls.map(tl => tl.name).join('、');
+          renderToolCard(aiMsgElement, {
+            title: toolNames,
+            description: `准备调用工具：${toolNames}`,
+            status: 'pending'
+          });
 
           const openAiToolCalls = result.toolCalls.map(call => ({
             id: call.id,
@@ -116,7 +194,13 @@ function createAiAgentRunner(options) {
               content: JSON.stringify(toolResult)
             });
 
-            addChatMessage(`[工具 ${toolCall.name} 结果]: ${JSON.stringify(toolResult)}`, 'ai');
+            const summary = buildToolResultSummary(toolCall.name, toolResult);
+            const resultMessage = addChatMessage('', 'ai');
+            renderToolCard(resultMessage, {
+              title: toolCall.name,
+              description: summary.text,
+              status: summary.status
+            });
           }
 
           if (!isAgentProcessing) break;
