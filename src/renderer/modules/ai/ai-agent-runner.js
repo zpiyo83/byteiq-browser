@@ -70,7 +70,51 @@ function createAiAgentRunner(options) {
     }
   }
 
-  function buildToolResultSummary(toolName, toolResult) {
+  function getToolTitle(toolName) {
+    switch (toolName) {
+    case 'get_page_info':
+      return '获取页面信息';
+    case 'click_element':
+      return '点击元素';
+    case 'input_text':
+      return '输入文本';
+    case 'end_session':
+      return '结束会话';
+    default:
+      return toolName || '工具';
+    }
+  }
+
+  function truncateText(text, maxLength) {
+    const value = String(text || '');
+    if (!maxLength || value.length <= maxLength) return value;
+    return value.substring(0, maxLength) + '...';
+  }
+
+  function buildToolCallDescription(toolCall) {
+    if (!toolCall) return '准备执行工具';
+    const args = toolCall.arguments || {};
+    switch (toolCall.name) {
+    case 'get_page_info':
+      return '获取当前页面信息（标题、URL、摘要、控件）';
+    case 'click_element': {
+      const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
+      return `准备点击元素，${selector}`;
+    }
+    case 'input_text': {
+      const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
+      const text = args.text ? `输入: ${truncateText(args.text, 32)}` : '未提供文本';
+      return `准备输入文本，${selector}，${text}`;
+    }
+    case 'end_session':
+      return '准备结束当前会话';
+    default:
+      return '准备执行工具';
+    }
+  }
+
+  function buildToolResultSummary(toolCall, toolResult) {
+    const toolName = toolCall ? toolCall.name : '';
     if (toolName === 'get_page_info') {
       return {
         status: toolResult && toolResult.success === false ? 'error' : 'success',
@@ -84,6 +128,25 @@ function createAiAgentRunner(options) {
       return {
         status: 'error',
         text: toolResult.error || '工具执行失败'
+      };
+    }
+
+    if (toolName === 'click_element') {
+      const tagName = toolResult && toolResult.tagName
+        ? `目标: ${toolResult.tagName.toLowerCase()}`
+        : '';
+      const cancelled = toolResult && toolResult.cancelled ? '事件被取消' : '';
+      const details = [tagName, cancelled].filter(Boolean).join('，');
+      return {
+        status: 'success',
+        text: details ? `点击成功，${details}` : '点击成功'
+      };
+    }
+
+    if (toolName === 'input_text') {
+      return {
+        status: 'success',
+        text: '已输入文本'
       };
     }
 
@@ -157,11 +220,15 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'tool_calls') {
-          const toolNames = result.toolCalls.map(tl => tl.name).join('、');
-          renderToolCard(aiMsgElement, {
-            title: toolNames,
-            description: `准备调用工具：${toolNames}`,
-            status: 'pending'
+          const toolMessages = new Map();
+          result.toolCalls.forEach((toolCall, index) => {
+            const target = index === 0 ? aiMsgElement : addChatMessage('', 'ai');
+            toolMessages.set(toolCall.id, target);
+            renderToolCard(target, {
+              title: getToolTitle(toolCall.name),
+              description: buildToolCallDescription(toolCall),
+              status: 'pending'
+            });
           });
 
           const openAiToolCalls = result.toolCalls.map(call => ({
@@ -181,10 +248,15 @@ function createAiAgentRunner(options) {
 
           for (const toolCall of result.toolCalls) {
             const toolResult = await toolsExecutor.execute(toolCall);
+            const target = toolMessages.get(toolCall.id) || addChatMessage('', 'ai');
 
             if (toolCall.name === 'end_session') {
+              renderToolCard(target, {
+                title: getToolTitle(toolCall.name),
+                description: '会话已结束',
+                status: 'success'
+              });
               isAgentProcessing = false;
-              addChatMessage(t('ai.sessionEnded') || '会话已结束', 'ai');
               break;
             }
 
@@ -194,10 +266,9 @@ function createAiAgentRunner(options) {
               content: JSON.stringify(toolResult)
             });
 
-            const summary = buildToolResultSummary(toolCall.name, toolResult);
-            const resultMessage = addChatMessage('', 'ai');
-            renderToolCard(resultMessage, {
-              title: toolCall.name,
+            const summary = buildToolResultSummary(toolCall, toolResult);
+            renderToolCard(target, {
+              title: getToolTitle(toolCall.name),
               description: summary.text,
               status: summary.status
             });
