@@ -16,6 +16,7 @@ const { createExtensionsManager } = require('./modules/extensions/extensions-man
 const { createTranslationManager } = require('./modules/ui/translation-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
+const { getDomReferences } = require('./modules/app/dom-references');
 const { bindSettingsAndPanelEvents } = require('./modules/app/events/settings-and-panels-events');
 const {
   bindNavigationAndDevtoolsEvents
@@ -26,102 +27,89 @@ if (store.get('settings.darkMode')) {
   document.body.classList.add('dark-mode');
 }
 
-// DOM 元素引用
-const urlInput = document.getElementById('url-input');
-const backBtn = document.getElementById('back-btn');
-const forwardBtn = document.getElementById('forward-btn');
-const refreshBtn = document.getElementById('refresh-btn');
-const homeBtn = document.getElementById('home-btn');
-const historyBtn = document.getElementById('history-btn');
-const bookmarksListBtn = document.getElementById('bookmarks-list-btn');
-const devtoolsBtn = document.getElementById('devtools-btn');
-const settingsBtn = document.getElementById('settings-btn');
-const downloadsBtn = document.getElementById('downloads-btn');
-const bookmarkBtn = document.getElementById('bookmark-btn');
-const clearUrlBtn = document.getElementById('clear-url-btn');
-const progressBar = document.getElementById('progress-bar');
-// 面板相关元素
-const historyPanel = document.getElementById('history-panel');
-const settingsPanel = document.getElementById('settings-panel');
-const bookmarksPanel = document.getElementById('bookmarks-panel');
-const downloadsPanel = document.getElementById('downloads-panel');
-const historyList = document.getElementById('history-list');
-const bookmarksList = document.getElementById('bookmarks-list');
-const downloadsList = document.getElementById('downloads-list');
-const historySearchInput = document.getElementById('history-search-input');
-const bookmarksSearchInput = document.getElementById('bookmarks-search-input');
-const downloadsSearchInput = document.getElementById('downloads-search-input');
-const downloadsFilters = document.getElementById('downloads-filters');
-const downloadsClearAllBtn = document.getElementById('downloads-clear-all-btn');
-const downloadsClearCompletedBtn = document.getElementById('downloads-clear-completed-btn');
-const downloadsClearFailedBtn = document.getElementById('downloads-clear-failed-btn');
-// 设置相关元素
-const searchEngineSelect = document.getElementById('search-engine-select');
-const startupUrlInput = document.getElementById('startup-url-input');
-const incognitoToggleBtn = document.getElementById('incognito-toggle-btn');
-const darkModeToggle = document.getElementById('dark-mode-toggle');
-const zoomInBtn = document.getElementById('zoom-in-btn');
-const zoomOutBtn = document.getElementById('zoom-out-btn');
-const zoomResetBtn = document.getElementById('zoom-reset-btn');
-const zoomLevelText = document.getElementById('zoom-level-text');
-const clearDataBtn = document.getElementById('clear-data-btn');
-const exportDataBtn = document.getElementById('export-data-btn');
-const restoreSessionToggle = document.getElementById('restore-session-toggle');
-// 扩展和翻译相关元素
-const extensionsList = document.getElementById('extensions-list');
-const extensionsAddBtn = document.getElementById('extensions-add-btn');
-const extensionsRefreshBtn = document.getElementById('extensions-refresh-btn');
-const extensionsEmpty = document.getElementById('extensions-empty');
-const aiEndpointInput = document.getElementById('ai-endpoint-input');
-const aiApiKeyInput = document.getElementById('ai-api-key-input');
-const aiRequestTypeSelect = document.getElementById('ai-request-type-select');
-const aiModelIdInput = document.getElementById('ai-model-id-input');
-// 翻译设置相关元素
-const translationApiEnabledToggle = document.getElementById('translation-api-enabled-toggle');
-const translationEndpointInput = document.getElementById('translation-endpoint-input');
-const translationApiKeyInput = document.getElementById('translation-api-key-input');
-const translationRequestTypeSelect = document.getElementById('translation-request-type-select');
-const translationModelIdInput = document.getElementById('translation-model-id-input');
-const translationTargetLanguageSelect = document.getElementById(
-  'translation-target-language-select'
-);
-const translationDynamicEnabledToggle = document.getElementById(
-  'translation-dynamic-enabled-toggle'
-);
-// 翻译高级选项元素
-const translationStreamingToggle = document.getElementById('translation-streaming-toggle');
-const translationConcurrencyToggle = document.getElementById('translation-concurrency-toggle');
-const translationConcurrencyCountInput = document.getElementById(
-  'translation-concurrency-count-input'
-);
-const translationMaxTextsInput = document.getElementById('translation-max-texts-input');
-const translationMaxCharsInput = document.getElementById('translation-max-chars-input');
-const translationTimeoutInput = document.getElementById('translation-timeout-input');
-// 标签页和webview相关元素
-const tabsBar = document.getElementById('tabs-bar');
-const newTabBtn = document.getElementById('new-tab-btn');
-const webviewsContainer = document.getElementById('webviews-container');
-const newTabTemplate = document.getElementById('new-tab-template');
-// AI 助手相关元素
-const aiSidebar = document.getElementById('ai-sidebar');
-const toggleAiBtn = document.getElementById('toggle-ai-btn');
-const closeAiBtn = document.getElementById('close-ai-btn');
-const aiInput = document.getElementById('ai-input');
-const aiSendBtn = document.getElementById('ai-send-btn');
-const aiChatArea = document.getElementById('ai-chat-area');
-// 查找和上下文菜单相关元素
-const findBox = document.getElementById('find-box');
-const findInput = document.getElementById('find-input');
-const findResults = document.getElementById('find-results');
-const findPrev = document.getElementById('find-prev');
-const findNext = document.getElementById('find-next');
-const findClose = document.getElementById('find-close');
-const contextMenu = document.getElementById('context-menu');
-const tabContextMenu = document.getElementById('tab-context-menu');
-const overlayBackdrop = document.getElementById('overlay-backdrop');
-// 更多按钮相关元素
-const moreMenuBtn = document.getElementById('more-menu-btn');
-const moreMenuDropdown = document.getElementById('more-menu-dropdown');
+const domRefs = getDomReferences(document);
+const {
+  urlInput,
+  backBtn,
+  forwardBtn,
+  refreshBtn,
+  homeBtn,
+  historyBtn,
+  bookmarksListBtn,
+  devtoolsBtn,
+  settingsBtn,
+  downloadsBtn,
+  bookmarkBtn,
+  clearUrlBtn,
+  progressBar,
+  historyPanel,
+  settingsPanel,
+  bookmarksPanel,
+  downloadsPanel,
+  historyList,
+  bookmarksList,
+  downloadsList,
+  historySearchInput,
+  bookmarksSearchInput,
+  downloadsSearchInput,
+  downloadsFilters,
+  downloadsClearAllBtn,
+  downloadsClearCompletedBtn,
+  downloadsClearFailedBtn,
+  searchEngineSelect,
+  startupUrlInput,
+  incognitoToggleBtn,
+  darkModeToggle,
+  zoomInBtn,
+  zoomOutBtn,
+  zoomResetBtn,
+  zoomLevelText,
+  clearDataBtn,
+  exportDataBtn,
+  restoreSessionToggle,
+  extensionsList,
+  extensionsAddBtn,
+  extensionsRefreshBtn,
+  extensionsEmpty,
+  aiEndpointInput,
+  aiApiKeyInput,
+  aiRequestTypeSelect,
+  aiModelIdInput,
+  translationApiEnabledToggle,
+  translationEndpointInput,
+  translationApiKeyInput,
+  translationRequestTypeSelect,
+  translationModelIdInput,
+  translationTargetLanguageSelect,
+  translationDynamicEnabledToggle,
+  translationStreamingToggle,
+  translationConcurrencyToggle,
+  translationConcurrencyCountInput,
+  translationMaxTextsInput,
+  translationMaxCharsInput,
+  translationTimeoutInput,
+  tabsBar,
+  newTabBtn,
+  webviewsContainer,
+  newTabTemplate,
+  aiSidebar,
+  toggleAiBtn,
+  closeAiBtn,
+  aiInput,
+  aiSendBtn,
+  aiChatArea,
+  findBox,
+  findInput,
+  findResults,
+  findPrev,
+  findNext,
+  findClose,
+  contextMenu,
+  tabContextMenu,
+  overlayBackdrop,
+  moreMenuBtn,
+  moreMenuDropdown
+} = domRefs;
 
 // 全局状态变量
 let isIncognito = false; // 隐私模式状态

@@ -257,7 +257,7 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
  */
 function sendChatRequest(messages, config) {
   return new Promise((resolve, reject) => {
-    const { endpoint, apiKey, requestType, model, timeout } = config;
+    const { endpoint, apiKey, requestType, model, timeout, tools } = config;
 
     if (!endpoint || !apiKey) {
       reject(new Error('AI endpoint and API key are required'));
@@ -273,6 +273,13 @@ function sendChatRequest(messages, config) {
       case 'openai-chat':
       default:
         requestBody = buildOpenAIChatRequest(messages, model, false);
+        break;
+    }
+
+    // 如果有工具定义，添加到请求体
+    if (tools && tools.length > 0) {
+      requestBody.tools = tools;
+      requestBody.tool_choice = 'auto';
     }
 
     const url = new URL(endpoint);
@@ -295,25 +302,8 @@ function sendChatRequest(messages, config) {
       });
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          try {
-            const parsed = JSON.parse(data);
-            let content;
-
-            switch (requestType) {
-              case 'openai-chat':
-                content = parsed.choices?.[0]?.message?.content || '';
-                break;
-              case 'anthropic':
-                content = parsed.content?.[0]?.text || '';
-                break;
-              default:
-                content = parsed.choices?.[0]?.message?.content || '';
-            }
-
-            resolve(content);
-          } catch (error) {
-            reject(new Error(`Parse error: ${error.message}`));
-          }
+          // 返回完整响应数据，让调用者解析工具调用
+          resolve(data);
         } else {
           reject(new Error(`HTTP ${res.statusCode}: ${data}`));
         }
