@@ -19,12 +19,47 @@ async function clickElement(webview, { selector }) {
     if (!el) {
       return { success: false, error: 'Element not found' };
     }
+    const style = window.getComputedStyle(el);
+    if (style.pointerEvents === 'none') {
+      return { success: false, error: 'Element not clickable' };
+    }
+    if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') {
+      return { success: false, error: 'Element disabled' };
+    }
     if (typeof el.scrollIntoView === 'function') {
       el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
     }
-    const event = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-    const cancelled = !el.dispatchEvent(event);
-    return { success: true, tagName: el.tagName, cancelled };
+    if (typeof el.focus === 'function') {
+      el.focus({ preventScroll: true });
+    }
+
+    let cancelled = false;
+    let clicked = false;
+
+    if (typeof el.click === 'function') {
+      el.click();
+      clicked = true;
+    } else {
+      const mouseDown = new MouseEvent(
+        'mousedown',
+        { bubbles: true, cancelable: true, view: window }
+      );
+      const mouseUp = new MouseEvent(
+        'mouseup',
+        { bubbles: true, cancelable: true, view: window }
+      );
+      const click = new MouseEvent(
+        'click',
+        { bubbles: true, cancelable: true, view: window }
+      );
+      cancelled =
+        !el.dispatchEvent(mouseDown) ||
+        !el.dispatchEvent(mouseUp) ||
+        !el.dispatchEvent(click);
+      clicked = true;
+    }
+
+    return { success: clicked, tagName: el.tagName, cancelled };
   } catch (error) {
     return { success: false, error: error && error.message ? error.message : 'Click failed' };
   }
