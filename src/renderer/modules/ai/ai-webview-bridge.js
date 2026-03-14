@@ -59,7 +59,13 @@ async function clickElement(webview, { selector }) {
       clicked = true;
     }
 
-    return { success: clicked, tagName: el.tagName, cancelled };
+    return {
+      success: clicked,
+      tagName: el.tagName,
+      role: el.getAttribute('role') || '',
+      type: el.getAttribute('type') || '',
+      cancelled
+    };
   } catch (error) {
     return { success: false, error: error && error.message ? error.message : 'Click failed' };
   }

@@ -16,6 +16,13 @@ function createAiToolsExecutor(options) {
     return webview;
   }
 
+  function getWebviewById(tabId) {
+    if (!tabId) return null;
+    const webview = documentRef.getElementById(`webview-${tabId}`);
+    if (!webview || webview.tagName !== 'WEBVIEW') return null;
+    return webview;
+  }
+
   function validateToolArgs(def, args) {
     const required = def.parameters?.required || [];
     for (const key of required) {
@@ -55,6 +62,7 @@ function createAiToolsExecutor(options) {
     return def.execute(
       {
         getActiveWebview,
+        getWebviewById,
         extractPageContent
       },
       args

@@ -30,7 +30,8 @@ function createAiManager(options) {
     toggleAiBtn,
     ipcRenderer,
     store,
-    showToast
+    showToast,
+    tabManager
   } = options;
 
   // 上下文状态栏元素
@@ -112,8 +113,33 @@ function createAiManager(options) {
 
   // 模式切换事件监听
   if (modeSelect) {
-    modeSelect.addEventListener('change', (e) => {
+    modeSelect.addEventListener('change', async (e) => {
       currentMode = e.target.value;
+      if (currentMode === 'agent') {
+        contextBar.style.display = 'none';
+        return;
+      }
+      const session = await getCurrentSession();
+      updateContextBar(session?.pageContext);
+    });
+  }
+
+  function getPageListSnapshot() {
+    if (!tabManager || typeof tabManager.getTabsSnapshot !== 'function') {
+      return [];
+    }
+    const tabs = tabManager.getTabsSnapshot();
+    return tabs.map((tab, index) => {
+      const webview = documentRef.getElementById(`webview-${tab.id}`);
+      const url = tab.url || (webview && webview.tagName === 'WEBVIEW' ? webview.getURL() : '');
+      const title = tab.title || url || t('tabs.newTab');
+      return {
+        id: tab.id,
+        title,
+        url,
+        active: tab.active,
+        index: index + 1
+      };
     });
   }
 
@@ -127,7 +153,8 @@ function createAiManager(options) {
     documentRef,
     t,
     buildSystemPrompt,
-    setInputEnabled
+    setInputEnabled,
+    getPageList: getPageListSnapshot
   });
 
 
@@ -140,10 +167,18 @@ function createAiManager(options) {
     await renderSessionsList();
     await renderSessionChat(session);
     updateContextBar(session?.pageContext);
+    if (currentMode === 'agent') {
+      contextBar.style.display = 'none';
+    }
 
     const tabId = getActiveTabId();
     const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
-    if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
+    if (
+      currentMode !== 'agent' &&
+      webview &&
+      webview.tagName === 'WEBVIEW' &&
+      !webview.isLoading()
+    ) {
       await extractAndSetPageContext({
         tabId,
         webview,
@@ -250,15 +285,17 @@ function createAiManager(options) {
     await renderSessionChat(session);
 
     // 提取页面内容
-    await extractAndSetPageContext({
-      tabId,
-      webview,
-      getCurrentSession,
-      updateSession,
-      updateContextBar,
-      renderSessionsList,
-      extractPageContentFn: extractPageContent
-    });
+    if (currentMode !== 'agent') {
+      await extractAndSetPageContext({
+        tabId,
+        webview,
+        getCurrentSession,
+        updateSession,
+        updateContextBar,
+        renderSessionsList,
+        extractPageContentFn: extractPageContent
+      });
+    }
   }
 
   /**
@@ -354,6 +391,21 @@ function createAiManager(options) {
     await updateSession(session.id, { updatedAt: Date.now() });
     renderSessionsList();
 
+    const tabId = getActiveTabId();
+    const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
+    if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
+      await extractAndSetPageContext({
+        tabId,
+        webview,
+        getCurrentSession,
+        updateSession,
+        updateContextBar,
+        renderSessionsList,
+        extractPageContentFn: extractPageContent,
+        force: true
+      });
+    }
+
     // 创建流式消息元素
     const streamingMsg = addChatMessage('', 'ai', true);
 
@@ -421,15 +473,17 @@ function createAiManager(options) {
           const session = await getCurrentSession();
           await renderSessionsList();
           await renderSessionChat(session);
-          await extractAndSetPageContext({
-            tabId,
-            webview,
-            getCurrentSession,
-            updateSession,
-            updateContextBar,
-            renderSessionsList,
-            extractPageContentFn: extractPageContent
-          });
+          if (currentMode !== 'agent') {
+            await extractAndSetPageContext({
+              tabId,
+              webview,
+              getCurrentSession,
+              updateSession,
+              updateContextBar,
+              renderSessionsList,
+              extractPageContentFn: extractPageContent
+            });
+          }
         }
       }
     });
