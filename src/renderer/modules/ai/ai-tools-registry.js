@@ -9,7 +9,7 @@ function getAiToolDefinitions() {
   return [
     {
       name: 'get_page_info',
-      description: '获取当前页面的URL、标题和内容摘要',
+      description: '获取当前页面的URL、标题、内容摘要和可交互元素列表',
       parameters: {
         type: 'object',
         properties: {}
