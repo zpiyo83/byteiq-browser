@@ -75,6 +75,22 @@ function createTabManager(options) {
     return tabs.find(tab => tab.id === id);
   }
 
+  function getTabsSnapshot() {
+    const orderedIds = getOrderedTabIds();
+    const orderedTabs = orderedIds.length
+      ? orderedIds.map(id => getTabById(id)).filter(Boolean)
+      : tabs.slice();
+
+    return orderedTabs.map(tab => ({
+      id: tab.id,
+      title: tab.title || '',
+      url: tab.url || '',
+      pinned: !!tab.pinned,
+      loading: !!tab.loading,
+      active: tab.id === activeTabId
+    }));
+  }
+
   // 更新标签页URL
   function updateTabUrl(id, url) {
     const tab = getTabById(id);
@@ -393,6 +409,7 @@ function createTabManager(options) {
     createTab,
     duplicateTab,
     getActiveTabId,
+    getTabsSnapshot,
     getTabById,
     restoreLastTab,
     restoreSession,

@@ -212,7 +212,13 @@ function buildSelectionContext(options) {
 }
 
 function buildSystemPrompt(options) {
-  const { mode, pageContext, t } = options;
+  const {
+    mode,
+    pageContext,
+    pageList,
+    includePageContext = true,
+    t
+  } = options;
   const base =
     t('ai.systemPrompt') ||
     '你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。';
@@ -239,7 +245,7 @@ function buildSystemPrompt(options) {
 
   let systemPrompt = `${base}\n\n${modePrompt}`;
 
-  if (pageContext && pageContext.content) {
+  if (includePageContext && pageContext && pageContext.content) {
     systemPrompt += '\n\n' + (t('ai.pageContext') || '当前页面信息：');
     systemPrompt += `\n标题: ${pageContext.title}`;
     systemPrompt += `\nURL: ${pageContext.url}`;
@@ -249,7 +255,14 @@ function buildSystemPrompt(options) {
     systemPrompt += `\n\n页面内容:\n${pageContext.content}`;
   }
 
-  if (mode === 'agent' && pageContext?.controls) {
+  if (mode === 'agent' && Array.isArray(pageList)) {
+    const pagesSummary = buildPagesSummary(pageList);
+    if (pagesSummary) {
+      systemPrompt += '\n\n当前可用页面(每次请求更新):\n' + pagesSummary;
+    }
+  }
+
+  if (mode === 'agent' && includePageContext && pageContext?.controls) {
     const controlsSummary = buildControlsSummary(pageContext.controls);
     if (controlsSummary) {
       systemPrompt += '\n\n可交互元素:\n' + controlsSummary;
@@ -290,6 +303,27 @@ function buildControlsSummary(controls) {
   return lines.join('\n');
 }
 
+function buildPagesSummary(pages) {
+  if (!Array.isArray(pages) || pages.length === 0) return '';
+  const limit = 10;
+  const lines = [];
+  const slice = pages.slice(0, limit);
+
+  for (const page of slice) {
+    const title = String(page.title || page.url || '未命名页面');
+    const url = page.url ? ` | ${page.url}` : '';
+    const active = page.active ? ' [当前]' : '';
+    const id = page.id ? ` | tab_id=${page.id}` : '';
+    lines.push(`${title}${active}${url}${id}`);
+  }
+
+  if (pages.length > limit) {
+    lines.push(`...还有${pages.length - limit}个页面`);
+  }
+
+  return lines.join('\n');
+}
+
 async function extractAndSetPageContext(options) {
   const {
     tabId,
@@ -298,14 +332,15 @@ async function extractAndSetPageContext(options) {
     updateSession,
     updateContextBar,
     renderSessionsList,
-    extractPageContentFn
+    extractPageContentFn,
+    force = false
   } = options;
 
   const session = await getCurrentSession();
   const previousUrl = session?.pageContext?.url;
   const pageContext = await extractPageContentFn(webview);
 
-  if (pageContext && pageContext.url !== previousUrl && session) {
+  if (pageContext && session && (force || pageContext.url !== previousUrl)) {
     await updateSession(session.id, { pageContext });
     updateContextBar(pageContext);
     await renderSessionsList();
@@ -317,5 +352,6 @@ module.exports = {
   extractPageContent,
   buildSelectionContext,
   buildSystemPrompt,
+  buildPagesSummary,
   extractAndSetPageContext
 };

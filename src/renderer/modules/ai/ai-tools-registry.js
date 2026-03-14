@@ -12,15 +12,29 @@ function getAiToolDefinitions() {
       description: '获取当前页面的URL、标题、内容摘要和可交互元素列表',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          tab_id: { type: 'string', description: '目标页面ID，可选，默认当前标签页' }
+        }
       },
-      async execute(context) {
-        const webview = context.getActiveWebview();
+      async execute(context, args) {
+        const tabId = args?.tab_id || '';
+        const webview = tabId
+          ? context.getWebviewById(tabId)
+          : context.getActiveWebview();
         if (!webview) {
-          return { success: false, error: 'No active webview' };
+          return {
+            success: false,
+            error: tabId ? 'Target webview not found' : 'No active webview'
+          };
         }
         const pageInfo = await context.extractPageContent(webview);
-        return pageInfo || { success: false, error: 'Failed to get page info' };
+        if (!pageInfo) {
+          return { success: false, error: 'Failed to get page info' };
+        }
+        return {
+          ...pageInfo,
+          tabId: tabId || ''
+        };
       }
     },
     {
@@ -29,18 +43,29 @@ function getAiToolDefinitions() {
       parameters: {
         type: 'object',
         properties: {
-          selector: { type: 'string', description: 'CSS选择器或元素ID' }
+          selector: { type: 'string', description: 'CSS选择器或元素ID' },
+          tab_id: { type: 'string', description: '目标页面ID，可选，默认当前标签页' }
         },
         required: ['selector']
       },
       async execute(context, args) {
-        const webview = context.getActiveWebview();
+        const tabId = args.tab_id || '';
+        const webview = tabId
+          ? context.getWebviewById(tabId)
+          : context.getActiveWebview();
         if (!webview) {
-          return { success: false, error: 'No active webview' };
+          return {
+            success: false,
+            error: tabId ? 'Target webview not found' : 'No active webview'
+          };
         }
-        return clickElement(webview, {
+        const result = await clickElement(webview, {
           selector: String(args.selector || '')
         });
+        return {
+          ...result,
+          tabId: tabId || ''
+        };
       }
     },
     {
@@ -50,19 +75,30 @@ function getAiToolDefinitions() {
         type: 'object',
         properties: {
           selector: { type: 'string', description: 'CSS选择器或元素ID' },
-          text: { type: 'string', description: '要输入的文本' }
+          text: { type: 'string', description: '要输入的文本' },
+          tab_id: { type: 'string', description: '目标页面ID，可选，默认当前标签页' }
         },
         required: ['selector', 'text']
       },
       async execute(context, args) {
-        const webview = context.getActiveWebview();
+        const tabId = args.tab_id || '';
+        const webview = tabId
+          ? context.getWebviewById(tabId)
+          : context.getActiveWebview();
         if (!webview) {
-          return { success: false, error: 'No active webview' };
+          return {
+            success: false,
+            error: tabId ? 'Target webview not found' : 'No active webview'
+          };
         }
-        return inputText(webview, {
+        const result = await inputText(webview, {
           selector: String(args.selector || ''),
           text: String(args.text || '')
         });
+        return {
+          ...result,
+          tabId: tabId || ''
+        };
       }
     },
     {

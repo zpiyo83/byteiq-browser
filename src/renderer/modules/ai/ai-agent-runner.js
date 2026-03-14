@@ -15,7 +15,8 @@ function createAiAgentRunner(options) {
     documentRef,
     t,
     buildSystemPrompt,
-    setInputEnabled
+    setInputEnabled,
+    getPageList
   } = options;
 
   let isAgentProcessing = false;
@@ -91,20 +92,60 @@ function createAiAgentRunner(options) {
     return value.substring(0, maxLength) + '...';
   }
 
+  function resolvePageLabel(tabId) {
+    if (!tabId || typeof getPageList !== 'function') return '';
+    const pages = getPageList() || [];
+    const match = pages.find(page => page.id === tabId);
+    if (!match) return '';
+    return match.title || match.url || '';
+  }
+
+  function buildPageHintFromArgs(args) {
+    if (!args || !args.tab_id) return '当前页面';
+    const label = resolvePageLabel(args.tab_id);
+    if (label) {
+      return `页面: ${label}`;
+    }
+    return `tab_id: ${args.tab_id}`;
+  }
+
+  function buildPageHintFromResult(toolResult, toolCall) {
+    if (toolResult?.title) {
+      return `页面: ${toolResult.title}`;
+    }
+    if (toolResult?.url) {
+      return `页面: ${toolResult.url}`;
+    }
+    if (toolResult?.tabId) {
+      const label = resolvePageLabel(toolResult.tabId);
+      if (label) return `页面: ${label}`;
+      return `tab_id: ${toolResult.tabId}`;
+    }
+    const callTabId = toolCall?.arguments?.tab_id;
+    if (callTabId) {
+      const label = resolvePageLabel(callTabId);
+      if (label) return `页面: ${label}`;
+      return `tab_id: ${callTabId}`;
+    }
+    return '';
+  }
+
   function buildToolCallDescription(toolCall) {
     if (!toolCall) return '准备执行工具';
     const args = toolCall.arguments || {};
     switch (toolCall.name) {
     case 'get_page_info':
-      return '获取当前页面信息（标题、URL、摘要、控件）';
+      return `获取页面信息（标题、URL、摘要、控件），${buildPageHintFromArgs(args)}`;
     case 'click_element': {
       const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
-      return `准备点击元素，${selector}`;
+      const pageHint = buildPageHintFromArgs(args);
+      return `准备点击元素，${selector}，${pageHint}`;
     }
     case 'input_text': {
       const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
       const text = args.text ? `输入: ${truncateText(args.text, 32)}` : '未提供文本';
-      return `准备输入文本，${selector}，${text}`;
+      const pageHint = buildPageHintFromArgs(args);
+      return `准备输入文本，${selector}，${text}，${pageHint}`;
     }
     case 'end_session':
       return '准备结束当前会话';
@@ -116,11 +157,13 @@ function createAiAgentRunner(options) {
   function buildToolResultSummary(toolCall, toolResult) {
     const toolName = toolCall ? toolCall.name : '';
     if (toolName === 'get_page_info') {
+      const pageHint = buildPageHintFromResult(toolResult, toolCall);
+      const failed = toolResult && toolResult.success === false;
+      const errorText = toolResult && toolResult.error ? toolResult.error : '获取页面信息失败';
+      const successText = pageHint ? `已获取页面信息，${pageHint}` : '已获取页面信息';
       return {
-        status: toolResult && toolResult.success === false ? 'error' : 'success',
-        text: toolResult && toolResult.success === false
-          ? (toolResult.error || '获取页面信息失败')
-          : '已获取页面信息'
+        status: failed ? 'error' : 'success',
+        text: failed ? errorText : successText
       };
     }
 
@@ -135,8 +178,11 @@ function createAiAgentRunner(options) {
       const tagName = toolResult && toolResult.tagName
         ? `目标: ${toolResult.tagName.toLowerCase()}`
         : '';
+      const role = toolResult && toolResult.role ? `role=${toolResult.role}` : '';
+      const type = toolResult && toolResult.type ? `type=${toolResult.type}` : '';
+      const pageHint = buildPageHintFromResult(toolResult, toolCall);
       const cancelled = toolResult && toolResult.cancelled ? '事件被取消' : '';
-      const details = [tagName, cancelled].filter(Boolean).join('，');
+      const details = [tagName, role, type, cancelled, pageHint].filter(Boolean).join('，');
       return {
         status: 'success',
         text: details ? `点击成功，${details}` : '点击成功'
@@ -144,9 +190,10 @@ function createAiAgentRunner(options) {
     }
 
     if (toolName === 'input_text') {
+      const pageHint = buildPageHintFromResult(toolResult, toolCall);
       return {
         status: 'success',
-        text: '已输入文本'
+        text: pageHint ? `已输入文本，${pageHint}` : '已输入文本'
       };
     }
 
@@ -178,6 +225,8 @@ function createAiAgentRunner(options) {
     const systemPrompt = buildSystemPrompt({
       mode: 'agent',
       pageContext: session.pageContext,
+      pageList: typeof getPageList === 'function' ? getPageList() : [],
+      includePageContext: false,
       t
     }) +
       '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面' +
@@ -185,9 +234,10 @@ function createAiAgentRunner(options) {
       '会话）。当你需要结束任务时，请调用end_session工具。' +
       '\n\n操作规范：' +
       '\n1. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
-      '\n2. 仅使用controls中提供的selector或用户明确给出的selector。' +
-      '\n3. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
-      '\n4. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
+      '\n2. get_page_info支持tab_id参数，可选择具体页面。' +
+      '\n3. 仅使用controls中提供的selector或用户明确给出的selector。' +
+      '\n4. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
+      '\n5. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
 
     agentMessageHistory = [
       { role: 'system', content: systemPrompt },
