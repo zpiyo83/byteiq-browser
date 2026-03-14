@@ -44,7 +44,14 @@ function createAiAgentRunner(options) {
       pageContext: session.pageContext,
       t
     }) +
-      '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束会话）。当你需要结束任务时，请调用end_session工具。';
+      '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面' +
+      '信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束' +
+      '会话）。当你需要结束任务时，请调用end_session工具。' +
+      '\n\n操作规范：' +
+      '\n1. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
+      '\n2. 仅使用controls中提供的selector或用户明确给出的selector。' +
+      '\n3. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
+      '\n4. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
 
     agentMessageHistory = [
       { role: 'system', content: systemPrompt },

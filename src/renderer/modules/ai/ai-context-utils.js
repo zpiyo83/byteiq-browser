@@ -78,11 +78,105 @@ const EXTRACT_PAGE_CONTENT_SCRIPT = `
     author: document.querySelector('meta[name="author"]')?.content || ''
   };
 
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+      return window.CSS.escape(value);
+    }
+    return String(value).replace(/["\\\\]/g, '\\\\$&');
+  }
+
+  function safeText(value, limit) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    if (!limit || text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
+  }
+
+  function isVisible(el) {
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    const rect = el.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return false;
+    return true;
+  }
+
+  function buildSelector(el) {
+    const tag = el.tagName.toLowerCase();
+    if (el.id) return '#' + cssEscape(el.id);
+
+    const dataTestId = el.getAttribute('data-testid');
+    if (dataTestId) {
+      return tag + '[data-testid="' + cssEscape(dataTestId) + '"]';
+    }
+
+    const ariaLabel = el.getAttribute('aria-label');
+    if (ariaLabel) {
+      return tag + '[aria-label="' + cssEscape(ariaLabel) + '"]';
+    }
+
+    const name = el.getAttribute('name');
+    if (name) {
+      return tag + '[name="' + cssEscape(name) + '"]';
+    }
+
+    const placeholder = el.getAttribute('placeholder');
+    if (placeholder && (tag === 'input' || tag === 'textarea')) {
+      return tag + '[placeholder="' + cssEscape(placeholder) + '"]';
+    }
+
+    const type = el.getAttribute('type');
+    if (type && tag === 'input') {
+      return tag + '[type="' + cssEscape(type) + '"]';
+    }
+
+    return tag;
+  }
+
+  function collectElements(selector, maxCount) {
+    const result = [];
+    const elements = document.querySelectorAll(selector);
+    for (const el of elements) {
+      if (!isVisible(el)) continue;
+      const tag = el.tagName.toLowerCase();
+      const text = safeText(
+        el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('title'),
+        80
+      );
+      result.push({
+        tag,
+        type: el.getAttribute('type') || '',
+        text,
+        id: el.id || '',
+        name: el.getAttribute('name') || '',
+        role: el.getAttribute('role') || '',
+        ariaLabel: el.getAttribute('aria-label') || '',
+        title: el.getAttribute('title') || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        selector: buildSelector(el)
+      });
+      if (result.length >= maxCount) break;
+    }
+    return result;
+  }
+
+  const controls = {
+    buttons: collectElements(
+      'button, [role="button"], input[type="button"], input[type="submit"]',
+      30
+    ),
+    inputs: collectElements(
+      'input:not([type="button"]):not([type="submit"]), textarea, select',
+      30
+    ),
+    links: collectElements('a[href]', 30)
+  };
+
   return {
     url: window.location.href,
     title: title,
     content: mainContent,
-    meta: meta
+    meta: meta,
+    controls: controls
   };
 })();
 `;
@@ -155,7 +249,45 @@ function buildSystemPrompt(options) {
     systemPrompt += `\n\n页面内容:\n${pageContext.content}`;
   }
 
+  if (mode === 'agent' && pageContext?.controls) {
+    const controlsSummary = buildControlsSummary(pageContext.controls);
+    if (controlsSummary) {
+      systemPrompt += '\n\n可交互元素:\n' + controlsSummary;
+    }
+  }
+
   return systemPrompt;
+}
+
+function buildControlsSummary(controls) {
+  if (!controls) return '';
+  const limit = 8;
+  const lines = [];
+  const sections = [
+    { label: '按钮', items: controls.buttons },
+    { label: '输入框', items: controls.inputs },
+    { label: '链接', items: controls.links }
+  ];
+
+  for (const section of sections) {
+    const items = Array.isArray(section.items) ? section.items.slice(0, limit) : [];
+    if (items.length === 0) continue;
+    lines.push(section.label + ':');
+    for (const item of items) {
+      const parts = [];
+      if (item.text) parts.push('text=' + item.text);
+      if (item.ariaLabel) parts.push('aria=' + item.ariaLabel);
+      if (item.id) parts.push('id=' + item.id);
+      if (item.name) parts.push('name=' + item.name);
+      if (item.placeholder) parts.push('placeholder=' + item.placeholder);
+      if (item.selector) parts.push('selector=' + item.selector);
+      if (parts.length > 0) {
+        lines.push(parts.join(' | '));
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 async function extractAndSetPageContext(options) {
