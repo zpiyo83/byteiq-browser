@@ -110,9 +110,8 @@ function createAiSessionService(options) {
 
   async function getSortedSessions() {
     await initStorage();
-    const sessions = await historyStorage.getSessions({ includeDeleted: true, limit: 1000 });
+    const sessions = await historyStorage.getSessions({ includeDeleted: false, limit: 1000 });
     sessions.sort((a, b) => {
-      if (!!a.deleted !== !!b.deleted) return a.deleted ? 1 : -1;
       if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
@@ -124,6 +123,21 @@ function createAiSessionService(options) {
     const tabToSession = readTabToSessionFromStore();
     if (tabToSession[tabId] === sessionId) {
       delete tabToSession[tabId];
+      writeTabToSessionToStore(tabToSession);
+    }
+  }
+
+  function unbindSessionFromAllTabs(sessionId) {
+    if (!sessionId) return;
+    const tabToSession = readTabToSessionFromStore();
+    let changed = false;
+    Object.keys(tabToSession).forEach(tabId => {
+      if (tabToSession[tabId] === sessionId) {
+        delete tabToSession[tabId];
+        changed = true;
+      }
+    });
+    if (changed) {
       writeTabToSessionToStore(tabToSession);
     }
   }
@@ -158,7 +172,8 @@ function createAiSessionService(options) {
     readTabToSessionFromStore,
     writeTabToSessionToStore,
     getActiveSessionId,
-    setActiveSessionId
+    setActiveSessionId,
+    unbindSessionFromAllTabs
   };
 }
 

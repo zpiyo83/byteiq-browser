@@ -31,7 +31,8 @@ function createAiManager(options) {
     ipcRenderer,
     store,
     showToast,
-    tabManager
+    tabManager,
+    formatUrl
   } = options;
 
   // 上下文状态栏元素
@@ -52,7 +53,10 @@ function createAiManager(options) {
   const toolsExecutor = createAiToolsExecutor({
     documentRef,
     getActiveTabId,
-    extractPageContent
+    extractPageContent,
+    openTab: tabManager ? tabManager.createTab : null,
+    formatUrl,
+    switchTab: tabManager ? tabManager.switchTab : null
   });
 
   const sessionService = createAiSessionService({
@@ -71,6 +75,7 @@ function createAiManager(options) {
     getOrCreateSessionIdForTab,
     bindSessionToCurrentTab,
     unbindSessionFromTab,
+    unbindSessionFromAllTabs,
     getActiveSessionId,
     setActiveSessionId,
     readTabToSessionFromStore,
@@ -84,12 +89,7 @@ function createAiManager(options) {
     t
   });
 
-  const {
-    addChatMessage,
-    updateStreamingMessage,
-    scrollToBottom,
-    clearChatArea
-  } = messageUI;
+  const { addChatMessage, updateStreamingMessage, scrollToBottom, clearChatArea } = messageUI;
   let renderSessionsList = async () => {};
   let renderSessionChat = async () => {};
 
@@ -113,7 +113,7 @@ function createAiManager(options) {
 
   // 模式切换事件监听
   if (modeSelect) {
-    modeSelect.addEventListener('change', async (e) => {
+    modeSelect.addEventListener('change', async e => {
       currentMode = e.target.value;
       if (currentMode === 'agent') {
         contextBar.style.display = 'none';
@@ -156,7 +156,6 @@ function createAiManager(options) {
     setInputEnabled,
     getPageList: getPageListSnapshot
   });
-
 
   async function switchToSession(sessionId) {
     if (!sessionId) return;
@@ -206,6 +205,7 @@ function createAiManager(options) {
     getActiveTabId,
     updateSession,
     unbindSessionFromTab,
+    unbindSessionFromAllTabs,
     setActiveSessionId,
     onSelectSession: switchToSession,
     addChatMessage,

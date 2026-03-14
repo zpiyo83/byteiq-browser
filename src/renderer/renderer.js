@@ -288,7 +288,8 @@ const aiManager = createAiManager({
   ipcRenderer,
   store,
   showToast,
-  tabManager
+  tabManager,
+  formatUrl: browserManager ? browserManager.formatUrl : url => url
 });
 
 const findManager = createFindManager({
