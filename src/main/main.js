@@ -87,7 +87,10 @@ function setupWebviewWindowHandler() {
             // 在新标签页中打开
             ownerWindow.webContents.send('open-new-tab', url);
           } else {
-            contents.loadURL(url);
+            contents.loadURL(url).catch(error => {
+              if (error && error.code === 'ERR_ABORTED') return;
+              console.error('Failed to open popup URL:', url, error);
+            });
           }
         } else {
           // 使用系统默认应用打开非HTTP链接
@@ -267,4 +270,3 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
-
