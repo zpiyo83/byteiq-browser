@@ -52,15 +52,16 @@
 #settings-panel .settings-body {
     flex: 1;
     display: flex;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #settings-panel .settings-sidebar {
-    width: 200px;
+    width: 240px;
     background: #fff;
     border-right: 1px solid #e0e0e0;
     padding: 12px 0;
     overflow-y: auto;
+    overflow-x: visible;
     flex-shrink: 0;
     opacity: 0;
     transition: opacity 0.3s ease 0.1s;
@@ -83,7 +84,7 @@
     font-size: 13px;
     color: #5f6368;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
