@@ -146,18 +146,21 @@ const RESTORE_ORIGINAL_SCRIPT = `
     return false;
   }
 
-  window.__byteiqOriginalTexts.forEach(item => {
+  // 使用 for 循环遍历，支持稀疏数组
+  for (let i = 0; i < window.__byteiqOriginalTexts.length; i++) {
+    const item = window.__byteiqOriginalTexts[i];
+    if (!item) continue;
     try {
       if (item.parent && item.parent.childNodes[item.childIndex]) {
         const textNode = item.parent.childNodes[item.childIndex];
-        if (textNode.nodeType === Node.TEXT_NODE) {
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
           textNode.textContent = item.originalText;
         }
       }
     } catch (e) {
       console.error('Failed to restore text:', e);
     }
-  });
+  }
 
   window.__byteiqOriginalTexts = null;
   return true;

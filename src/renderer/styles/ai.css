@@ -629,6 +629,8 @@
     gap: 10px;
     background: var(--ai-surface);
     box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.06);
+    position: relative;
+    z-index: 40;
 }
 
 .ai-input-area input {
