@@ -170,10 +170,6 @@ function createTabWebviewEvents(options) {
       showToast(`页面加载失败: ${errorMsg}`, 'error');
     });
 
-    webview.addEventListener('new-window', e => {
-      e.preventDefault();
-    });
-
     webview.addEventListener('console-message', e => {
       if (!e || !e.sourceId || !String(e.sourceId).startsWith('chrome-extension://')) {
         return;
