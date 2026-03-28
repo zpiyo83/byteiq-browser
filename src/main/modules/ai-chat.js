@@ -20,6 +20,29 @@ function buildOpenAIChatRequest(messages, model = 'gpt-3.5-turbo', stream = true
 }
 
 /**
+ * 构建 OpenAI Response 格式的对话请求体
+ */
+function buildOpenAIResponseRequest(messages, model = 'gpt-4', stream = true) {
+  // 将 messages 转换为 input 格式
+  const input = messages.map(msg => ({
+    role: msg.role,
+    content: msg.content
+  }));
+
+  const requestBody = {
+    model,
+    input,
+    max_output_tokens: 4096
+  };
+
+  if (stream) {
+    requestBody.stream = true;
+  }
+
+  return requestBody;
+}
+
+/**
  * 构建 Anthropic 格式的对话请求体
  */
 function buildAnthropicRequest(messages, model = 'claude-3-sonnet-20240229') {
@@ -90,7 +113,11 @@ function getRequestPath(endpoint, requestType) {
   const path = url.pathname;
 
   // 如果端点已经包含完整路径，直接使用
-  if (path.includes('/chat/completions') || path.includes('/messages')) {
+  if (
+    path.includes('/chat/completions') ||
+    path.includes('/responses') ||
+    path.includes('/messages')
+  ) {
     return path + url.search;
   }
 
@@ -98,6 +125,8 @@ function getRequestPath(endpoint, requestType) {
   switch (requestType) {
     case 'openai-chat':
       return '/v1/chat/completions';
+    case 'openai-response':
+      return '/v1/responses';
     case 'anthropic':
       return '/v1/messages';
     default:
@@ -128,6 +157,18 @@ function parseStreamChunk(line, requestType) {
         // OpenAI 流式格式: choices[0].delta.content
         if (parsed.choices && parsed.choices[0]?.delta?.content) {
           return parsed.choices[0].delta.content;
+        }
+        return null;
+
+      case 'openai-response':
+        // OpenAI Responses API 流式格式:
+        // type: 'response.output_text.delta' -> delta
+        // type: 'response.output_text.done' -> text
+        if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
+          return parsed.delta;
+        }
+        if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
+          return parsed.text;
         }
         return null;
 
@@ -169,6 +210,9 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
       case 'anthropic':
         requestBody = buildAnthropicRequest(messages, model);
         requestBody.stream = true;
+        break;
+      case 'openai-response':
+        requestBody = buildOpenAIResponseRequest(messages, model, true);
         break;
       case 'openai-chat':
       default:
@@ -269,6 +313,9 @@ function sendChatRequest(messages, config) {
     switch (requestType) {
       case 'anthropic':
         requestBody = buildAnthropicRequest(messages, model);
+        break;
+      case 'openai-response':
+        requestBody = buildOpenAIResponseRequest(messages, model, false);
         break;
       case 'openai-chat':
       default:
