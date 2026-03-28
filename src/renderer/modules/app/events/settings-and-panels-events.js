@@ -213,7 +213,7 @@
         searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
         startupUrlInput.value = store.get('settings.startupUrl', '');
         if (restoreSessionToggle) {
-          restoreSessionToggle.checked = store.get('settings.restoreSession', true);
+          restoreSessionToggle.checked = store.get('settings.restoreSession', false);
         }
         if (langSelect) {
           langSelect.value = store.get('settings.language', 'zh-CN');
@@ -311,7 +311,7 @@
   }
 
   if (restoreSessionToggle) {
-    restoreSessionToggle.checked = store.get('settings.restoreSession', true);
+    restoreSessionToggle.checked = store.get('settings.restoreSession', false);
     restoreSessionToggle.addEventListener('change', () => {
       store.set('settings.restoreSession', restoreSessionToggle.checked);
     });

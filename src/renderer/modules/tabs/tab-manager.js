@@ -112,7 +112,7 @@ function createTabManager(options) {
   }
 
   function restoreSession() {
-    const shouldRestore = store.get('settings.restoreSession', true);
+    const shouldRestore = store.get('settings.restoreSession', false);
     if (!shouldRestore) {
       createTab();
       return;
