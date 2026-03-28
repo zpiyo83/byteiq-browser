@@ -58,8 +58,10 @@ function createTabWebviewEvents(options) {
   } = options;
 
   function setupWebviewEvents(webview, id) {
-    if (webview.dataset && typeof webview.isLoading === 'function') {
-      webview.dataset.domReady = webview.isLoading() ? 'false' : 'true';
+    // 延迟设置初始 domReady 状态，避免在 webview 未完全附加时访问 isLoading()
+    if (webview.dataset) {
+      // 初始状态设为 false，等待 dom-ready 事件设置正确状态
+      webview.dataset.domReady = 'false';
     }
 
     webview.addEventListener('did-start-loading', () => {
