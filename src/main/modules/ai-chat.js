@@ -23,17 +23,18 @@ function buildOpenAIChatRequest(messages, model = 'gpt-3.5-turbo', stream = true
  * 构建 OpenAI Response 格式的对话请求体
  */
 function buildOpenAIResponseRequest(messages, model = 'gpt-4', stream = true) {
-  // 将 messages 转换为 input 格式
-  const input = messages.map(msg => ({
-    role: msg.role,
-    content: msg.content
-  }));
+  // 将 messages 转换为 Responses API 的 input items 格式
+  const { items, instructions } = buildResponsesInputFromMessages(messages);
 
   const requestBody = {
     model,
-    input,
+    input: items,
     max_output_tokens: 4096
   };
+
+  if (instructions) {
+    requestBody.instructions = instructions;
+  }
 
   if (stream) {
     requestBody.stream = true;
@@ -185,6 +186,75 @@ function parseStreamChunk(line, requestType) {
   } catch {
     return null;
   }
+}
+
+function buildResponsesInputFromMessages(messages) {
+  const items = [];
+  const systemParts = [];
+  const list = Array.isArray(messages) ? messages : [];
+
+  for (const message of list) {
+    if (!message) continue;
+
+    if (message.role === 'system') {
+      if (message.content != null) {
+        if (typeof message.content === 'string') {
+          systemParts.push(message.content);
+        } else {
+          systemParts.push(JSON.stringify(message.content));
+        }
+      }
+      continue;
+    }
+
+    if (message.role === 'tool') {
+      if (message.tool_call_id) {
+        items.push({
+          type: 'function_call_output',
+          call_id: message.tool_call_id,
+          output: message.content == null ? '' : String(message.content)
+        });
+      }
+      continue;
+    }
+
+    if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+      for (const call of message.tool_calls) {
+        const callId = call.id || call.call_id || '';
+        const func = call.function || {};
+        const name = call.name || func.name || '';
+        const args = call.arguments || func.arguments || {};
+        if (!callId || !name) continue;
+        items.push({
+          type: 'function_call',
+          call_id: callId,
+          name,
+          arguments: typeof args === 'string' ? args : JSON.stringify(args)
+        });
+      }
+
+      if (message.content) {
+        items.push({
+          type: 'message',
+          role: message.role || 'assistant',
+          content: String(message.content)
+        });
+      }
+      continue;
+    }
+
+    const content = message.content == null ? '' : String(message.content);
+    items.push({
+      type: 'message',
+      role: message.role || 'user',
+      content
+    });
+  }
+
+  return {
+    items,
+    instructions: systemParts.length > 0 ? systemParts.join('\n\n') : ''
+  };
 }
 
 /**

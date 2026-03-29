@@ -95,7 +95,7 @@ function createExtensionsManager(options) {
     if (!targetSession || !extensionId) return null;
     try {
       return targetSession.getExtension(extensionId) || null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
