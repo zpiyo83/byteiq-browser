@@ -264,22 +264,22 @@ function buildSystemPrompt(options) {
 
   let modePrompt;
   switch (mode) {
-    case 'outline':
-      modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
-      break;
-    case 'compare':
-      modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
-      break;
-    case 'translate_page':
-      modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
-      break;
-    case 'code_docs':
-      modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
-      break;
-    case 'qa':
-    default:
-      modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
-      break;
+  case 'outline':
+    modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
+    break;
+  case 'compare':
+    modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
+    break;
+  case 'translate_page':
+    modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
+    break;
+  case 'code_docs':
+    modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
+    break;
+  case 'qa':
+  default:
+    modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
+    break;
   }
 
   let systemPrompt = `${base}\n\n${modePrompt}`;

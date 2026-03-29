@@ -7,10 +7,10 @@
     const query = filterText.trim().toLowerCase();
     const filteredData = query
       ? data.filter(item => {
-          const title = (item.title || '').toLowerCase();
-          const url = (item.url || '').toLowerCase();
-          return title.includes(query) || url.includes(query);
-        })
+        const title = (item.title || '').toLowerCase();
+        const url = (item.url || '').toLowerCase();
+        return title.includes(query) || url.includes(query);
+      })
       : data;
 
     listContainer.innerHTML = '';

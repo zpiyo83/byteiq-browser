@@ -154,10 +154,10 @@ function createHistoryPanelManager(options) {
     // 过滤数据
     const filteredHistory = query
       ? history.filter(item => {
-          const title = (item.title || '').toLowerCase();
-          const url = (item.url || '').toLowerCase();
-          return title.includes(query) || url.includes(query);
-        })
+        const title = (item.title || '').toLowerCase();
+        const url = (item.url || '').toLowerCase();
+        return title.includes(query) || url.includes(query);
+      })
       : history;
 
     listContainer.innerHTML = '';

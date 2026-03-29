@@ -81,14 +81,14 @@ function getHeaders(requestType, apiKey) {
   };
 
   switch (requestType) {
-    case 'openai-chat':
-    case 'openai-response':
-      headers['Authorization'] = `Bearer ${apiKey}`;
-      break;
-    case 'anthropic':
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-      break;
+  case 'openai-chat':
+  case 'openai-response':
+    headers['Authorization'] = `Bearer ${apiKey}`;
+    break;
+  case 'anthropic':
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    break;
   }
 
   return headers;
@@ -124,14 +124,14 @@ function getRequestPath(endpoint, requestType) {
 
   // 否则根据类型添加路径
   switch (requestType) {
-    case 'openai-chat':
-      return '/v1/chat/completions';
-    case 'openai-response':
-      return '/v1/responses';
-    case 'anthropic':
-      return '/v1/messages';
-    default:
-      return '/v1/chat/completions';
+  case 'openai-chat':
+    return '/v1/chat/completions';
+  case 'openai-response':
+    return '/v1/responses';
+  case 'anthropic':
+    return '/v1/messages';
+  default:
+    return '/v1/chat/completions';
   }
 }
 
@@ -154,34 +154,34 @@ function parseStreamChunk(line, requestType) {
     const parsed = JSON.parse(jsonStr);
 
     switch (requestType) {
-      case 'openai-chat':
-        // OpenAI 流式格式: choices[0].delta.content
-        if (parsed.choices && parsed.choices[0]?.delta?.content) {
-          return parsed.choices[0].delta.content;
-        }
-        return null;
+    case 'openai-chat':
+      // OpenAI 流式格式: choices[0].delta.content
+      if (parsed.choices && parsed.choices[0]?.delta?.content) {
+        return parsed.choices[0].delta.content;
+      }
+      return null;
 
-      case 'openai-response':
-        // OpenAI Responses API 流式格式:
-        // type: 'response.output_text.delta' -> delta
-        // type: 'response.output_text.done' -> text
-        if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
-          return parsed.delta;
-        }
-        if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
-          return parsed.text;
-        }
-        return null;
+    case 'openai-response':
+      // OpenAI Responses API 流式格式:
+      // type: 'response.output_text.delta' -> delta
+      // type: 'response.output_text.done' -> text
+      if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
+        return parsed.delta;
+      }
+      if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
+        return parsed.text;
+      }
+      return null;
 
-      case 'anthropic':
-        // Anthropic 流式格式
-        if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-          return parsed.delta.text;
-        }
-        return null;
+    case 'anthropic':
+      // Anthropic 流式格式
+      if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+        return parsed.delta.text;
+      }
+      return null;
 
-      default:
-        return null;
+    default:
+      return null;
     }
   } catch {
     return null;
@@ -277,16 +277,16 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
     // 构建请求体
     let requestBody;
     switch (requestType) {
-      case 'anthropic':
-        requestBody = buildAnthropicRequest(messages, model);
-        requestBody.stream = true;
-        break;
-      case 'openai-response':
-        requestBody = buildOpenAIResponseRequest(messages, model, true);
-        break;
-      case 'openai-chat':
-      default:
-        requestBody = buildOpenAIChatRequest(messages, model, true);
+    case 'anthropic':
+      requestBody = buildAnthropicRequest(messages, model);
+      requestBody.stream = true;
+      break;
+    case 'openai-response':
+      requestBody = buildOpenAIResponseRequest(messages, model, true);
+      break;
+    case 'openai-chat':
+    default:
+      requestBody = buildOpenAIChatRequest(messages, model, true);
     }
 
     const url = new URL(endpoint);
@@ -381,16 +381,16 @@ function sendChatRequest(messages, config) {
     // 构建请求体 (非流式)
     let requestBody;
     switch (requestType) {
-      case 'anthropic':
-        requestBody = buildAnthropicRequest(messages, model);
-        break;
-      case 'openai-response':
-        requestBody = buildOpenAIResponseRequest(messages, model, false);
-        break;
-      case 'openai-chat':
-      default:
-        requestBody = buildOpenAIChatRequest(messages, model, false);
-        break;
+    case 'anthropic':
+      requestBody = buildAnthropicRequest(messages, model);
+      break;
+    case 'openai-response':
+      requestBody = buildOpenAIResponseRequest(messages, model, false);
+      break;
+    case 'openai-chat':
+    default:
+      requestBody = buildOpenAIChatRequest(messages, model, false);
+      break;
     }
 
     // 如果有工具定义，添加到请求体
