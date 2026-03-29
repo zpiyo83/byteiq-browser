@@ -72,26 +72,26 @@ function parseAPIResponse(data, requestType) {
     const parsed = JSON.parse(data);
 
     switch (requestType) {
-      case 'openai-chat':
-      case 'openai-response':
-        // OpenAI 格式: choices[0].message.content 或 output
-        if (parsed.choices && parsed.choices[0]?.message?.content) {
-          return JSON.parse(parsed.choices[0].message.content);
-        }
-        if (parsed.output) {
-          return JSON.parse(parsed.output);
-        }
-        throw new Error('Invalid OpenAI response format');
+    case 'openai-chat':
+    case 'openai-response':
+      // OpenAI 格式: choices[0].message.content 或 output
+      if (parsed.choices && parsed.choices[0]?.message?.content) {
+        return JSON.parse(parsed.choices[0].message.content);
+      }
+      if (parsed.output) {
+        return JSON.parse(parsed.output);
+      }
+      throw new Error('Invalid OpenAI response format');
 
-      case 'anthropic':
-        // Anthropic 格式: content[0].text
-        if (parsed.content && parsed.content[0]?.text) {
-          return JSON.parse(parsed.content[0].text);
-        }
-        throw new Error('Invalid Anthropic response format');
+    case 'anthropic':
+      // Anthropic 格式: content[0].text
+      if (parsed.content && parsed.content[0]?.text) {
+        return JSON.parse(parsed.content[0].text);
+      }
+      throw new Error('Invalid Anthropic response format');
 
-      default:
-        throw new Error(`Unknown request type: ${requestType}`);
+    default:
+      throw new Error(`Unknown request type: ${requestType}`);
     }
   } catch (error) {
     throw new Error(`Failed to parse translation response: ${error.message}`);
@@ -107,14 +107,14 @@ function getHeaders(requestType, apiKey) {
   };
 
   switch (requestType) {
-    case 'openai-chat':
-    case 'openai-response':
-      headers['Authorization'] = `Bearer ${apiKey}`;
-      break;
-    case 'anthropic':
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-      break;
+  case 'openai-chat':
+  case 'openai-response':
+    headers['Authorization'] = `Bearer ${apiKey}`;
+    break;
+  case 'anthropic':
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    break;
   }
 
   return headers;
@@ -147,14 +147,14 @@ function getRequestPath(endpoint, requestType) {
 
   // 否则根据类型添加路径
   switch (requestType) {
-    case 'openai-chat':
-      return '/v1/chat/completions';
-    case 'openai-response':
-      return '/v1/responses';
-    case 'anthropic':
-      return '/v1/messages';
-    default:
-      return '/v1/chat/completions';
+  case 'openai-chat':
+    return '/v1/chat/completions';
+  case 'openai-response':
+    return '/v1/responses';
+  case 'anthropic':
+    return '/v1/messages';
+  default:
+    return '/v1/chat/completions';
   }
 }
 
@@ -223,17 +223,17 @@ async function translateTexts(texts, targetLanguage, config) {
   // 构建请求体
   let requestBody;
   switch (requestType) {
-    case 'openai-chat':
-      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model);
-      break;
-    case 'openai-response':
-      requestBody = buildOpenAIResponseRequest(texts, targetLanguage, model);
-      break;
-    case 'anthropic':
-      requestBody = buildAnthropicRequest(texts, targetLanguage, model);
-      break;
-    default:
-      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model);
+  case 'openai-chat':
+    requestBody = buildOpenAIChatRequest(texts, targetLanguage, model);
+    break;
+  case 'openai-response':
+    requestBody = buildOpenAIResponseRequest(texts, targetLanguage, model);
+    break;
+  case 'anthropic':
+    requestBody = buildAnthropicRequest(texts, targetLanguage, model);
+    break;
+  default:
+    requestBody = buildOpenAIChatRequest(texts, targetLanguage, model);
   }
 
   return sendRequest(endpoint, requestBody, requestType, apiKey, timeout);
@@ -309,34 +309,34 @@ function parseStreamChunk(line, requestType) {
     const parsed = JSON.parse(jsonStr);
 
     switch (requestType) {
-      case 'openai-chat':
-        // OpenAI 流式格式: choices[0].delta.content
-        if (parsed.choices && parsed.choices[0]?.delta?.content) {
-          return parsed.choices[0].delta.content;
-        }
-        return null;
+    case 'openai-chat':
+      // OpenAI 流式格式: choices[0].delta.content
+      if (parsed.choices && parsed.choices[0]?.delta?.content) {
+        return parsed.choices[0].delta.content;
+      }
+      return null;
 
-      case 'openai-response':
-        // OpenAI Responses API 流式格式:
-        // type: 'response.output_text.delta' -> delta
-        // type: 'response.output_text.done' -> text
-        if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
-          return parsed.delta;
-        }
-        if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
-          return parsed.text;
-        }
-        return null;
+    case 'openai-response':
+      // OpenAI Responses API 流式格式:
+      // type: 'response.output_text.delta' -> delta
+      // type: 'response.output_text.done' -> text
+      if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
+        return parsed.delta;
+      }
+      if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
+        return parsed.text;
+      }
+      return null;
 
-      case 'anthropic':
-        // Anthropic 流式格式: delta.text
-        if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-          return parsed.delta.text;
-        }
-        return null;
+    case 'anthropic':
+      // Anthropic 流式格式: delta.text
+      if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+        return parsed.delta.text;
+      }
+      return null;
 
-      default:
-        return null;
+    default:
+      return null;
     }
   } catch {
     return null;
@@ -564,19 +564,19 @@ async function translateTextsStreaming(texts, targetLanguage, config, onProgress
   // 构建流式请求体
   let requestBody;
   switch (requestType) {
-    case 'openai-chat':
-      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model, true);
-      break;
-    case 'openai-response':
-      requestBody = buildOpenAIResponseRequest(texts, targetLanguage, model);
-      requestBody.stream = true;
-      break;
-    case 'anthropic':
-      requestBody = buildAnthropicRequest(texts, targetLanguage, model);
-      requestBody.stream = true;
-      break;
-    default:
-      requestBody = buildOpenAIChatRequest(texts, targetLanguage, model, true);
+  case 'openai-chat':
+    requestBody = buildOpenAIChatRequest(texts, targetLanguage, model, true);
+    break;
+  case 'openai-response':
+    requestBody = buildOpenAIResponseRequest(texts, targetLanguage, model);
+    requestBody.stream = true;
+    break;
+  case 'anthropic':
+    requestBody = buildAnthropicRequest(texts, targetLanguage, model);
+    requestBody.stream = true;
+    break;
+  default:
+    requestBody = buildOpenAIChatRequest(texts, targetLanguage, model, true);
   }
 
   return sendStreamingRequest(
