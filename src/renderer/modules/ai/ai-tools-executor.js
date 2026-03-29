@@ -90,6 +90,7 @@ function createAiToolsExecutor(options) {
         webview.addEventListener('dom-ready', onReady);
       });
     } catch (error) {
+      console.warn('[ai-tools-executor] ensureTabActive failed:', error);
       return { success: false, error: '目标页面尚未准备好，请稍后重试' };
     }
 

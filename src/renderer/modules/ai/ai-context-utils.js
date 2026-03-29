@@ -262,7 +262,7 @@ function buildSystemPrompt(options) {
     t('ai.systemPrompt') ||
     '你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。';
 
-  let modePrompt = '';
+  let modePrompt;
   switch (mode) {
     case 'outline':
       modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
@@ -365,7 +365,6 @@ function buildPagesSummary(pages) {
 
 async function extractAndSetPageContext(options) {
   const {
-    tabId,
     webview,
     getCurrentSession,
     updateSession,

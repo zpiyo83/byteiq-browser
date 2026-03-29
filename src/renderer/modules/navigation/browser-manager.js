@@ -19,7 +19,7 @@ function createBrowserManager(options) {
   function getHostFromUrl(url) {
     try {
       return new URL(url).host;
-    } catch (error) {
+    } catch {
       return '';
     }
   }

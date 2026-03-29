@@ -96,7 +96,8 @@ function fetchAiModels(config) {
             const payload = data ? JSON.parse(data) : null;
             resolve(normalizeModelList(payload));
           } catch (error) {
-            reject(new Error('Invalid model list response'));
+            const parseMessage = error && error.message ? error.message : String(error);
+            reject(new Error(`Invalid model list response: ${parseMessage}`));
           }
           return;
         }
