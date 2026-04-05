@@ -370,16 +370,16 @@
   });
 
   if (darkModeToggle) {
+    // 初始化时同步 UI 状态
+    const savedDarkMode = store.get('settings.darkMode');
+    darkModeToggle.checked = savedDarkMode === true;
+
     darkModeToggle.addEventListener('change', () => {
       const isDark = darkModeToggle.checked;
       document.body.classList.toggle('dark-mode', isDark);
-      store.set('settings.darkMode', isDark);
+      // 确保布尔值被正确保存
+      store.set('settings.darkMode', isDark === true);
     });
-
-    if (store.get('settings.darkMode')) {
-      document.body.classList.add('dark-mode');
-      darkModeToggle.checked = true;
-    }
   }
 
   zoomInBtn.addEventListener('click', () => {
