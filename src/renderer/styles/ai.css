@@ -25,7 +25,10 @@
     flex-direction: column;
     z-index: 10;
     box-shadow: -6px 0 18px rgba(15, 23, 42, 0.08);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.3s ease,
+                background-color 0.3s ease,
+                border-color 0.3s ease;
 }
 
 .ai-resize-handle {
@@ -262,6 +265,7 @@
     min-width: 0;
     min-height: 0;
     background: linear-gradient(180deg, var(--ai-surface-alt), var(--ai-surface) 220px);
+    transition: background-color 0.3s ease;
 }
 
 .ai-history-popup {
