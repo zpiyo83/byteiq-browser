@@ -23,7 +23,7 @@ const {
 } = require('./modules/app/events/navigation-and-devtools-events');
 
 // 尽早应用深色模式，避免页面闪烁
-if (store.get('settings.darkMode')) {
+if (store.get('settings.darkMode') === true) {
   document.body.classList.add('dark-mode');
 }
 
