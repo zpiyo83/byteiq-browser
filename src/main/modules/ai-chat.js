@@ -137,6 +137,7 @@ function getRequestPath(endpoint, requestType) {
 
 /**
  * 解析流式响应的单个数据块
+ * @returns {{ content: string, reasoningContent: string } | null}
  */
 function parseStreamChunk(line, requestType) {
   if (!line) return null;
@@ -154,29 +155,46 @@ function parseStreamChunk(line, requestType) {
     const parsed = JSON.parse(jsonStr);
 
     switch (requestType) {
-      case 'openai-chat':
+      case 'openai-chat': {
         // OpenAI 流式格式: choices[0].delta.content
-        if (parsed.choices && parsed.choices[0]?.delta?.content) {
-          return parsed.choices[0].delta.content;
+        const delta = parsed.choices?.[0]?.delta;
+        if (!delta) return null;
+
+        const result = { content: '', reasoningContent: '' };
+        if (typeof delta.content === 'string') {
+          result.content = delta.content;
+        }
+        // 支持 reasoning_content / thinking / reasoning 字段（部分模型）
+        if (typeof delta.reasoning_content === 'string') {
+          result.reasoningContent = delta.reasoning_content;
+        } else if (typeof delta.thinking === 'string') {
+          result.reasoningContent = delta.thinking;
+        } else if (typeof delta.reasoning === 'string') {
+          result.reasoningContent = delta.reasoning;
+        }
+
+        if (result.content || result.reasoningContent) {
+          return result;
         }
         return null;
+      }
 
       case 'openai-response':
         // OpenAI Responses API 流式格式:
         // type: 'response.output_text.delta' -> delta
         // type: 'response.output_text.done' -> text
         if (parsed.type === 'response.output_text.delta' && typeof parsed.delta === 'string') {
-          return parsed.delta;
+          return { content: parsed.delta, reasoningContent: '' };
         }
         if (parsed.type === 'response.output_text.done' && typeof parsed.text === 'string') {
-          return parsed.text;
+          return { content: parsed.text, reasoningContent: '' };
         }
         return null;
 
       case 'anthropic':
         // Anthropic 流式格式
         if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-          return parsed.delta.text;
+          return { content: parsed.delta.text, reasoningContent: '' };
         }
         return null;
 
@@ -377,6 +395,20 @@ function parseChatCompletionsStreamEvent(payload, state) {
   const delta = choice?.delta;
   if (!delta) return;
 
+  // 支持 reasoning_content / thinking / reasoning 字段（部分模型）
+  const reasoningDelta =
+    typeof delta.reasoning_content === 'string'
+      ? delta.reasoning_content
+      : typeof delta.thinking === 'string'
+        ? delta.thinking
+        : typeof delta.reasoning === 'string'
+          ? delta.reasoning
+          : '';
+  if (reasoningDelta) {
+    state.reasoningContent = state.reasoningContent || '';
+    state.reasoningContent += reasoningDelta;
+  }
+
   if (typeof delta.content === 'string') {
     state.text += delta.content;
   }
@@ -422,7 +454,8 @@ function buildChatLikeResponseFromChatStream(state) {
         {
           message: {
             content: null,
-            tool_calls: toolCalls
+            tool_calls: toolCalls,
+            reasoning_content: state.reasoningContent || ''
           }
         }
       ]
@@ -433,7 +466,8 @@ function buildChatLikeResponseFromChatStream(state) {
     choices: [
       {
         message: {
-          content: state.text || ''
+          content: state.text || '',
+          reasoning_content: state.reasoningContent || ''
         }
       }
     ]
@@ -593,6 +627,7 @@ function sendChatCompletionsStreamForAgent(messages, config) {
 
     const state = {
       text: '',
+      reasoningContent: '',
       toolCallsByIndex: new Map()
     };
 
@@ -714,6 +749,7 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
       res.setEncoding('utf8');
       let buffer = '';
       let fullContent = '';
+      let fullReasoningContent = '';
       let errorData = '';
 
       res.on('data', chunk => {
@@ -729,11 +765,16 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          const content = parseStreamChunk(line, requestType);
-          if (content !== null) {
-            fullContent += content;
+          const parsed = parseStreamChunk(line, requestType);
+          if (parsed !== null) {
+            if (parsed.content) {
+              fullContent += parsed.content;
+            }
+            if (parsed.reasoningContent) {
+              fullReasoningContent += parsed.reasoningContent;
+            }
             if (onChunk) {
-              onChunk(content, fullContent);
+              onChunk(parsed.content, fullContent, fullReasoningContent);
             }
           }
         }
@@ -743,15 +784,20 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           // 处理最后的缓冲区
           if (buffer) {
-            const content = parseStreamChunk(buffer, requestType);
-            if (content !== null) {
-              fullContent += content;
+            const parsed = parseStreamChunk(buffer, requestType);
+            if (parsed !== null) {
+              if (parsed.content) {
+                fullContent += parsed.content;
+              }
+              if (parsed.reasoningContent) {
+                fullReasoningContent += parsed.reasoningContent;
+              }
               if (onChunk) {
-                onChunk(content, fullContent);
+                onChunk(parsed.content, fullContent, fullReasoningContent);
               }
             }
           }
-          resolve(fullContent);
+          resolve({ content: fullContent, reasoningContent: fullReasoningContent });
         } else {
           const message = errorData || buffer;
           reject(new Error(`HTTP ${res.statusCode}: ${message}`));

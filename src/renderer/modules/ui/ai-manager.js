@@ -89,7 +89,13 @@ function createAiManager(options) {
     t
   });
 
-  const { addChatMessage, updateStreamingMessage, scrollToBottom, clearChatArea } = messageUI;
+  const {
+    addChatMessage,
+    updateStreamingMessage,
+    finishStreamingMessage,
+    scrollToBottom,
+    clearChatArea
+  } = messageUI;
   let renderSessionsList = async () => {};
   let renderSessionChat = async () => {};
 
@@ -102,7 +108,6 @@ function createAiManager(options) {
   }
 
   // 当前流式响应状态
-  let currentStreamingMessage = null;
   let currentStreamingElement = null;
   let currentTaskId = null;
   let isStreaming = false;
@@ -150,6 +155,8 @@ function createAiManager(options) {
     updateSession,
     renderSessionsList: (...args) => renderSessionsList(...args),
     addChatMessage,
+    updateStreamingMessage,
+    finishStreamingMessage,
     documentRef,
     t,
     buildSystemPrompt,
@@ -223,8 +230,11 @@ function createAiManager(options) {
       if (!isStreaming || !currentStreamingElement) return;
       if (data.taskId !== currentTaskId) return;
 
-      currentStreamingMessage = data.accumulated;
-      updateStreamingMessage(currentStreamingElement, currentStreamingMessage);
+      // 组合思考内容和正文内容用于显示
+      const fullText = data.reasoningContent
+        ? `<!--think-->${data.reasoningContent}<!--endthink-->${data.accumulated}`
+        : data.accumulated;
+      updateStreamingMessage(currentStreamingElement, fullText);
     });
   }
 
@@ -305,7 +315,6 @@ function createAiManager(options) {
     currentTaskId = `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     isStreaming = true;
     currentStreamingElement = streamingElement;
-    currentStreamingMessage = '';
 
     // 禁用发送按钮
     setInputEnabled(false);
@@ -328,7 +337,7 @@ function createAiManager(options) {
         }
 
         if (streamingElement) {
-          streamingElement.classList.remove('streaming');
+          finishStreamingMessage(streamingElement);
         } else {
           addChatMessage(result.content, 'ai');
         }
@@ -345,7 +354,6 @@ function createAiManager(options) {
     } finally {
       isStreaming = false;
       currentStreamingElement = null;
-      currentStreamingMessage = null;
       currentTaskId = null;
 
       // 恢复发送按钮
@@ -427,7 +435,7 @@ function createAiManager(options) {
     } catch (error) {
       console.error('Chat error:', error);
       streamingMsg.innerText = `${t('ai.error') || '发生错误'}: ${error.message}`;
-      streamingMsg.classList.remove('streaming');
+      finishStreamingMessage(streamingMsg);
     }
   }
 

@@ -3,13 +3,7 @@
  */
 
 function registerAiIpc(options) {
-  const {
-    ipcMain,
-    store,
-    sendStreamingChatRequest,
-    sendChatRequest,
-    fetchAiModels
-  } = options;
+  const { ipcMain, store, sendStreamingChatRequest, sendChatRequest, fetchAiModels } = options;
 
   const activeChatRequests = new Map(); // taskId -> ClientRequest
 
@@ -39,11 +33,12 @@ function registerAiIpc(options) {
           model,
           timeout
         },
-        (chunk, accumulated) => {
+        (chunk, accumulated, reasoningContent) => {
           event.sender.send('ai-chat-streaming', {
             taskId: resolvedTaskId,
             chunk,
-            accumulated
+            accumulated,
+            reasoningContent
           });
         },
         req => {
@@ -55,7 +50,8 @@ function registerAiIpc(options) {
 
       return {
         success: true,
-        content: fullContent,
+        content: fullContent.content || fullContent,
+        reasoningContent: fullContent.reasoningContent || '',
         taskId: resolvedTaskId
       };
     } catch (error) {
@@ -106,17 +102,14 @@ function registerAiIpc(options) {
         };
       }
 
-      const result = await sendChatRequest(
-        messages,
-        {
-          endpoint,
-          apiKey,
-          requestType,
-          model,
-          timeout,
-          tools
-        }
-      );
+      const result = await sendChatRequest(messages, {
+        endpoint,
+        apiKey,
+        requestType,
+        model,
+        timeout,
+        tools
+      });
 
       let responseData;
       try {
@@ -130,6 +123,13 @@ function registerAiIpc(options) {
       }
 
       const message = responseData.choices?.[0]?.message;
+      const reasoningContent =
+        message?.reasoning_content ||
+        message?.thinking ||
+        message?.reasoning ||
+        message?.analysis ||
+        '';
+
       if (message?.tool_calls && message.tool_calls.length > 0) {
         const toolCalls = message.tool_calls.map(tc => ({
           id: tc.id,
@@ -140,14 +140,17 @@ function registerAiIpc(options) {
         return {
           success: true,
           type: 'tool_calls',
-          toolCalls
+          toolCalls,
+          reasoningContent,
+          content: message?.content || ''
         };
       }
 
       return {
         success: true,
         type: 'message',
-        content: message?.content || result
+        content: message?.content || result,
+        reasoningContent
       };
     } catch (error) {
       console.error('AI agent error:', error);
@@ -162,8 +165,7 @@ function registerAiIpc(options) {
     try {
       const endpoint = payload.endpoint || store.get('settings.aiEndpoint', '');
       const apiKey = payload.apiKey || store.get('settings.aiApiKey', '');
-      const requestType =
-        payload.requestType || store.get('settings.aiRequestType', 'openai-chat');
+      const requestType = payload.requestType || store.get('settings.aiRequestType', 'openai-chat');
       const timeout = (store.get('settings.translationTimeout', 120) || 120) * 1000;
 
       if (!endpoint || !apiKey) {

@@ -466,9 +466,11 @@
 
 .chat-message.ai {
     align-self: flex-start;
-    background: var(--ai-bubble-ai);
+    background: transparent;
     color: var(--ai-text);
-    border-bottom-left-radius: 4px;
+    border: none;
+    box-shadow: none;
+    padding: 10px 0;
 }
 
 .chat-message.user {
@@ -547,28 +549,44 @@
     color: #1a73e8;
 }
 
-/* 流式消息样式 */
+/* 流式消息样式 - working 动画 */
 .chat-message.streaming {
     position: relative;
 }
 
-.chat-message.streaming::after {
-    content: '';
-    display: inline-block;
-    width: 6px;
-    height: 14px;
-    background: #5f6368;
-    margin-left: 2px;
-    animation: blink 1s infinite;
+.chat-message.streaming .streaming-indicator {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ai-muted);
     vertical-align: middle;
+    position: relative;
+    overflow: hidden;
 }
 
-@keyframes blink {
-    0%, 50% {
-        opacity: 1;
+.chat-message.streaming .streaming-indicator::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -100%;
+    width: 60%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    transform: skewX(-20deg);
+    animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
     }
-    51%, 100% {
-        opacity: 0;
+    30% {
+        left: 200%;
+    }
+    100% {
+        left: 200%;
     }
 }
 
@@ -766,7 +784,7 @@
  }
 
 .dark-mode .chat-message.ai {
-    background: var(--ai-bubble-ai);
+    background: transparent;
     color: var(--ai-text);
 }
 
@@ -841,4 +859,142 @@
 .dark-mode .ai-context-bar .context-clear-btn:hover {
     background: var(--ai-surface);
     color: var(--ai-text);
+}
+
+/* 思考下拉框样式 - 极简风格 */
+.think-dropdown {
+    margin-bottom: 12px;
+    border: none;
+    background: transparent;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.think-dropdown.thinking {
+    box-shadow: none;
+}
+
+.think-dropdown.thought {
+    opacity: 0.8;
+}
+
+.think-dropdown-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.25s ease, transform 0.25s ease;
+    color: var(--ai-muted);
+}
+
+.think-dropdown-header:hover {
+    background: transparent;
+    color: var(--ai-text);
+    transform: translateX(2px);
+}
+
+.think-label {
+    flex: none;
+    font-size: 12px;
+    font-weight: 500;
+    color: inherit;
+}
+
+.think-dropdown.thinking .think-label {
+    color: var(--ai-accent);
+}
+
+.think-toggle {
+    font-size: 9px;
+    color: inherit;
+    opacity: 0.6;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+}
+
+.think-dropdown-content {
+    --think-duration: 260ms;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--think-duration) cubic-bezier(0.22, 1, 0.36, 1), 
+                padding var(--think-duration) cubic-bezier(0.22, 1, 0.36, 1);
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ai-muted);
+    background: transparent;
+    border-left: 2px solid var(--ai-border);
+    margin-left: 2px;
+    will-change: max-height, padding;
+}
+
+.think-dropdown-content.show {
+    max-height: 1000px;
+}
+
+.think-dropdown.expanded .think-dropdown-content {
+    max-height: 1000px;
+    padding: 4px 0 4px 16px;
+    overflow-y: visible;
+    border-top: none;
+}
+
+.dark-mode .think-dropdown-content {
+    border-left-color: rgba(255, 255, 255, 0.15);
+    background: transparent;
+}
+
+/* 思考内容滚动条 */
+.think-dropdown-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.think-dropdown-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.think-dropdown-content::-webkit-scrollbar-thumb {
+    background: var(--ai-border);
+    border-radius: 2px;
+}
+
+/* 思考中动画 */
+.think-dropdown.thinking .think-icon {
+    animation: thinkPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes thinkPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(0.95);
+    }
+}
+
+/* 消息内容区域 */
+.message-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* 深色模式 - 思考下拉框 */
+.dark-mode .think-dropdown {
+    background: transparent;
+    border-color: transparent;
+}
+
+.dark-mode .think-dropdown.thinking {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.dark-mode .think-dropdown-header:hover {
+    background: transparent;
+}
+
+.dark-mode .think-dropdown-content {
+    background: transparent;
+    border-top-color: transparent;
 }
