@@ -9,6 +9,7 @@ function createAiMessageUI(options) {
 
   // 流式思考解析器实例映射
   const streamingParsers = new WeakMap();
+  const THINK_MAX_LINES = 7;
 
   // 工作状态指示器选项
   const workingIndicators = [
@@ -86,19 +87,87 @@ function createAiMessageUI(options) {
     return Math.min(Math.max(value, min), max);
   }
 
+  function cleanContent(text) {
+    if (!text || typeof text !== 'string') return text;
+    // 移除开头的 > 符号和可能的空格
+    return text.replace(/^>\s*/, '');
+  }
+
   function getRandomWorkingIndicator() {
     return workingIndicators[Math.floor(Math.random() * workingIndicators.length)];
   }
 
-  function syncThinkContentHeight(content, expanded) {
+  function getThinkLineHeight(content) {
+    if (!content) return 0;
+    const view = documentRef?.defaultView || window;
+    if (!view?.getComputedStyle) return 0;
+    const computed = view.getComputedStyle(content);
+    const fontSize = parseFloat(computed.fontSize) || 12;
+    const rawLineHeight = parseFloat(computed.lineHeight);
+    if (Number.isFinite(rawLineHeight)) {
+      return rawLineHeight;
+    }
+    return fontSize * 1.45;
+  }
+
+  function getThinkMaxHeightLimit(content) {
+    const lineHeight = getThinkLineHeight(content);
+    if (!lineHeight) return 0;
+    const view = documentRef?.defaultView || window;
+    let padding = 0;
+    if (view?.getComputedStyle) {
+      const computed = view.getComputedStyle(content);
+      const paddingTop = parseFloat(computed.paddingTop) || 0;
+      const paddingBottom = parseFloat(computed.paddingBottom) || 0;
+      padding = paddingTop + paddingBottom;
+    }
+    return Math.round(lineHeight * THINK_MAX_LINES + padding);
+  }
+
+  function getThinkMaxHeight(content, lockToMax) {
+    const limit = getThinkMaxHeightLimit(content);
+    if (lockToMax || !content) return limit;
+    const height = content.scrollHeight || 0;
+    if (!height) return limit;
+    return Math.min(height, limit);
+  }
+
+  function scrollThinkContentToBottom(content) {
     if (!content) return;
+    content.scrollTop = content.scrollHeight;
+  }
+
+  function hasUserToggled(container) {
+    return container?.dataset.userToggled === 'true';
+  }
+
+  function markUserToggled(container) {
+    if (!container) return;
+    container.dataset.userToggled = 'true';
+  }
+
+  function hasAutoCollapsed(container) {
+    return container?.dataset.autoCollapsed === 'true';
+  }
+
+  function markAutoCollapsed(container) {
+    if (!container) return;
+    container.dataset.autoCollapsed = 'true';
+  }
+
+  function syncThinkContentHeight(content, expanded, lockToMax = false) {
+    if (!content) return;
+    const maxHeightLimit = getThinkMaxHeightLimit(content);
+    if (maxHeightLimit) {
+      content.style.setProperty('--think-max-height', `${maxHeightLimit}px`);
+    }
     if (!expanded) {
       content.style.maxHeight = '0px';
       content.classList.remove('show');
       return;
     }
 
-    const height = content.scrollHeight || 0;
+    const height = getThinkMaxHeight(content, lockToMax);
     const duration = clamp(Math.round(height * 0.4), 180, 320);
     content.style.setProperty('--think-duration', `${duration}ms`);
     content.style.maxHeight = `${height}px`;
@@ -117,30 +186,37 @@ function createAiMessageUI(options) {
    * @param {boolean} isThinking - 是否正在思考中
    * @returns {HTMLElement}
    */
-  function createThinkDropdown(isThinking = false) {
+  function createThinkDropdown({ isThinking = false, expanded = false } = {}) {
     const container = documentRef.createElement('div');
     container.className = 'think-dropdown';
     if (isThinking) {
-      container.classList.add('thinking', 'expanded');
+      container.classList.add('thinking');
+    }
+    if (expanded) {
+      container.classList.add('expanded');
     }
 
     const header = documentRef.createElement('div');
     header.className = 'think-dropdown-header';
     header.innerHTML = `
       <span class="think-label">${isThinking ? 'Thinking' : 'Thoughts'}</span>
-      <span class="think-toggle">${isThinking ? '▲' : '▼'}</span>
+      <span class="think-toggle">${expanded ? '▲' : '▼'}</span>
     `;
 
     const content = documentRef.createElement('div');
     content.className = 'think-dropdown-content';
 
     header.addEventListener('click', () => {
+      markUserToggled(container);
       const isExpanded = container.classList.toggle('expanded');
       const toggle = header.querySelector('.think-toggle');
       if (toggle) {
         toggle.textContent = isExpanded ? '▲' : '▼';
       }
       syncThinkContentHeight(content, isExpanded);
+      if (isExpanded) {
+        scrollThinkContentToBottom(content);
+      }
     });
 
     container.appendChild(header);
@@ -169,14 +245,19 @@ function createAiMessageUI(options) {
     const parsed = parseThinkingContent(text);
 
     if (parsed.thinking) {
+      const hasContent = Boolean(parsed.content && parsed.content.trim());
+      const shouldForceExpand = Boolean(isStreaming && parsed.thinking && !hasContent);
       // 有思考内容，创建带下拉框的消息
-      const { container, content } = createThinkDropdown(parsed.isThinking);
-      content.textContent = parsed.thinking;
+      const { container, content } = createThinkDropdown({
+        isThinking: parsed.isThinking,
+        expanded: shouldForceExpand
+      });
+      content.textContent = cleanContent(parsed.thinking);
       msg.appendChild(container);
 
       const contentDiv = documentRef.createElement('div');
       contentDiv.className = 'message-content';
-      contentDiv.textContent = parsed.content;
+      contentDiv.textContent = cleanContent(parsed.content);
       msg.appendChild(contentDiv);
 
       // 存储解析器实例用于流式更新
@@ -184,15 +265,20 @@ function createAiMessageUI(options) {
         const parser = createStreamingThinkParser();
         streamingParsers.set(msg, parser);
       }
-      requestAnimationFrame(() => syncThinkContentHeight(content, parsed.isThinking));
+      requestAnimationFrame(() => {
+        syncThinkContentHeight(content, shouldForceExpand, shouldForceExpand);
+        if (shouldForceExpand) {
+          scrollThinkContentToBottom(content);
+        }
+      });
     } else {
       if (isStreaming) {
         const contentDiv = documentRef.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = text || '';
+        contentDiv.textContent = cleanContent(text || '');
         msg.appendChild(contentDiv);
       } else {
-        msg.innerText = text;
+        msg.innerText = cleanContent(text);
       }
     }
 
@@ -223,19 +309,30 @@ function createAiMessageUI(options) {
     const indicator = element.querySelector('.streaming-indicator');
 
     const isThinking = result.isThinking || !result.thinkingComplete;
+    const hasThinking = Boolean(finalResult.thinking);
+    const hasContent = Boolean(finalResult.content && finalResult.content.trim());
+    const shouldForceExpand = Boolean(hasThinking && !hasContent);
+    let dropdown = existingDropdown;
 
     // 1. 处理思考部分
-    if (finalResult.thinking) {
-      if (!existingDropdown) {
+    if (hasThinking) {
+      if (!dropdown) {
         // 首次创建思考下拉框
-        const { container, content } = createThinkDropdown(isThinking);
-        content.textContent = finalResult.thinking;
+        const { container, content } = createThinkDropdown({
+          isThinking,
+          expanded: shouldForceExpand
+        });
+        content.textContent = cleanContent(finalResult.thinking);
+        dropdown = container;
 
-        if (isThinking) {
-          container.classList.add('expanded', 'thinking');
+        container.classList.toggle('thinking', isThinking);
+        if (shouldForceExpand) {
           const toggle = container.querySelector('.think-toggle');
           if (toggle) toggle.textContent = '▲';
-          requestAnimationFrame(() => syncThinkContentHeight(content, true));
+          requestAnimationFrame(() => {
+            syncThinkContentHeight(content, true, true);
+            scrollThinkContentToBottom(content);
+          });
         }
 
         // 插入到最前面，或者在 indicator 之后
@@ -246,39 +343,72 @@ function createAiMessageUI(options) {
         }
       } else {
         // 更新现有思考内容
-        const contentEl = existingDropdown.querySelector('.think-dropdown-content');
+        dropdown.classList.toggle('thinking', isThinking);
+        const label = dropdown.querySelector('.think-label');
+        if (label) {
+          label.textContent = isThinking ? 'Thinking' : 'Thoughts';
+        }
+
+        const contentEl = dropdown.querySelector('.think-dropdown-content');
         if (contentEl) {
-          contentEl.textContent = finalResult.thinking;
-          const isExpanded = existingDropdown.classList.contains('expanded');
+          contentEl.textContent = cleanContent(finalResult.thinking);
+          const isExpanded = dropdown.classList.contains('expanded');
           if (isExpanded) {
-            requestAnimationFrame(() => syncThinkContentHeight(contentEl, true));
+            const lockToMax = shouldForceExpand && !hasUserToggled(dropdown);
+            requestAnimationFrame(() => {
+              syncThinkContentHeight(contentEl, true, lockToMax);
+              if (lockToMax) {
+                scrollThinkContentToBottom(contentEl);
+              }
+            });
           }
         }
         // 保持展开状态（如果正在思考）
-        if (isThinking && !existingDropdown.classList.contains('expanded')) {
-          existingDropdown.classList.add('expanded', 'thinking');
-          const toggle = existingDropdown.querySelector('.think-toggle');
-          if (toggle) toggle.textContent = '▲';
-          const contentEl = existingDropdown.querySelector('.think-dropdown-content');
-          if (contentEl) {
-            requestAnimationFrame(() => syncThinkContentHeight(contentEl, true));
+        if (shouldForceExpand && !dropdown.classList.contains('expanded')) {
+          if (!hasUserToggled(dropdown)) {
+            dropdown.classList.add('expanded');
+            const toggle = dropdown.querySelector('.think-toggle');
+            if (toggle) toggle.textContent = '▲';
+            const contentEl = dropdown.querySelector('.think-dropdown-content');
+            if (contentEl) {
+              requestAnimationFrame(() => {
+                syncThinkContentHeight(contentEl, true, true);
+                scrollThinkContentToBottom(contentEl);
+              });
+            }
           }
         }
       }
     }
 
     // 2. 处理正文部分
-    if (finalResult.content) {
+    if (hasContent) {
       if (!existingContent) {
         const contentDiv = documentRef.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = finalResult.content;
+        contentDiv.textContent = cleanContent(finalResult.content);
         element.appendChild(contentDiv);
       } else {
-        existingContent.textContent = finalResult.content;
+        existingContent.textContent = cleanContent(finalResult.content);
       }
     } else if (existingContent) {
       existingContent.remove();
+    }
+
+    // 正文出现后自动折叠（仅第一次自动折叠，尊重用户手动操作）
+    if (hasContent && dropdown) {
+      if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
+        dropdown.classList.remove('expanded');
+        markAutoCollapsed(dropdown);
+        const contentEl = dropdown.querySelector('.think-dropdown-content');
+        if (contentEl) {
+          syncThinkContentHeight(contentEl, false);
+        }
+        const toggle = dropdown.querySelector('.think-toggle');
+        if (toggle) {
+          toggle.textContent = '▼';
+        }
+      }
     }
 
     // 3. 处理 working 指示器逻辑
@@ -306,6 +436,8 @@ function createAiMessageUI(options) {
     if (!element) return;
 
     const dropdown = element.querySelector('.think-dropdown');
+    const contentEl = element.querySelector('.message-content');
+    const hasContent = Boolean(contentEl && contentEl.textContent.trim());
     if (dropdown) {
       dropdown.classList.remove('thinking');
       dropdown.classList.add('thought');
@@ -316,15 +448,19 @@ function createAiMessageUI(options) {
         label.textContent = 'Thoughts';
       }
 
-      // 收起下拉框
-      dropdown.classList.remove('expanded');
-      const content = dropdown.querySelector('.think-dropdown-content');
-      if (content) {
-        syncThinkContentHeight(content, false);
-      }
-      const toggle = dropdown.querySelector('.think-toggle');
-      if (toggle) {
-        toggle.textContent = '▼';
+      const thinkContent = dropdown.querySelector('.think-dropdown-content');
+      if (hasContent && !hasUserToggled(dropdown)) {
+        dropdown.classList.remove('expanded');
+        markAutoCollapsed(dropdown);
+        if (thinkContent) {
+          syncThinkContentHeight(thinkContent, false);
+        }
+        const toggle = dropdown.querySelector('.think-toggle');
+        if (toggle) {
+          toggle.textContent = '▼';
+        }
+      } else if (thinkContent && dropdown.classList.contains('expanded')) {
+        syncThinkContentHeight(thinkContent, true, false);
       }
     }
 
