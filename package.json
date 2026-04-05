@@ -55,6 +55,7 @@
     "prettier": "^3.8.1"
   },
   "dependencies": {
-    "electron-store": "^8.1.0"
+    "electron-store": "^8.1.0",
+    "marked": "^17.0.6"
   }
 }

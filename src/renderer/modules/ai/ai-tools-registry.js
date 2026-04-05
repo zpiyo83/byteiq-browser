@@ -18,9 +18,7 @@ function getAiToolDefinitions() {
       },
       async execute(context, args) {
         const tabId = args?.tab_id || '';
-        const webview = tabId
-          ? context.getWebviewById(tabId)
-          : context.getActiveWebview();
+        const webview = tabId ? context.getWebviewById(tabId) : context.getActiveWebview();
         if (!webview) {
           return {
             success: false,
@@ -50,9 +48,7 @@ function getAiToolDefinitions() {
       },
       async execute(context, args) {
         const tabId = args.tab_id || '';
-        const webview = tabId
-          ? context.getWebviewById(tabId)
-          : context.getActiveWebview();
+        const webview = tabId ? context.getWebviewById(tabId) : context.getActiveWebview();
         if (!webview) {
           return {
             success: false,
@@ -62,6 +58,27 @@ function getAiToolDefinitions() {
         const result = await clickElement(webview, {
           selector: String(args.selector || '')
         });
+
+        // 点击成功后提取页面信息反馈给AI
+        if (result.success) {
+          try {
+            const pageInfo = await context.extractPageContent(webview);
+            if (pageInfo) {
+              return {
+                ...result,
+                tabId: tabId || '',
+                pageInfo: {
+                  url: pageInfo.url || '',
+                  title: pageInfo.title || '',
+                  content: pageInfo.content ? pageInfo.content.substring(0, 2000) : ''
+                }
+              };
+            }
+          } catch (error) {
+            console.warn('[ai-tools-registry] Failed to extract page info after click:', error);
+          }
+        }
+
         return {
           ...result,
           tabId: tabId || ''
@@ -82,9 +99,7 @@ function getAiToolDefinitions() {
       },
       async execute(context, args) {
         const tabId = args.tab_id || '';
-        const webview = tabId
-          ? context.getWebviewById(tabId)
-          : context.getActiveWebview();
+        const webview = tabId ? context.getWebviewById(tabId) : context.getActiveWebview();
         if (!webview) {
           return {
             success: false,

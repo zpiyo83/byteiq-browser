@@ -12,6 +12,8 @@ function createAiAgentRunner(options) {
     updateSession,
     renderSessionsList,
     addChatMessage,
+    updateStreamingMessage,
+    finishStreamingMessage,
     documentRef,
     t,
     buildSystemPrompt,
@@ -60,29 +62,29 @@ function createAiAgentRunner(options) {
 
   function getToolStatusLabel(status) {
     switch (status) {
-    case 'success':
-      return '已完成';
-    case 'error':
-      return '失败';
-    case 'pending':
-      return '执行中';
-    default:
-      return '状态';
+      case 'success':
+        return '已完成';
+      case 'error':
+        return '失败';
+      case 'pending':
+        return '执行中';
+      default:
+        return '状态';
     }
   }
 
   function getToolTitle(toolName) {
     switch (toolName) {
-    case 'get_page_info':
-      return '获取页面信息';
-    case 'click_element':
-      return '点击元素';
-    case 'input_text':
-      return '输入文本';
-    case 'end_session':
-      return '结束会话';
-    default:
-      return toolName || '工具';
+      case 'get_page_info':
+        return '获取页面信息';
+      case 'click_element':
+        return '点击元素';
+      case 'input_text':
+        return '输入文本';
+      case 'end_session':
+        return '结束会话';
+      default:
+        return toolName || '工具';
     }
   }
 
@@ -134,23 +136,23 @@ function createAiAgentRunner(options) {
     if (!toolCall) return '准备执行工具';
     const args = toolCall.arguments || {};
     switch (toolCall.name) {
-    case 'get_page_info':
-      return `获取页面信息（标题、URL、摘要、控件），${buildPageHintFromArgs(args)}`;
-    case 'click_element': {
-      const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
-      const pageHint = buildPageHintFromArgs(args);
-      return `准备点击元素，${selector}，${pageHint}`;
-    }
-    case 'input_text': {
-      const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
-      const text = args.text ? `输入: ${truncateText(args.text, 32)}` : '未提供文本';
-      const pageHint = buildPageHintFromArgs(args);
-      return `准备输入文本，${selector}，${text}，${pageHint}`;
-    }
-    case 'end_session':
-      return '准备结束当前会话';
-    default:
-      return '准备执行工具';
+      case 'get_page_info':
+        return `获取页面信息（标题、URL、摘要、控件），${buildPageHintFromArgs(args)}`;
+      case 'click_element': {
+        const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
+        const pageHint = buildPageHintFromArgs(args);
+        return `准备点击元素，${selector}，${pageHint}`;
+      }
+      case 'input_text': {
+        const selector = args.selector ? `selector: ${args.selector}` : '未提供selector';
+        const text = args.text ? `输入: ${truncateText(args.text, 32)}` : '未提供文本';
+        const pageHint = buildPageHintFromArgs(args);
+        return `准备输入文本，${selector}，${text}，${pageHint}`;
+      }
+      case 'end_session':
+        return '准备结束当前会话';
+      default:
+        return '准备执行工具';
     }
   }
 
@@ -255,14 +257,19 @@ function createAiAgentRunner(options) {
 
       try {
         const result = await sendAgentRequest(agentMessageHistory);
-        aiMsgElement.classList.remove('streaming');
+        finishStreamingMessage(aiMsgElement);
 
         if (!result?.success) {
           throw new Error(result?.error || 'Agent request failed');
         }
 
         if (result.type === 'message') {
-          aiMsgElement.innerText = result.content;
+          // 渲染思考内容和正文
+          const fullText = result.reasoningContent
+            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
+            : result.content;
+          updateStreamingMessage(aiMsgElement, fullText);
+          finishStreamingMessage(aiMsgElement);
           agentMessageHistory.push({ role: 'assistant', content: result.content });
           await historyStorage.addMessage(session.id, {
             role: 'assistant',
@@ -272,9 +279,21 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'tool_calls') {
+          // 渲染思考内容（如果有）
+          let firstToolTarget = aiMsgElement;
+          const fullText = result.reasoningContent
+            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
+            : result.content || '';
+          if (fullText) {
+            updateStreamingMessage(aiMsgElement, fullText);
+            finishStreamingMessage(aiMsgElement);
+            firstToolTarget = null;
+          }
+
           const toolMessages = new Map();
           result.toolCalls.forEach((toolCall, index) => {
-            const target = index === 0 ? aiMsgElement : addChatMessage('', 'ai');
+            const target =
+              index === 0 && firstToolTarget ? firstToolTarget : addChatMessage('', 'ai');
             toolMessages.set(toolCall.id, target);
             renderToolCard(target, {
               title: getToolTitle(toolCall.name),
@@ -334,7 +353,7 @@ function createAiAgentRunner(options) {
       } catch (error) {
         console.error('Agent error:', error);
         aiMsgElement.innerText = `${t('ai.error') || '发生错误'}: ${error.message}`;
-        aiMsgElement.classList.remove('streaming');
+        finishStreamingMessage(aiMsgElement);
         isAgentProcessing = false;
       }
     }
