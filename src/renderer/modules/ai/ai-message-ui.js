@@ -3,7 +3,6 @@
  */
 
 const { createStreamingThinkParser } = require('./ai-think-parser');
-const { renderMarkdown } = require('./ai-markdown');
 
 function createAiMessageUI(options) {
   const { aiChatArea, documentRef, t } = options;
@@ -101,7 +100,7 @@ function createAiMessageUI(options) {
 
       const contentDiv = documentRef.createElement('div');
       contentDiv.className = 'message-content';
-      contentDiv.innerHTML = renderMarkdown(parsed.content);
+      contentDiv.textContent = parsed.content;
       msg.appendChild(contentDiv);
 
       // 存储解析器实例用于流式更新
@@ -114,10 +113,10 @@ function createAiMessageUI(options) {
       if (isStreaming) {
         const contentDiv = documentRef.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.innerHTML = renderMarkdown(text || '');
+        contentDiv.textContent = text || '';
         msg.appendChild(contentDiv);
       } else {
-        msg.innerHTML = renderMarkdown(text);
+        msg.innerText = text;
       }
     }
 
@@ -197,10 +196,10 @@ function createAiMessageUI(options) {
       if (!existingContent) {
         const contentDiv = documentRef.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.innerHTML = renderMarkdown(finalResult.content);
+        contentDiv.textContent = finalResult.content;
         element.appendChild(contentDiv);
       } else {
-        existingContent.innerHTML = renderMarkdown(finalResult.content);
+        existingContent.textContent = finalResult.content;
       }
     } else if (existingContent) {
       existingContent.remove();
