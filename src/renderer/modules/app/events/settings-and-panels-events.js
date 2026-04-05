@@ -340,7 +340,13 @@
       btn.classList.add('active');
 
       // Update sections
-      document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.settings-section').forEach(s => {
+        s.classList.remove('active');
+        // 强制重置动画
+        s.style.animation = 'none';
+        s.offsetHeight; // 触发重绘
+        s.style.animation = '';
+      });
       const targetSection = document.getElementById(`settings-${section}`);
       if (targetSection) {
         targetSection.classList.add('active');
