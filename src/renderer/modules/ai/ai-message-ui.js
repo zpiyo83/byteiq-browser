@@ -10,8 +10,84 @@ function createAiMessageUI(options) {
   // 流式思考解析器实例映射
   const streamingParsers = new WeakMap();
 
+  // 工作状态指示器选项
+  const workingIndicators = [
+    'working',
+    'processing',
+    'thinking',
+    'analyzing',
+    'generating',
+    'crafting',
+    'composing',
+    'building',
+    'creating',
+    'developing',
+    'calculating',
+    'computing',
+    'designing',
+    'formulating',
+    'constructing',
+    'assembling',
+    'preparing',
+    'organizing',
+    'structuring',
+    'planning',
+    'researching',
+    'investigating',
+    'exploring',
+    'discovering',
+    'learning',
+    'adapting',
+    'optimizing',
+    'refining',
+    'improving',
+    'enhancing',
+    'modifying',
+    'adjusting',
+    'configuring',
+    'customizing',
+    'tailoring',
+    'personalizing',
+    'streamlining',
+    'simplifying',
+    'clarifying',
+    'explaining',
+    'describing',
+    'detailing',
+    'elaborating',
+    'specifying',
+    'defining',
+    'outlining',
+    'sketching',
+    'drafting',
+    'prototyping',
+    'modeling',
+    'simulating',
+    'testing',
+    'validating',
+    'verifying',
+    'checking',
+    'reviewing',
+    'examining',
+    'inspecting',
+    'auditing',
+    'monitoring',
+    'tracking',
+    'measuring',
+    'evaluating',
+    'assessing',
+    'judging',
+    'deciding',
+    'selecting',
+    'choosing'
+  ];
+
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+
+  function getRandomWorkingIndicator() {
+    return workingIndicators[Math.floor(Math.random() * workingIndicators.length)];
   }
 
   function syncThinkContentHeight(content, expanded) {
@@ -84,7 +160,7 @@ function createAiMessageUI(options) {
       // 添加 working 指示器
       const indicator = documentRef.createElement('span');
       indicator.className = 'streaming-indicator';
-      indicator.textContent = 'working';
+      indicator.textContent = getRandomWorkingIndicator();
       msg.appendChild(indicator);
     }
 
@@ -213,7 +289,7 @@ function createAiMessageUI(options) {
       if (!indicator) {
         const newIndicator = documentRef.createElement('span');
         newIndicator.className = 'streaming-indicator';
-        newIndicator.textContent = 'working';
+        newIndicator.textContent = getRandomWorkingIndicator();
         element.prepend(newIndicator);
       }
     } else if (indicator) {
