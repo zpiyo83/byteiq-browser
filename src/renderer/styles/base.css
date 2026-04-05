@@ -17,6 +17,20 @@ body {
         Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     /* 纯白背景，避免外壳与网页之间出现明显色块差异 */
     background: #ffffff;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 全局过渡动画，确保主题切换平滑 */
+body *, body *::before, body *::after {
+    transition: background-color 0.3s ease, 
+                border-color 0.3s ease, 
+                color 0.3s ease, 
+                box-shadow 0.3s ease;
+}
+
+/* 排除不需要过渡的元素，如 webview 内容 */
+webview, .webview-mock, .no-transition, .no-transition * {
+    transition: none !important;
 }
 
 /* 焦点轮廓样式 - 键盘无障碍访问 */
