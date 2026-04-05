@@ -145,6 +145,12 @@
     animation: settingsFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
+.settings-section.active h3 {
+    animation: jelly 0.6s ease-in-out 1;
+    transform-origin: left center;
+    display: inline-block;
+}
+
 @keyframes settingsFadeIn {
     from {
         opacity: 0;

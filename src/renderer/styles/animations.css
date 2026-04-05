@@ -336,7 +336,144 @@ body.dark-mode .list-item-hover:hover {
     contain: layout style;
 }
 
-/* ==================== 响应式动画 ==================== */
+/* ==================== 复合动画效果 (斜纹/抖动/呼吸) ==================== */
+
+/* 第一层：基础斜纹滚动 (The Flow) */
+@keyframes flowStripe {
+    from {
+        background-position: 0 0;
+    }
+    to {
+        background-position: 50px 0;
+    }
+}
+
+/* 果冻弹性动画 (Jelly / Elastic) - 更加微妙的方案 */
+@keyframes jelly {
+    0% { transform: scale(1, 1); }
+    30% { transform: scale(1.02, 0.98); }
+    45% { transform: scale(0.99, 1.01); }
+    60% { transform: scale(1.01, 0.99); }
+    80% { transform: scale(0.998, 1.002); }
+    100% { transform: scale(1, 1); }
+}
+
+/* 第三层：透明度/光泽呼吸 (The Breath) */
+@keyframes breathSheen {
+    0%, 100% {
+        opacity: 0.85;
+        filter: brightness(1);
+    }
+    50% {
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+}
+
+/* 组合动画类名 */
+.cyber-active-bg {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--ai-accent, #3b82f6) !important;
+    color: #fff !important;
+}
+
+.cyber-active-bg::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    right: -10%;
+    bottom: -10%;
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.15),
+        rgba(255, 255, 255, 0.15) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    background-size: 28.28px 28.28px;
+    animation: flowStripe 1s linear infinite;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.cyber-active-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    background-size: 200% 100%;
+    animation: progressShimmer 2s infinite, breathSheen 3s ease-in-out infinite;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* 抖动效果应用于内容或整体 */
+.cyber-jitter {
+    animation: jitter 0.2s infinite;
+}
+
+/* 适配设置面板侧边栏活动项 */
+.settings-nav-item.active {
+    background: var(--ai-accent, #1967d2) !important;
+    color: #fff !important;
+    position: relative;
+    z-index: 1;
+}
+
+.settings-nav-item.active .cyber-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.settings-nav-item.active .cyber-layer::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    right: -10%;
+    bottom: -10%;
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.15),
+        rgba(255, 255, 255, 0.15) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    background-size: 28.28px 28.28px;
+    animation: flowStripe 1s linear infinite;
+}
+
+.settings-nav-item.active .cyber-layer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+    );
+    background-size: 200% 100%;
+    animation: progressShimmer 2s infinite, breathSheen 3s ease-in-out infinite;
+}
 
 /* 尊重用户减少动画偏好 */
 @media (prefers-reduced-motion: reduce) {
