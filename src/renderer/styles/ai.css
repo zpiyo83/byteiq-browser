@@ -914,6 +914,7 @@
 
 .think-dropdown-content {
     --think-duration: 260ms;
+    --think-max-height: 120px;
     max-height: 0;
     overflow: hidden;
     transition: max-height var(--think-duration) cubic-bezier(0.22, 1, 0.36, 1), 
@@ -928,13 +929,14 @@
 }
 
 .think-dropdown-content.show {
-    max-height: 1000px;
+    max-height: var(--think-max-height);
 }
 
 .think-dropdown.expanded .think-dropdown-content {
-    max-height: 1000px;
+    max-height: var(--think-max-height);
     padding: 4px 0 4px 16px;
-    overflow-y: visible;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
     border-top: none;
 }
 
