@@ -1,0 +1,220 @@
+/* AI 侧边栏布局、调整大小、头部、工具栏 */
+
+.ai-sidebar {
+    --ai-surface: #ffffff;
+    --ai-surface-alt: #f7f9fc;
+    --ai-surface-soft: #f1f3f6;
+    --ai-border: #e3e6ec;
+    --ai-text: #1f2328;
+    --ai-muted: #5f6368;
+    --ai-accent: #3b82f6;
+    --ai-accent-strong: #2563eb;
+    --ai-accent-soft: rgba(59, 130, 246, 0.12);
+    --ai-bubble-ai: #eef2f7;
+    --ai-bubble-user: #3b82f6;
+    --ai-bubble-user-text: #ffffff;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 360px;
+    min-width: 280px;
+    max-width: 600px;
+    color: var(--ai-text);
+    background: linear-gradient(180deg, var(--ai-surface-alt), var(--ai-surface) 140px);
+    border-left: 1px solid var(--ai-border);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    box-shadow: -6px 0 18px rgba(15, 23, 42, 0.08);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.3s ease,
+                background-color 0.3s ease,
+                border-color 0.3s ease;
+}
+
+.ai-resize-handle {
+    position: absolute;
+    left: -3px;
+    top: 0;
+    bottom: 0;
+    width: 12px;
+    background: transparent;
+    cursor: ew-resize;
+    z-index: 20;
+    transition: background 0.2s ease;
+}
+
+.ai-resize-handle:hover,
+.ai-resize-handle:active,
+.ai-resize-handle.resizing {
+    background: var(--ai-accent);
+}
+
+.ai-resize-handle.resizing {
+    background: var(--ai-accent-strong);
+}
+
+.ai-sidebar.resizing {
+    transition: none;
+    border-left-color: var(--ai-accent);
+}
+
+body.ai-sidebar-resizing {
+    cursor: ew-resize !important;
+    user-select: none !important;
+}
+
+.ai-sidebar.collapsed {
+    transform: translateX(100%);
+    pointer-events: none;
+    opacity: 0;
+}
+
+.ai-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--ai-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--ai-surface-alt);
+    gap: 8px;
+}
+
+.ai-header h3 {
+    font-size: 14px;
+    color: var(--ai-text);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.ai-header button {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 18px;
+    color: var(--ai-muted);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-header button:hover {
+    background: var(--ai-surface-soft);
+    color: var(--ai-text);
+    transform: rotate(6deg);
+}
+
+.ai-header button:active {
+    transform: rotate(6deg) scale(0.95);
+}
+
+.ai-sidebar-toolbar {
+    display: flex;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--ai-border);
+    align-items: center;
+    background: var(--ai-surface);
+}
+
+.ai-toolbar-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--ai-border);
+    background: var(--ai-surface);
+    cursor: pointer;
+    color: var(--ai-muted);
+    transition: all 0.2s ease;
+}
+
+.ai-toolbar-btn:hover {
+    background: var(--ai-surface-soft);
+    color: var(--ai-text);
+}
+
+/* AI模式选择下拉框样式 */
+.ai-sidebar-toolbar .ai-mode-select {
+    flex: 1;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--ai-border);
+    background: var(--ai-surface);
+    font-size: 13px;
+    padding: 0 8px;
+    outline: none;
+    cursor: pointer;
+    color: var(--ai-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-sidebar-toolbar .ai-mode-select:hover {
+    border-color: var(--ai-accent);
+}
+
+.ai-sidebar-toolbar .ai-mode-select:focus {
+    border-color: var(--ai-accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* AI页面状态指示器 */
+.ai-page-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    margin: 0 8px;
+    background: var(--ai-accent-soft);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--ai-accent-strong);
+    line-height: 1.4;
+    transition: opacity 0.2s ease;
+}
+
+.ai-page-status-icon {
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.ai-page-status-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.ai-page-status.changed {
+    animation: ai-page-status-pulse 0.6s ease;
+}
+
+@keyframes ai-page-status-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* 深色模式适配 */
+.dark-mode .ai-sidebar-toolbar .ai-mode-select {
+    background: var(--ai-surface);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-sidebar-toolbar .ai-mode-select:hover,
+.dark-mode .ai-sidebar-toolbar .ai-mode-select:focus {
+    border-color: var(--ai-accent);
+    box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.15);
+}
+
+.ai-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}

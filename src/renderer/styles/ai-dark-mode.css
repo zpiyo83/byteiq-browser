@@ -1,0 +1,216 @@
+/* AI 深色模式覆盖样式 */
+
+/* 深色模式适配 */
+.dark-mode .ai-sidebar {
+    --ai-surface: #1f2328;
+    --ai-surface-alt: #252a31;
+    --ai-surface-soft: #2b3138;
+    --ai-border: #333a43;
+    --ai-text: #e8eaed;
+    --ai-muted: #9aa0a6;
+    --ai-accent: #8ab4f8;
+    --ai-accent-strong: #6d9cf5;
+    --ai-accent-soft: rgba(138, 180, 248, 0.2);
+    --ai-bubble-ai: #2f3640;
+    --ai-bubble-user: #4a7ff0;
+    --ai-bubble-user-text: #ffffff;
+    background: linear-gradient(180deg, var(--ai-surface-alt), var(--ai-surface) 140px);
+    border-left-color: var(--ai-border);
+    box-shadow: -6px 0 18px rgba(0,0,0,0.45);
+}
+
+.dark-mode .ai-header {
+    background: var(--ai-surface-alt);
+    border-bottom-color: var(--ai-border);
+}
+
+.dark-mode .ai-header h3 {
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-header button {
+    color: var(--ai-muted);
+}
+
+.dark-mode .ai-header button:hover {
+    background: var(--ai-surface-soft);
+    color: var(--ai-text);
+}
+
+ .dark-mode .ai-sessions {
+    background: var(--ai-surface-alt);
+    border-right-color: var(--ai-border);
+ }
+
+ .dark-mode .ai-sessions-toolbar {
+    border-bottom-color: var(--ai-border);
+ }
+
+ .dark-mode .ai-new-session-btn,
+ .dark-mode .ai-mode-select {
+    background: var(--ai-surface);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+ }
+
+ .dark-mode .ai-session-item:hover {
+    background: var(--ai-surface-soft);
+ }
+
+ .dark-mode .ai-session-item.active {
+    background: #1d2b3d;
+    border-color: #2d4969;
+ }
+
+ .dark-mode .ai-session-item.deleted {
+    opacity: 0.5;
+ }
+
+.dark-mode .ai-session-title {
+    color: var(--ai-text);
+}
+
+ .dark-mode .ai-session-meta {
+    color: var(--ai-muted);
+ }
+
+.dark-mode .chat-message.ai {
+    background: transparent;
+    color: var(--ai-text);
+}
+
+.dark-mode .chat-message.streaming::after {
+    background: var(--ai-muted);
+}
+
+.dark-mode .chat-message.page-info {
+    background: #1d2b3d;
+    color: #a5c5fb;
+}
+
+.dark-mode .chat-message.page-info strong {
+    color: #c5dbff;
+}
+
+.dark-mode .chat-message.tool-card {
+    background: var(--ai-surface-alt);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .tool-card-status.success {
+    background: rgba(138, 180, 248, 0.2);
+    color: #cfe0ff;
+    border-color: rgba(138, 180, 248, 0.35);
+}
+
+.dark-mode .tool-card-status.pending {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fcd34d;
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.dark-mode .tool-card-status.error {
+    background: rgba(248, 113, 113, 0.2);
+    color: #fecaca;
+    border-color: rgba(248, 113, 113, 0.35);
+}
+
+.dark-mode .ai-input-area {
+    background: var(--ai-surface);
+    border-top-color: var(--ai-border);
+}
+
+.dark-mode .ai-input-area input {
+    background: var(--ai-surface-alt);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-input-area input:focus {
+    border-color: var(--ai-accent);
+    box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.15);
+}
+
+.dark-mode .ai-input-area input:disabled {
+    background: var(--ai-surface-soft);
+    color: var(--ai-muted);
+}
+
+/* Dark mode - History popup */
+.dark-mode .ai-history-popup {
+    background: var(--ai-surface);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .ai-history-search input {
+    background: var(--ai-surface-alt);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-history-search input:focus {
+    border-color: var(--ai-accent);
+    box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.15);
+}
+
+.dark-mode .ai-history-item:hover {
+    background: var(--ai-surface-soft);
+}
+
+.dark-mode .ai-history-item.active {
+    background: rgba(138, 180, 248, 0.15);
+}
+
+.dark-mode .ai-history-empty {
+    color: var(--ai-muted);
+}
+
+/* 深色模式 - 上下文状态栏 */
+.dark-mode .ai-context-bar {
+    background: var(--ai-surface-soft);
+    border-color: var(--ai-border);
+    color: var(--ai-muted);
+}
+
+.dark-mode .ai-context-bar .context-clear-btn {
+    color: var(--ai-muted);
+}
+
+.dark-mode .ai-context-bar .context-clear-btn:hover {
+    background: var(--ai-surface);
+    color: var(--ai-text);
+}
+
+/* 深色模式 - Markdown 代码块 */
+.dark-mode .message-content.markdown-body pre {
+    background: var(--ai-surface-soft);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .message-content.markdown-body code {
+    background: var(--ai-surface-soft);
+}
+
+.dark-mode .message-content.markdown-body th {
+    background: var(--ai-surface-soft);
+}
+
+/* 深色模式 - 思考下拉框 */
+.dark-mode .think-dropdown {
+    background: transparent;
+    border-color: transparent;
+}
+
+.dark-mode .think-dropdown.thinking {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.dark-mode .think-dropdown-header:hover {
+    background: transparent;
+}
+
+.dark-mode .think-dropdown-content {
+    background: transparent;
+    border-top-color: transparent;
+}

@@ -1,0 +1,47 @@
+/* 浏览器深色模式覆盖样式 */
+
+body.dark-mode .close-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 深色模式下的高级选项 */
+.dark-mode .advanced-options {
+    border-color: #3c4043;
+}
+
+.dark-mode .advanced-options summary {
+    background: #2d2e30;
+}
+
+.dark-mode .advanced-options summary:hover,
+.dark-mode .advanced-options[open] summary {
+    background: #35363a;
+}
+
+.dark-mode .advanced-options .setting-item {
+    border-bottom-color: #3c4043;
+}
+
+/* 深色模式下的更多按钮下拉菜单 */
+.dark-mode .more-menu-dropdown {
+    background: #2d2e30;
+    border-color: #3c4043;
+}
+
+.dark-mode .more-menu-dropdown button {
+    color: #e8eaed;
+}
+
+.dark-mode .more-menu-dropdown button:hover {
+    background: #3c4043;
+}
+
+.dark-mode .more-menu-dropdown button:active {
+    background: #44474b;
+}
+
+.dark-mode .advanced-options input[type="number"] {
+    background: #2d2e30;
+    border-color: #3c4043;
+    color: #e8eaed;
+}

@@ -1,6 +1,6 @@
 /**
- * AI 助手管理器
- * 负责AI对话、页面内容提取功能
+ * AI 助手管理器入口
+ * 负责编排子模块，绑定事件
  */
 
 const { getAIHistoryStorage } = require('../storage/ai-history-storage');
@@ -16,6 +16,8 @@ const {
   extractAndSetPageContext
 } = require('../ai/ai-context-utils');
 const { createAiAgentRunner } = require('../ai/ai-agent-runner');
+const { createAiPageContext } = require('../ai/ai-page-context');
+const { createAiChatHandler } = require('../ai/ai-chat-handler');
 
 function createAiManager(options) {
   const {
@@ -39,10 +41,6 @@ function createAiManager(options) {
   const contextBar = documentRef.getElementById('ai-context-bar');
   const contextText = documentRef.getElementById('ai-context-text');
   const contextClearBtn = documentRef.getElementById('ai-context-clear-btn');
-
-  // 页面状态指示器
-  const pageStatusBar = documentRef.getElementById('ai-page-status');
-  const pageStatusText = documentRef.getElementById('ai-page-status-text');
 
   // 工具栏与历史面板
   const newSessionBtn = documentRef.getElementById('ai-new-session-btn');
@@ -111,11 +109,6 @@ function createAiManager(options) {
     }
   }
 
-  // 当前流式响应状态
-  let currentStreamingElement = null;
-  let currentTaskId = null;
-  let isStreaming = false;
-
   // AI 模式选择
   const modeSelect = documentRef.getElementById('ai-mode-select');
   let currentMode = 'ask'; // 'ask' 或 'agent'
@@ -123,80 +116,6 @@ function createAiManager(options) {
   // Agent任务状态追踪
   let taskState = null;
 
-  // 当前页面信息缓存（用于动态注入）
-  let lastKnownPageInfo = null;
-
-  /**
-   * 获取当前页面实时信息（轻量级，不提取完整内容）
-   */
-  function getCurrentPageInfo() {
-    const tabId = getActiveTabId();
-    const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
-    if (!webview || webview.tagName !== 'WEBVIEW') return null;
-    const loading = typeof webview.isLoading === 'function' ? webview.isLoading() : false;
-    let title = '';
-    let url = '';
-    try {
-      url = typeof webview.getURL === 'function' ? webview.getURL() : '';
-      title = webview.getTitle?.() || '';
-    } catch {
-      // webview尚未加载完成
-    }
-    return { title, url, loading, tabId };
-  }
-
-  /**
-   * 更新页面状态指示器UI
-   */
-  function updatePageStatusUI(pageInfo) {
-    if (!pageStatusBar || !pageStatusText) return;
-    if (!pageInfo || !pageInfo.url) {
-      pageStatusBar.style.display = 'none';
-      return;
-    }
-    const shortTitle = pageInfo.title || pageInfo.url;
-    pageStatusText.textContent = pageInfo.loading ? `加载中: ${shortTitle}` : shortTitle;
-    pageStatusBar.style.display = 'flex';
-  }
-
-  /**
-   * 页面变化时的处理：更新状态指示器和AI上下文
-   */
-  function onPageChanged(tabId, _url) {
-    const pageInfo = getCurrentPageInfo();
-    if (!pageInfo) return;
-
-    // 检测页面是否变化
-    const changed = lastKnownPageInfo && lastKnownPageInfo.url !== pageInfo.url;
-    lastKnownPageInfo = pageInfo;
-
-    updatePageStatusUI(pageInfo);
-
-    // 页面变化时闪烁提示
-    if (changed && pageStatusBar) {
-      pageStatusBar.classList.add('changed');
-      setTimeout(() => pageStatusBar.classList.remove('changed'), 600);
-    }
-
-    // Ask模式：自动更新session的pageContext（延迟提取，避免阻塞导航）
-    if (currentMode !== 'agent') {
-      const webview = documentRef.getElementById(`webview-${tabId}`);
-      if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
-        extractAndSetPageContext({
-          webview,
-          getCurrentSession,
-          updateSession,
-          updateContextBar,
-          renderSessionsList,
-          extractPageContentFn: extractPageContent
-        }).catch(err => console.error('Auto-extract page context failed:', err));
-      }
-    }
-  }
-
-  /**
-   * 更新Agent任务状态
-   */
   function updateTaskState(patch) {
     if (!taskState) {
       taskState = { goal: '', completedSteps: [], currentPage: '', lastAction: '' };
@@ -240,6 +159,22 @@ function createAiManager(options) {
     });
   }
 
+  // 创建页面上下文管理器
+  const pageContext = createAiPageContext({
+    documentRef,
+    getActiveTabId,
+    t,
+    getCurrentSession,
+    updateSession,
+    updateContextBar: ctx => updateContextBar(ctx),
+    renderSessionsList: (...args) => renderSessionsList(...args),
+    aiSidebar,
+    getOrCreateSessionIdForTab,
+    setActiveSessionId,
+    readTabToSessionFromStore,
+    renderSessionChat: (...args) => renderSessionChat(...args)
+  });
+
   const agentRunner = createAiAgentRunner({
     ipcRenderer,
     toolsExecutor,
@@ -254,10 +189,31 @@ function createAiManager(options) {
     buildSystemPrompt,
     setInputEnabled,
     getPageList: getPageListSnapshot,
-    getCurrentPageInfo,
+    getCurrentPageInfo: pageContext.getCurrentPageInfo,
     updateTaskState,
     resetTaskState,
     getTaskState: () => taskState
+  });
+
+  // 创建聊天处理器
+  const chatHandler = createAiChatHandler({
+    ipcRenderer,
+    historyStorage,
+    addChatMessage,
+    updateStreamingMessage,
+    finishStreamingMessage,
+    setInputEnabled,
+    getCurrentSession,
+    updateSession,
+    renderSessionsList,
+    getCurrentPageInfo: pageContext.getCurrentPageInfo,
+    t,
+    agentRunner,
+    extractAndSetPageContext,
+    extractPageContent,
+    getActiveTabId,
+    documentRef,
+    updateContextBar: ctx => updateContextBar(ctx)
   });
 
   async function switchToSession(sessionId) {
@@ -318,22 +274,6 @@ function createAiManager(options) {
   const { bindHistoryPanelEvents } = historyUI;
 
   /**
-   * 监听流式响应
-   */
-  function setupStreamingListener() {
-    ipcRenderer.on('ai-chat-streaming', (_event, data) => {
-      if (!isStreaming || !currentStreamingElement) return;
-      if (data.taskId !== currentTaskId) return;
-
-      // 组合思考内容和正文内容用于显示
-      const fullText = data.reasoningContent
-        ? `<!--think-->${data.reasoningContent}<!--endthink-->${data.accumulated}`
-        : data.accumulated;
-      updateStreamingMessage(currentStreamingElement, fullText);
-    });
-  }
-
-  /**
    * 更新上下文状态栏
    */
   function updateContextBar(pageContext) {
@@ -355,239 +295,11 @@ function createAiManager(options) {
     await updateSession(session.id, {
       pageContext: null
     });
-    // 清除所有消息
     await historyStorage.clearAll();
     contextBar.style.display = 'none';
     clearChatArea();
     await renderSessionsList();
   }
-
-  /**
-   * 当标签页切换时自动提取内容
-   */
-  async function onTabChanged(tabId) {
-    if (!tabId) return;
-
-    const webview = documentRef.getElementById(`webview-${tabId}`);
-    if (!webview || webview.tagName !== 'WEBVIEW') {
-      return;
-    }
-
-    // 等待页面加载完成
-    if (webview.isLoading && webview.isLoading()) {
-      return;
-    }
-
-    // 检查AI侧边栏是否打开
-    if (aiSidebar.classList.contains('collapsed')) {
-      return;
-    }
-
-    await getOrCreateSessionIdForTab(tabId);
-    setActiveSessionId(readTabToSessionFromStore()[tabId]);
-    await renderSessionsList();
-    const session = await getCurrentSession();
-    await renderSessionChat(session);
-
-    // 提取页面内容
-    if (currentMode !== 'agent') {
-      await extractAndSetPageContext({
-        tabId,
-        webview,
-        getCurrentSession,
-        updateSession,
-        updateContextBar,
-        renderSessionsList,
-        extractPageContentFn: extractPageContent
-      });
-    }
-  }
-
-  /**
-   * 发送对话请求
-   */
-  async function sendChatRequest(messages, sessionId, streamingElement = null) {
-    currentTaskId = `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    isStreaming = true;
-    currentStreamingElement = streamingElement;
-
-    // 禁用发送按钮
-    setInputEnabled(false);
-
-    try {
-      const result = await ipcRenderer.invoke('ai-chat', {
-        messages,
-        taskId: currentTaskId
-      });
-
-      if (result.success) {
-        // 保存AI回复到IndexedDB（包含思考内容标记）
-        if (sessionId) {
-          const savedContent = result.reasoningContent
-            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
-            : result.content;
-          await historyStorage.addMessage(sessionId, {
-            role: 'assistant',
-            content: savedContent
-          });
-          // 更新session时间
-          await updateSession(sessionId, { updatedAt: Date.now() });
-        }
-
-        if (streamingElement) {
-          finishStreamingMessage(streamingElement);
-        } else {
-          addChatMessage(result.content, 'ai');
-        }
-
-        renderSessionsList();
-      } else if (result.cancelled) {
-        if (streamingElement) {
-          streamingElement.classList.add('cancelled');
-          streamingElement.innerText = t('ai.cancelled') || '已取消';
-        }
-      } else {
-        throw new Error(result.error);
-      }
-    } finally {
-      isStreaming = false;
-      currentStreamingElement = null;
-      currentTaskId = null;
-
-      // 恢复发送按钮
-      setInputEnabled(true);
-    }
-  }
-
-  /**
-   * 处理用户发送消息
-   */
-  async function handleAISend() {
-    const text = aiInput.value.trim();
-    if (!text || isStreaming) return;
-
-    const session = await getCurrentSession();
-    if (!session) return;
-
-    // 添加用户消息到UI
-    addChatMessage(text, 'user');
-    aiInput.value = '';
-
-    // 保存用户消息到IndexedDB
-    await historyStorage.addMessage(session.id, {
-      role: 'user',
-      content: text
-    });
-
-    // 首条消息自动生成会话标题
-    const defaultTitle = t('ai.sessionUntitled') || '新会话';
-    if (session.title === defaultTitle || session.title === '当前标签页') {
-      const autoTitle = text.length > 30 ? text.slice(0, 30) + '...' : text;
-      await updateSession(session.id, { title: autoTitle });
-    }
-
-    // 根据模式处理
-    if (currentMode === 'agent') {
-      // Agent模式：支持工具调用循环
-      await handleAgentMode(session, text);
-    } else {
-      // Ask模式：普通对话
-      await handleAskMode(session, text);
-    }
-  }
-
-  /**
-   * Ask模式处理 - 普通对话，无工具调用
-   */
-  async function handleAskMode(session, userText) {
-    // 更新session元数据
-    await updateSession(session.id, { updatedAt: Date.now() });
-    renderSessionsList();
-
-    const tabId = getActiveTabId();
-    const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
-    if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
-      await extractAndSetPageContext({
-        tabId,
-        webview,
-        getCurrentSession,
-        updateSession,
-        updateContextBar,
-        renderSessionsList,
-        extractPageContentFn: extractPageContent,
-        force: true
-      });
-    }
-
-    // 创建流式消息元素
-    const streamingMsg = addChatMessage('', 'ai', true);
-
-    try {
-      // 从IndexedDB加载历史消息构建上下文
-      const historyMessages = await historyStorage.getMessages(session.id, { limit: 100 });
-      const systemPrompt = buildSystemPrompt({
-        mode: session.mode || 'qa',
-        pageContext: session.pageContext,
-        currentPageInfo: getCurrentPageInfo(),
-        t
-      });
-      // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
-      const formattedHistory = historyMessages
-        .filter(m => m.role !== 'system')
-        .map(m => {
-          if (m.role === 'tool') {
-            return {
-              role: 'tool',
-              tool_call_id: m.metadata?.toolCallId || '',
-              content: m.content || ''
-            };
-          }
-          if (m.role === 'assistant' && m.metadata?.toolCalls) {
-            return {
-              role: 'assistant',
-              content: null,
-              tool_calls: m.metadata.toolCalls.map(call => ({
-                id: call.id,
-                type: 'function',
-                function: {
-                  name: call.name,
-                  arguments: JSON.stringify(call.arguments || {})
-                }
-              }))
-            };
-          }
-          // 普通消息：去除思考标记（仅用于UI显示，API不需要）
-          const content =
-            typeof m.content === 'string'
-              ? m.content.replace(/<!--think-->[\s\S]*?<!--endthink-->/g, '').trim()
-              : m.content;
-          return { role: m.role, content };
-        });
-      const messages = [
-        { role: 'system', content: systemPrompt },
-        ...formattedHistory,
-        { role: 'user', content: userText }
-      ];
-
-      await sendChatRequest(messages, session.id, streamingMsg);
-    } catch (error) {
-      console.error('Chat error:', error);
-      streamingMsg.innerText = `${t('ai.error') || '发生错误'}: ${error.message}`;
-      finishStreamingMessage(streamingMsg);
-    }
-  }
-
-  /**
-   * Agent模式处理 - 支持工具调用循环
-   */
-  async function handleAgentMode(session, userText) {
-    // 初始化消息历史
-    await agentRunner.runAgentConversation(session, userText);
-  }
-
-  /**
-   * 发送Agent请求（支持工具调用）
-   */
 
   /**
    * 绑定事件
@@ -611,7 +323,6 @@ function createAiManager(options) {
       const wasCollapsed = aiSidebar.classList.contains('collapsed');
       aiSidebar.classList.toggle('collapsed');
 
-      // 如果刚刚打开，提取当前页面内容
       if (wasCollapsed) {
         const tabId = getActiveTabId();
         const webview = documentRef.getElementById(`webview-${tabId}`);
@@ -640,18 +351,18 @@ function createAiManager(options) {
     });
 
     // 发送按钮
-    aiSendBtn.addEventListener('click', handleAISend);
+    aiSendBtn.addEventListener('click', () => chatHandler.handleAISend(aiInput, currentMode));
 
     // 回车发送
     aiInput.addEventListener('keypress', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        handleAISend();
+        chatHandler.handleAISend(aiInput, currentMode);
       }
     });
 
     // 设置流式响应监听
-    setupStreamingListener();
+    chatHandler.setupStreamingListener();
 
     // 清除上下文按钮
     if (contextClearBtn) {
@@ -684,11 +395,7 @@ function createAiManager(options) {
     });
 
     // 初始化页面状态指示器
-    const initPageInfo = getCurrentPageInfo();
-    if (initPageInfo) {
-      lastKnownPageInfo = initPageInfo;
-      updatePageStatusUI(initPageInfo);
-    }
+    pageContext.initPageStatus();
 
     // 初始化
     const session = await getCurrentSession();
@@ -698,8 +405,8 @@ function createAiManager(options) {
 
   return {
     bindEvents,
-    onTabChanged,
-    onPageChanged,
+    onTabChanged: tabId => pageContext.onTabChanged(tabId, currentMode),
+    onPageChanged: (tabId, url) => pageContext.onPageChanged(tabId, url, currentMode),
     clearTabConversation
   };
 }

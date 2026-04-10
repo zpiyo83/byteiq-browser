@@ -1,153 +1,83 @@
-﻿function bindSettingsAndPanelEvents(options) {
+/**
+ * 设置与面板事件入口
+ * 编排子模块：AI设置、浏览器设置、更多菜单
+ */
+
+const { bindAiSettingsEvents } = require('./ai-settings-events');
+const { bindBrowserSettingsEvents } = require('./browser-settings-events');
+
+function bindSettingsAndPanelEvents(options) {
   const {
-    aiApiKeyInput,
-    aiEndpointInput,
-    aiModelIdInput,
-    aiModelListSelect,
-    aiModelListStatus,
-    aiModelRefreshBtn,
-    aiRequestTypeSelect,
-    bookmarkBtn,
-    bookmarksList,
-    bookmarksPanel,
-    bookmarksSearchInput,
-    browserManager,
-    clearDataBtn,
-    darkModeToggle,
     documentRef,
-    downloadsManager,
-    exportDataBtn,
-    extensionsManager,
-    historyList,
-    historyPanel,
-    historyPanelManager,
-    historySearchInput,
-    incognitoToggleBtn,
     ipcRenderer,
-    listPanelManager,
-    modalManager,
+    store,
     moreMenuBtn,
     moreMenuDropdown,
-    overlayBackdrop,
-    overlayManager,
-    restoreSessionToggle,
-    searchEngineSelect,
-    setLocale,
     settingsPanel,
-    startupUrlInput,
-    store,
-    tabManager,
-    translationApiEnabledToggle,
-    translationApiKeyInput,
-    translationConcurrencyCountInput,
-    translationConcurrencyToggle,
-    translationDynamicEnabledToggle,
-    translationEndpointInput,
-    translationMaxCharsInput,
-    translationMaxTextsInput,
-    translationModelIdInput,
-    translationRequestTypeSelect,
-    translationStreamingToggle,
-    translationTargetLanguageSelect,
-    translationTimeoutInput,
-    updateBookmarkIcon,
-    updateZoomUI,
-    zoomInBtn,
-    zoomOutBtn,
-    zoomResetBtn
+    overlayManager
   } = options;
 
   const document = documentRef;
 
-  const langSelect = document.getElementById('lang-select');
-  if (langSelect) {
-    langSelect.value = store.get('settings.language', 'zh-CN');
-    langSelect.addEventListener('change', () => {
-      setLocale(langSelect.value);
-    });
-  }
+  // 绑定AI设置事件
+  const aiSettingsHelpers = bindAiSettingsEvents({
+    aiApiKeyInput: options.aiApiKeyInput,
+    aiEndpointInput: options.aiEndpointInput,
+    aiModelIdInput: options.aiModelIdInput,
+    aiModelListSelect: options.aiModelListSelect,
+    aiModelListStatus: options.aiModelListStatus,
+    aiModelRefreshBtn: options.aiModelRefreshBtn,
+    aiRequestTypeSelect: options.aiRequestTypeSelect,
+    ipcRenderer,
+    store,
+    documentRef,
+    translationApiEnabledToggle: options.translationApiEnabledToggle,
+    translationApiKeyInput: options.translationApiKeyInput,
+    translationConcurrencyCountInput: options.translationConcurrencyCountInput,
+    translationConcurrencyToggle: options.translationConcurrencyToggle,
+    translationDynamicEnabledToggle: options.translationDynamicEnabledToggle,
+    translationEndpointInput: options.translationEndpointInput,
+    translationMaxCharsInput: options.translationMaxCharsInput,
+    translationMaxTextsInput: options.translationMaxTextsInput,
+    translationModelIdInput: options.translationModelIdInput,
+    translationRequestTypeSelect: options.translationRequestTypeSelect,
+    translationStreamingToggle: options.translationStreamingToggle,
+    translationTargetLanguageSelect: options.translationTargetLanguageSelect,
+    translationTimeoutInput: options.translationTimeoutInput
+  });
 
-  function setAiModelStatus(text, state) {
-    if (!aiModelListStatus) return;
-    aiModelListStatus.textContent = text || '';
-    aiModelListStatus.classList.remove('loading', 'success', 'error');
-    if (state) {
-      aiModelListStatus.classList.add(state);
-    }
-  }
-
-  function updateAiModelOptions(models) {
-    if (!aiModelListSelect) return;
-    aiModelListSelect.innerHTML = '';
-
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = models.length > 0 ? '选择模型' : '暂无模型';
-    aiModelListSelect.appendChild(placeholder);
-
-    models.forEach(modelId => {
-      const option = document.createElement('option');
-      option.value = modelId;
-      option.textContent = modelId;
-      aiModelListSelect.appendChild(option);
-    });
-  }
-
-  function syncAiModelSelection() {
-    if (!aiModelListSelect || !aiModelIdInput) return;
-    const value = aiModelIdInput.value.trim();
-    if (!value) return;
-    const hasOption = Array.from(aiModelListSelect.options).some(option => {
-      return option.value === value;
-    });
-    if (hasOption) {
-      aiModelListSelect.value = value;
-    }
-  }
-
-  async function refreshAiModelList() {
-    if (!aiModelRefreshBtn || !aiModelListSelect) return;
-
-    const endpoint = aiEndpointInput.value.trim();
-    const apiKey = aiApiKeyInput.value.trim();
-    const requestType = aiRequestTypeSelect.value;
-
-    if (!endpoint || !apiKey) {
-      setAiModelStatus('请先配置端点和密钥', 'error');
-      return;
-    }
-
-    aiModelRefreshBtn.disabled = true;
-    setAiModelStatus('正在获取模型列表...', 'loading');
-
-    try {
-      const result = await ipcRenderer.invoke('ai-list-models', {
-        endpoint,
-        apiKey,
-        requestType
-      });
-
-      if (!result?.success) {
-        setAiModelStatus(result?.error || '获取失败', 'error');
-        updateAiModelOptions([]);
-        return;
-      }
-
-      const models = Array.isArray(result.models) ? result.models : [];
-      updateAiModelOptions(models);
-      syncAiModelSelection();
-
-      if (models.length > 0) {
-        setAiModelStatus(`已获取 ${models.length} 个模型`, 'success');
-      } else {
-        setAiModelStatus('未获取到模型', 'error');
-      }
-    } catch (error) {
-      setAiModelStatus(error.message || '获取失败', 'error');
-    } finally {
-      aiModelRefreshBtn.disabled = false;
-    }
-  }
+  // 绑定浏览器设置事件
+  bindBrowserSettingsEvents({
+    bookmarkBtn: options.bookmarkBtn,
+    bookmarksList: options.bookmarksList,
+    bookmarksPanel: options.bookmarksPanel,
+    bookmarksSearchInput: options.bookmarksSearchInput,
+    browserManager: options.browserManager,
+    clearDataBtn: options.clearDataBtn,
+    darkModeToggle: options.darkModeToggle,
+    documentRef,
+    exportDataBtn: options.exportDataBtn,
+    historyList: options.historyList,
+    historyPanel: options.historyPanel,
+    historyPanelManager: options.historyPanelManager,
+    historySearchInput: options.historySearchInput,
+    incognitoToggleBtn: options.incognitoToggleBtn,
+    listPanelManager: options.listPanelManager,
+    modalManager: options.modalManager,
+    overlayBackdrop: options.overlayBackdrop,
+    overlayManager,
+    restoreSessionToggle: options.restoreSessionToggle,
+    searchEngineSelect: options.searchEngineSelect,
+    setLocale: options.setLocale,
+    startupUrlInput: options.startupUrlInput,
+    store,
+    tabManager: options.tabManager,
+    updateBookmarkIcon: options.updateBookmarkIcon,
+    updateZoomUI: options.updateZoomUI,
+    zoomInBtn: options.zoomInBtn,
+    zoomOutBtn: options.zoomOutBtn,
+    zoomResetBtn: options.zoomResetBtn
+  });
 
   // 更多按钮下拉菜单事件处理
   if (moreMenuBtn && moreMenuDropdown) {
@@ -156,12 +86,10 @@
       moreMenuDropdown.classList.toggle('show');
     });
 
-    // 点击下拉菜单外部时关闭
     document.addEventListener('click', () => {
       moreMenuDropdown.classList.remove('show');
     });
 
-    // 阻止点击下拉菜单内部时关闭
     moreMenuDropdown.addEventListener('click', e => {
       e.stopPropagation();
     });
@@ -176,28 +104,32 @@
     if (historyBtnInMenu) {
       historyBtnInMenu.addEventListener('click', () => {
         moreMenuDropdown.classList.remove('show');
-        historyPanelManager.showPanel(historyPanel, historyList, historySearchInput?.value || '');
-        overlayManager.openOverlay(historyPanel);
+        options.historyPanelManager.showPanel(
+          options.historyPanel,
+          options.historyList,
+          options.historySearchInput?.value || ''
+        );
+        overlayManager.openOverlay(options.historyPanel);
       });
     }
 
     if (bookmarksBtnInMenu) {
       bookmarksBtnInMenu.addEventListener('click', () => {
         moreMenuDropdown.classList.remove('show');
-        listPanelManager.showPanel(
-          bookmarksPanel,
-          bookmarksList,
+        options.listPanelManager.showPanel(
+          options.bookmarksPanel,
+          options.bookmarksList,
           'bookmarks',
-          bookmarksSearchInput?.value || ''
+          options.bookmarksSearchInput?.value || ''
         );
-        overlayManager.openOverlay(bookmarksPanel);
+        overlayManager.openOverlay(options.bookmarksPanel);
       });
     }
 
     if (devtoolsBtnInMenu) {
       devtoolsBtnInMenu.addEventListener('click', () => {
         moreMenuDropdown.classList.remove('show');
-        const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
+        const wv = document.getElementById(`webview-${options.tabManager.getActiveTabId()}`);
         if (wv) wv.openDevTools();
       });
     }
@@ -205,79 +137,92 @@
     if (settingsBtnInMenu) {
       settingsBtnInMenu.addEventListener('click', () => {
         moreMenuDropdown.classList.remove('show');
-        searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
-        startupUrlInput.value = store.get('settings.startupUrl', '');
-        if (restoreSessionToggle) {
-          restoreSessionToggle.checked = store.get('settings.restoreSession', false);
+        // 加载设置值
+        const langSelect = document.getElementById('lang-select');
+        options.searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
+        options.startupUrlInput.value = store.get('settings.startupUrl', '');
+        if (options.restoreSessionToggle) {
+          options.restoreSessionToggle.checked = store.get('settings.restoreSession', false);
         }
         if (langSelect) {
           langSelect.value = store.get('settings.language', 'zh-CN');
         }
         // 加载 AI 设置
-        aiEndpointInput.value = store.get('settings.aiEndpoint', '');
-        aiApiKeyInput.value = store.get('settings.aiApiKey', '');
-        aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
-        if (aiModelIdInput) {
-          aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
+        options.aiEndpointInput.value = store.get('settings.aiEndpoint', '');
+        options.aiApiKeyInput.value = store.get('settings.aiApiKey', '');
+        options.aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
+        if (options.aiModelIdInput) {
+          options.aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
         }
-        if (aiModelListSelect) {
-          syncAiModelSelection();
-          if (aiModelListSelect.options.length <= 1) {
-            setAiModelStatus('等待获取', '');
+        if (options.aiModelListSelect) {
+          aiSettingsHelpers.syncAiModelSelection();
+          if (options.aiModelListSelect.options.length <= 1) {
+            aiSettingsHelpers.setAiModelStatus('等待获取', '');
           }
         }
         // 加载翻译设置
-        if (translationApiEnabledToggle) {
-          translationApiEnabledToggle.checked = store.get('settings.translationApiEnabled', false);
+        if (options.translationApiEnabledToggle) {
+          options.translationApiEnabledToggle.checked = store.get(
+            'settings.translationApiEnabled',
+            false
+          );
         }
-        if (translationEndpointInput) {
-          translationEndpointInput.value = store.get('settings.translationEndpoint', '');
+        if (options.translationEndpointInput) {
+          options.translationEndpointInput.value = store.get('settings.translationEndpoint', '');
         }
-        if (translationApiKeyInput) {
-          translationApiKeyInput.value = store.get('settings.translationApiKey', '');
+        if (options.translationApiKeyInput) {
+          options.translationApiKeyInput.value = store.get('settings.translationApiKey', '');
         }
-        if (translationRequestTypeSelect) {
-          translationRequestTypeSelect.value = store.get(
+        if (options.translationRequestTypeSelect) {
+          options.translationRequestTypeSelect.value = store.get(
             'settings.translationRequestType',
             'openai-chat'
           );
         }
-        if (translationModelIdInput) {
-          translationModelIdInput.value = store.get('settings.translationModelId', 'gpt-3.5-turbo');
+        if (options.translationModelIdInput) {
+          options.translationModelIdInput.value = store.get(
+            'settings.translationModelId',
+            'gpt-3.5-turbo'
+          );
         }
-        if (translationTargetLanguageSelect) {
-          translationTargetLanguageSelect.value = store.get(
+        if (options.translationTargetLanguageSelect) {
+          options.translationTargetLanguageSelect.value = store.get(
             'settings.translationTargetLanguage',
             '简体中文'
           );
         }
-        if (translationDynamicEnabledToggle) {
-          translationDynamicEnabledToggle.checked = store.get(
+        if (options.translationDynamicEnabledToggle) {
+          options.translationDynamicEnabledToggle.checked = store.get(
             'settings.translationDynamicEnabled',
             true
           );
         }
-        // 加载翻译高级选项
-        if (translationStreamingToggle) {
-          translationStreamingToggle.checked = store.get('settings.translationStreaming', true);
+        if (options.translationStreamingToggle) {
+          options.translationStreamingToggle.checked = store.get(
+            'settings.translationStreaming',
+            true
+          );
         }
-        if (translationConcurrencyToggle) {
-          translationConcurrencyToggle.checked = store.get(
+        if (options.translationConcurrencyToggle) {
+          options.translationConcurrencyToggle.checked = store.get(
             'settings.translationConcurrencyEnabled',
             false
           );
         }
-        if (translationConcurrencyCountInput) {
-          translationConcurrencyCountInput.value = store.get('settings.translationConcurrency', 2);
+        if (options.translationConcurrencyCountInput) {
+          options.translationConcurrencyCountInput.value = store.get(
+            'settings.translationConcurrency',
+            2
+          );
         }
-        if (translationMaxTextsInput) {
-          translationMaxTextsInput.value = store.get('settings.translationMaxTexts', 500);
+        if (options.translationMaxTextsInput) {
+          options.translationMaxTextsInput.value = store.get('settings.translationMaxTexts', 500);
         }
-        if (translationMaxCharsInput) {
-          translationMaxCharsInput.value = store.get('settings.translationMaxChars', 50000);
+        if (options.translationMaxCharsInput) {
+          options.translationMaxCharsInput.value = store.get('settings.translationMaxChars', 50000);
         }
-        if (translationTimeoutInput) {
-          translationTimeoutInput.value = store.get('settings.translationTimeout', 120);
+        if (options.translationTimeoutInput) {
+          options.translationTimeoutInput.value = store.get('settings.translationTimeout', 120);
         }
         // 获取版本信息
         ipcRenderer.invoke('get-version-info').then(versions => {
@@ -292,7 +237,7 @@
           if (nodeVersionEl) nodeVersionEl.textContent = versions.nodeVersion;
           if (v8VersionEl) v8VersionEl.textContent = versions.v8Version;
         });
-        extensionsManager.refresh();
+        options.extensionsManager.refresh();
         overlayManager.openOverlay(settingsPanel);
       });
     }
@@ -300,316 +245,9 @@
     if (downloadsBtnInMenu) {
       downloadsBtnInMenu.addEventListener('click', () => {
         moreMenuDropdown.classList.remove('show');
-        downloadsManager.openDownloadsPanel();
+        options.downloadsManager.openDownloadsPanel();
       });
     }
-  }
-
-  if (restoreSessionToggle) {
-    restoreSessionToggle.checked = store.get('settings.restoreSession', false);
-    restoreSessionToggle.addEventListener('change', () => {
-      store.set('settings.restoreSession', restoreSessionToggle.checked);
-    });
-  }
-
-  bookmarkBtn.addEventListener('click', () => {
-    const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
-    if (!wv || wv.tagName !== 'WEBVIEW') return;
-
-    const url = wv.getURL();
-    const title = wv.getTitle();
-    const bookmarks = store.get('bookmarks', []);
-    const index = bookmarks.findIndex(item => item.url === url);
-
-    if (index > -1) {
-      bookmarks.splice(index, 1);
-    } else {
-      bookmarks.unshift({ url, title, time: new Date().toISOString() });
-    }
-
-    store.set('bookmarks', bookmarks);
-    updateBookmarkIcon(url);
-  });
-  document.querySelectorAll('.settings-nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const section = btn.getAttribute('data-section');
-      if (!section) return;
-
-      // Update nav items
-      document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Update sections
-      document.querySelectorAll('.settings-section').forEach(s => {
-        s.classList.remove('active');
-        // 强制重置动画
-        s.style.animation = 'none';
-        s.offsetHeight; // 触发重绘
-        s.style.animation = '';
-      });
-      const targetSection = document.getElementById(`settings-${section}`);
-      if (targetSection) {
-        targetSection.classList.add('active');
-      }
-    });
-  });
-
-  if (historySearchInput) {
-    historySearchInput.addEventListener('input', () => {
-      historyPanelManager.showPanel(historyPanel, historyList, historySearchInput.value);
-    });
-  }
-
-  if (bookmarksSearchInput) {
-    bookmarksSearchInput.addEventListener('input', () => {
-      listPanelManager.showPanel(
-        bookmarksPanel,
-        bookmarksList,
-        'bookmarks',
-        bookmarksSearchInput.value
-      );
-    });
-  }
-
-  incognitoToggleBtn.addEventListener('click', () => {
-    browserManager.toggleIncognito();
-  });
-
-  if (darkModeToggle) {
-    // 初始化时同步 UI 状态
-    const savedDarkMode = store.get('settings.darkMode');
-    darkModeToggle.checked = savedDarkMode === true;
-
-    darkModeToggle.addEventListener('change', () => {
-      const isDark = darkModeToggle.checked;
-      document.body.classList.toggle('dark-mode', isDark);
-      // 确保布尔值被正确保存
-      store.set('settings.darkMode', isDark === true);
-    });
-  }
-
-  zoomInBtn.addEventListener('click', () => {
-    const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
-    if (wv && wv.tagName === 'WEBVIEW') {
-      wv.getZoomFactor(factor => {
-        const newFactor = factor + 0.1;
-        wv.setZoomFactor(newFactor);
-        updateZoomUI(newFactor);
-        browserManager.setZoomForUrl(wv.getURL(), newFactor);
-      });
-    }
-  });
-
-  zoomOutBtn.addEventListener('click', () => {
-    const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
-    if (wv && wv.tagName === 'WEBVIEW') {
-      wv.getZoomFactor(factor => {
-        const newFactor = Math.max(0.2, factor - 0.1);
-        wv.setZoomFactor(newFactor);
-        updateZoomUI(newFactor);
-        browserManager.setZoomForUrl(wv.getURL(), newFactor);
-      });
-    }
-  });
-
-  zoomResetBtn.addEventListener('click', () => {
-    const wv = document.getElementById(`webview-${tabManager.getActiveTabId()}`);
-    if (wv && wv.tagName === 'WEBVIEW') {
-      wv.setZoomFactor(1.0);
-      updateZoomUI(1.0);
-      browserManager.setZoomForUrl(wv.getURL(), 1.0);
-    }
-  });
-
-  searchEngineSelect.addEventListener('change', () => {
-    store.set('settings.searchEngine', searchEngineSelect.value);
-  });
-
-  startupUrlInput.addEventListener('change', () => {
-    store.set('settings.startupUrl', startupUrlInput.value);
-  });
-
-  aiEndpointInput.addEventListener('change', () => {
-    store.set('settings.aiEndpoint', aiEndpointInput.value);
-    if (aiModelListSelect) {
-      updateAiModelOptions([]);
-      setAiModelStatus('等待获取', '');
-    }
-  });
-
-  aiApiKeyInput.addEventListener('change', () => {
-    store.set('settings.aiApiKey', aiApiKeyInput.value);
-    if (aiModelListSelect) {
-      updateAiModelOptions([]);
-      setAiModelStatus('等待获取', '');
-    }
-  });
-
-  aiRequestTypeSelect.addEventListener('change', () => {
-    store.set('settings.aiRequestType', aiRequestTypeSelect.value);
-    if (aiModelListSelect) {
-      updateAiModelOptions([]);
-      setAiModelStatus('等待获取', '');
-    }
-  });
-
-  if (aiModelIdInput) {
-    aiModelIdInput.addEventListener('change', () => {
-      store.set('settings.aiModelId', aiModelIdInput.value);
-      syncAiModelSelection();
-    });
-  }
-
-  if (aiModelListSelect) {
-    aiModelListSelect.addEventListener('change', () => {
-      const value = aiModelListSelect.value;
-      if (!value) return;
-      if (aiModelIdInput) {
-        aiModelIdInput.value = value;
-      }
-      store.set('settings.aiModelId', value);
-    });
-  }
-
-  if (aiModelRefreshBtn) {
-    aiModelRefreshBtn.addEventListener('click', () => {
-      refreshAiModelList();
-    });
-  }
-
-  if (translationTargetLanguageSelect) {
-    translationTargetLanguageSelect.addEventListener('change', () => {
-      store.set('settings.translationTargetLanguage', translationTargetLanguageSelect.value);
-    });
-  }
-
-  if (translationDynamicEnabledToggle) {
-    translationDynamicEnabledToggle.addEventListener('change', () => {
-      store.set('settings.translationDynamicEnabled', translationDynamicEnabledToggle.checked);
-    });
-  }
-
-  // 翻译设置事件绑定
-  if (translationApiEnabledToggle) {
-    translationApiEnabledToggle.addEventListener('change', () => {
-      store.set('settings.translationApiEnabled', translationApiEnabledToggle.checked);
-    });
-  }
-
-  if (translationEndpointInput) {
-    translationEndpointInput.addEventListener('change', () => {
-      store.set('settings.translationEndpoint', translationEndpointInput.value);
-    });
-  }
-
-  if (translationApiKeyInput) {
-    translationApiKeyInput.addEventListener('change', () => {
-      store.set('settings.translationApiKey', translationApiKeyInput.value);
-    });
-  }
-
-  if (translationRequestTypeSelect) {
-    translationRequestTypeSelect.addEventListener('change', () => {
-      store.set('settings.translationRequestType', translationRequestTypeSelect.value);
-    });
-  }
-
-  if (translationModelIdInput) {
-    translationModelIdInput.addEventListener('change', () => {
-      store.set('settings.translationModelId', translationModelIdInput.value);
-    });
-  }
-
-  // 翻译高级选项事件绑定
-  if (translationStreamingToggle) {
-    translationStreamingToggle.addEventListener('change', () => {
-      store.set('settings.translationStreaming', translationStreamingToggle.checked);
-    });
-  }
-
-  if (translationConcurrencyToggle) {
-    translationConcurrencyToggle.addEventListener('change', () => {
-      store.set('settings.translationConcurrencyEnabled', translationConcurrencyToggle.checked);
-    });
-  }
-
-  if (translationConcurrencyCountInput) {
-    translationConcurrencyCountInput.addEventListener('change', () => {
-      const value = Math.max(
-        1,
-        Math.min(10, parseInt(translationConcurrencyCountInput.value) || 2)
-      );
-      translationConcurrencyCountInput.value = value;
-      store.set('settings.translationConcurrency', value);
-    });
-  }
-
-  if (translationMaxTextsInput) {
-    translationMaxTextsInput.addEventListener('change', () => {
-      const value = Math.max(10, Math.min(1000, parseInt(translationMaxTextsInput.value) || 500));
-      translationMaxTextsInput.value = value;
-      store.set('settings.translationMaxTexts', value);
-    });
-  }
-
-  if (translationMaxCharsInput) {
-    translationMaxCharsInput.addEventListener('change', () => {
-      const value = Math.max(
-        1000,
-        Math.min(100000, parseInt(translationMaxCharsInput.value) || 50000)
-      );
-      translationMaxCharsInput.value = value;
-      store.set('settings.translationMaxChars', value);
-    });
-  }
-
-  if (translationTimeoutInput) {
-    translationTimeoutInput.addEventListener('change', () => {
-      const value = Math.max(30, Math.min(300, parseInt(translationTimeoutInput.value) || 120));
-      translationTimeoutInput.value = value;
-      store.set('settings.translationTimeout', value);
-    });
-  }
-
-  clearDataBtn.addEventListener('click', async () => {
-    const confirmed = await modalManager.confirmDelete(
-      '确定要清除所有浏览数据吗？此操作不可撤销。',
-      '清除数据'
-    );
-    if (confirmed) {
-      store.set('history', []);
-      store.set('bookmarks', []);
-      await modalManager.success('数据已清除', '完成');
-    }
-  });
-
-  exportDataBtn.addEventListener('click', () => {
-    const data = {
-      bookmarks: store.get('bookmarks', []),
-      history: store.get('history', []),
-      settings: store.get('settings', {})
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json'
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `byteiq-browser-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  document.querySelectorAll('.close-overlay').forEach(btn => {
-    btn.addEventListener('click', () => {
-      overlayManager.closeAllOverlays();
-    });
-  });
-
-  if (overlayBackdrop) {
-    overlayBackdrop.addEventListener('click', () => {
-      overlayManager.closeAllOverlays();
-    });
   }
 }
 
