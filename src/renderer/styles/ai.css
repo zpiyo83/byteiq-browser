@@ -319,20 +319,52 @@
     color: #202124;
 }
 
+.ai-history-search {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ai-border);
+}
+
+.ai-history-search input {
+    width: 100%;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--ai-border);
+    background: var(--ai-surface-soft);
+    padding: 0 10px;
+    font-size: 12px;
+    outline: none;
+    color: var(--ai-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-history-search input:focus {
+    border-color: var(--ai-accent);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
 .ai-history-list {
     flex: 1;
     overflow-y: auto;
-    padding: 8px;
+    padding: 4px 8px 8px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
+}
+
+.ai-history-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ai-muted);
+    padding: 8px 8px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .ai-history-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 6px;
+    padding: 8px 10px;
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.2s ease;
@@ -346,9 +378,20 @@
     background: var(--ai-accent-soft);
 }
 
+.ai-history-item.deleted {
+    opacity: 0.55;
+}
+
 .ai-history-item-content {
     flex: 1;
     overflow: hidden;
+    min-width: 0;
+}
+
+.ai-history-item-title-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
 }
 
 .ai-history-item-title {
@@ -357,17 +400,40 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
-.ai-history-item-meta {
+.ai-history-item-time {
+    font-size: 10px;
+    color: var(--ai-muted);
+    flex-shrink: 0;
+}
+
+.ai-history-item-preview {
     font-size: 11px;
     color: var(--ai-muted);
     margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.ai-history-item-delete {
-    width: 24px;
-    height: 24px;
+.ai-history-item-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.ai-history-item:hover .ai-history-item-actions {
+    opacity: 1;
+}
+
+.ai-history-item-action {
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -375,32 +441,26 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #5f6368;
-    opacity: 0.6;
+    color: var(--ai-muted);
+    font-size: 12px;
     transition: all 0.2s ease;
-    flex-shrink: 0;
 }
 
-.ai-history-item:hover .ai-history-item-delete {
-    opacity: 1;
-}
-
-.ai-history-item-delete:hover {
+.ai-history-item-action.delete:hover {
     background: #fce8e6;
     color: #d93025;
-    opacity: 1;
 }
 
-/* 已删除项目的恢复按钮样式 */
-.ai-history-item.deleted .ai-history-item-delete {
+.ai-history-item-action.restore:hover {
     background: #e8f5e9;
     color: #1e8e3e;
-    opacity: 1;
 }
 
-.ai-history-item.deleted .ai-history-item-delete:hover {
-    background: #d4edda;
-    color: #155724;
+.ai-history-empty {
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ai-muted);
 }
 
 .ai-chat-area {
@@ -842,6 +902,35 @@
 
 .dark-mode .ai-input-area input:disabled {
     background: var(--ai-surface-soft);
+    color: var(--ai-muted);
+}
+
+/* Dark mode - History popup */
+.dark-mode .ai-history-popup {
+    background: var(--ai-surface);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .ai-history-search input {
+    background: var(--ai-surface-alt);
+    border-color: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-history-search input:focus {
+    border-color: var(--ai-accent);
+    box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.15);
+}
+
+.dark-mode .ai-history-item:hover {
+    background: var(--ai-surface-soft);
+}
+
+.dark-mode .ai-history-item.active {
+    background: rgba(138, 180, 248, 0.15);
+}
+
+.dark-mode .ai-history-empty {
     color: var(--ai-muted);
 }
 

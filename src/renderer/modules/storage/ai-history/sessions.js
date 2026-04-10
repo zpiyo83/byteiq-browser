@@ -102,12 +102,7 @@ async function permanentlyDeleteSession(storage, sessionId) {
 
 async function getSessions(storage, options = {}) {
   await storage.init();
-  const {
-    includeDeleted = false,
-    limit = 100,
-    offset = 0,
-    sortBy = 'updatedAt'
-  } = options;
+  const { includeDeleted = false, limit = 100, offset = 0, sortBy = 'updatedAt' } = options;
 
   return new Promise((resolve, reject) => {
     const tx = storage.getTransaction([STORES.sessions]);
@@ -155,8 +150,23 @@ async function getSessions(storage, options = {}) {
 
 async function countSessions(storage, includeDeleted = false) {
   await storage.init();
-  const sessions = await storage.getSessions({ includeDeleted, limit: Infinity });
-  return sessions.length;
+  return new Promise((resolve, reject) => {
+    const tx = storage.getTransaction([STORES.sessions]);
+    const store = tx.objectStore(STORES.sessions);
+    const request = store.count();
+    request.onsuccess = () => {
+      if (includeDeleted) {
+        resolve(request.result);
+        return;
+      }
+      // 排除已删除的：用 deleted 索引计数
+      const delIndex = store.index('deleted');
+      const delReq = delIndex.count(true);
+      delReq.onsuccess = () => resolve(request.result - delReq.result);
+      delReq.onerror = () => resolve(request.result);
+    };
+    request.onerror = () => reject(request.error);
+  });
 }
 
 module.exports = {

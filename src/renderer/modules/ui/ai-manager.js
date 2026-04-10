@@ -381,6 +381,13 @@ function createAiManager(options) {
       content: text
     });
 
+    // 首条消息自动生成会话标题
+    const defaultTitle = t('ai.sessionUntitled') || '新会话';
+    if (session.title === defaultTitle || session.title === '当前标签页') {
+      const autoTitle = text.length > 30 ? text.slice(0, 30) + '...' : text;
+      await updateSession(session.id, { title: autoTitle });
+    }
+
     // 根据模式处理
     if (currentMode === 'agent') {
       // Agent模式：支持工具调用循环

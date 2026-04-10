@@ -6,12 +6,7 @@
 
 /* global indexedDB */
 
-const {
-  DB_NAME,
-  DB_VERSION,
-  STORES,
-  upgradeDatabase
-} = require('./ai-history/schema');
+const { DB_NAME, DB_VERSION, STORES, upgradeDatabase } = require('./ai-history/schema');
 const sessionOps = require('./ai-history/sessions');
 const messageOps = require('./ai-history/messages');
 const searchOps = require('./ai-history/search');
@@ -90,8 +85,16 @@ class AIHistoryStorage {
     return messageOps.countMessages(this, sessionId);
   }
 
+  async getLastMessage(sessionId) {
+    return messageOps.getLastMessage(this, sessionId);
+  }
+
   async searchMessages(query, options = {}) {
     return searchOps.searchMessages(this, query, options);
+  }
+
+  async restoreSession(sessionId) {
+    return sessionOps.restoreSession(this, sessionId);
   }
 
   async migrateFromLegacy(store) {

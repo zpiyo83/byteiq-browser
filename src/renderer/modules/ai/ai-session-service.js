@@ -110,8 +110,21 @@ function createAiSessionService(options) {
 
   async function getSortedSessions() {
     await initStorage();
-    const sessions = await historyStorage.getSessions({ includeDeleted: false, limit: 1000 });
+    const sessions = await historyStorage.getSessions({ includeDeleted: true, limit: 1000 });
+    // 附加最后一条消息预览
+    for (const session of sessions) {
+      try {
+        const lastMsg = await historyStorage.getLastMessage(session.id);
+        if (lastMsg) {
+          session.lastMessage = lastMsg.content;
+        }
+      } catch {
+        // 获取失败不影响列表
+      }
+    }
     sessions.sort((a, b) => {
+      // 已删除的排到最后
+      if (!!a.deleted !== !!b.deleted) return a.deleted ? 1 : -1;
       if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });

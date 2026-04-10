@@ -88,12 +88,37 @@ async function getMessages(storage, sessionId, options = {}) {
 
 async function countMessages(storage, sessionId) {
   await storage.init();
-  const messages = await storage.getMessages(sessionId, { limit: Infinity });
-  return messages.length;
+  return new Promise((resolve, reject) => {
+    const tx = storage.getTransaction([STORES.messages]);
+    const store = tx.objectStore(STORES.messages);
+    const index = store.index('sessionId');
+    const request = index.count(sessionId);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * 获取会话的最后一条消息（用于预览）
+ */
+async function getLastMessage(storage, sessionId) {
+  await storage.init();
+  return new Promise((resolve, reject) => {
+    const tx = storage.getTransaction([STORES.messages]);
+    const store = tx.objectStore(STORES.messages);
+    const index = store.index('sessionId');
+    const request = index.openCursor(sessionId, 'prev');
+    request.onsuccess = event => {
+      const cursor = event.target.result;
+      resolve(cursor ? cursor.value : null);
+    };
+    request.onerror = () => reject(request.error);
+  });
 }
 
 module.exports = {
   addMessage,
   countMessages,
+  getLastMessage,
   getMessages
 };
