@@ -205,7 +205,6 @@ function createAiManager(options) {
     closeHistoryBtn,
     historyStorage,
     t,
-    showToast,
     getSortedSessions,
     getActiveSessionId,
     getCurrentSession,

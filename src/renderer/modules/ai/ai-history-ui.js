@@ -12,7 +12,6 @@ function createAiHistoryUI(options) {
     closeHistoryBtn,
     historyStorage,
     t,
-    showToast,
     getSortedSessions,
     getActiveSessionId,
     getCurrentSession,
@@ -193,9 +192,6 @@ function createAiHistoryUI(options) {
             e.stopPropagation();
             await historyStorage.restoreSession(session.id);
             await renderSessionsList();
-            if (showToast) {
-              showToast(t('ai.sessionRestored') || '会话已恢复', 'info');
-            }
           });
           actions.appendChild(restoreBtn);
         }
@@ -223,9 +219,6 @@ function createAiHistoryUI(options) {
               const next = await getCurrentSession();
               await renderSessionChat(next);
             }
-            if (showToast) {
-              showToast(t('ai.sessionPermanentlyDeleted') || '会话已永久删除', 'info');
-            }
           } else {
             // 软删除
             await historyStorage.deleteSession(session.id);
@@ -233,9 +226,6 @@ function createAiHistoryUI(options) {
               setActiveSessionId('');
               const next = await getCurrentSession();
               await renderSessionChat(next);
-            }
-            if (showToast) {
-              showToast(t('ai.sessionDeleted') || '会话已删除', 'info');
             }
           }
           await renderSessionsList();
@@ -274,14 +264,6 @@ function createAiHistoryUI(options) {
           const shouldPin = !session.pinned;
           await updateSession(session.id, { pinned: shouldPin });
           await renderSessionsList();
-          if (showToast) {
-            showToast(
-              shouldPin
-                ? t('ai.sessionPinned') || '已置顶'
-                : t('ai.sessionUnpinned') || '已取消置顶',
-              'info'
-            );
-          }
         });
 
         historyListEl.appendChild(item);
