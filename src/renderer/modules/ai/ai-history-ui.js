@@ -281,6 +281,53 @@ function createAiHistoryUI(options) {
     }
   }
 
+  /**
+   * 渲染历史工具卡片
+   */
+  function renderHistoryToolCard(toolName, status, description) {
+    const msg = documentRef.createElement('div');
+    msg.className = 'chat-message ai tool-card';
+
+    const header = documentRef.createElement('div');
+    header.className = 'tool-card-header';
+
+    const titleEl = documentRef.createElement('div');
+    titleEl.className = 'tool-card-title';
+    titleEl.textContent = `工具：${getToolTitle(toolName)}`;
+    header.appendChild(titleEl);
+
+    if (status) {
+      const statusEl = documentRef.createElement('span');
+      statusEl.className = `tool-card-status ${status}`;
+      statusEl.textContent = getToolStatusLabel(status);
+      header.appendChild(statusEl);
+    }
+
+    const descEl = documentRef.createElement('div');
+    descEl.className = 'tool-card-desc';
+    descEl.textContent = description || '';
+    msg.appendChild(header);
+    msg.appendChild(descEl);
+
+    aiChatArea.appendChild(msg);
+    return msg;
+  }
+
+  function getToolTitle(toolName) {
+    const titles = {
+      get_page_info: '获取页面信息',
+      click_element: '点击元素',
+      input_text: '输入文本',
+      end_session: '结束会话'
+    };
+    return titles[toolName] || toolName || '工具';
+  }
+
+  function getToolStatusLabel(status) {
+    const labels = { success: '已完成', error: '失败', pending: '执行中' };
+    return labels[status] || '状态';
+  }
+
   async function renderSessionChat(session) {
     if (!session) return;
     aiChatArea.innerHTML = '';
@@ -297,13 +344,32 @@ function createAiHistoryUI(options) {
     }
 
     for (const msg of messages) {
-      if (!msg || !msg.role || typeof msg.content !== 'string') continue;
+      if (!msg) continue;
+
       if (msg.role === 'user') {
-        addChatMessage(msg.content, 'user');
+        if (typeof msg.content === 'string') {
+          addChatMessage(msg.content, 'user');
+        }
       } else if (msg.role === 'assistant') {
-        addChatMessage(msg.content, 'ai');
+        // assistant消息：addChatMessage已支持<!--think-->标记渲染思考下拉框
+        const content = typeof msg.content === 'string' ? msg.content : '';
+        // 有内容或思考标记时才渲染（纯工具调用的assistant可能内容为空）
+        if (content.trim()) {
+          addChatMessage(content, 'ai');
+        }
+      } else if (msg.role === 'tool') {
+        // 工具结果消息：渲染为工具卡片
+        const meta = msg.metadata || {};
+        renderHistoryToolCard(
+          meta.toolName || '',
+          meta.status || 'success',
+          meta.description || ''
+        );
       }
     }
+
+    // 滚动到底部
+    aiChatArea.scrollTop = aiChatArea.scrollHeight;
   }
 
   function bindHistoryPanelEvents() {

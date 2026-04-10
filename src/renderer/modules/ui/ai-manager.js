@@ -325,11 +325,14 @@ function createAiManager(options) {
       });
 
       if (result.success) {
-        // 保存AI回复到IndexedDB
+        // 保存AI回复到IndexedDB（包含思考内容标记）
         if (sessionId) {
+          const savedContent = result.reasoningContent
+            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
+            : result.content;
           await historyStorage.addMessage(sessionId, {
             role: 'assistant',
-            content: result.content
+            content: savedContent
           });
           // 更新session时间
           await updateSession(sessionId, { updatedAt: Date.now() });
@@ -431,9 +434,41 @@ function createAiManager(options) {
         pageContext: session.pageContext,
         t
       });
+      // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
+      const formattedHistory = historyMessages
+        .filter(m => m.role !== 'system')
+        .map(m => {
+          if (m.role === 'tool') {
+            return {
+              role: 'tool',
+              tool_call_id: m.metadata?.toolCallId || '',
+              content: m.content || ''
+            };
+          }
+          if (m.role === 'assistant' && m.metadata?.toolCalls) {
+            return {
+              role: 'assistant',
+              content: null,
+              tool_calls: m.metadata.toolCalls.map(call => ({
+                id: call.id,
+                type: 'function',
+                function: {
+                  name: call.name,
+                  arguments: JSON.stringify(call.arguments || {})
+                }
+              }))
+            };
+          }
+          // 普通消息：去除思考标记（仅用于UI显示，API不需要）
+          const content =
+            typeof m.content === 'string'
+              ? m.content.replace(/<!--think-->[\s\S]*?<!--endthink-->/g, '').trim()
+              : m.content;
+          return { role: m.role, content };
+        });
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...historyMessages.filter(m => m.role !== 'system'),
+        ...formattedHistory,
         { role: 'user', content: userText }
       ];
 

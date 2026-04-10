@@ -243,9 +243,43 @@ function createAiAgentRunner(options) {
       '\n6. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出“等待X秒”。' +
       '\n7. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
 
+    // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
+    const rawHistory = await historyStorage.getMessages(session.id, { limit: 50 });
+    const formattedHistory = rawHistory
+      .filter(m => m.role !== 'system')
+      .map(m => {
+        if (m.role === 'tool') {
+          return {
+            role: 'tool',
+            tool_call_id: m.metadata?.toolCallId || '',
+            content: m.content || ''
+          };
+        }
+        if (m.role === 'assistant' && m.metadata?.toolCalls) {
+          return {
+            role: 'assistant',
+            content: null,
+            tool_calls: m.metadata.toolCalls.map(call => ({
+              id: call.id,
+              type: 'function',
+              function: {
+                name: call.name,
+                arguments: JSON.stringify(call.arguments || {})
+              }
+            }))
+          };
+        }
+        // 普通消息：去除思考标记（仅用于UI显示，API不需要）
+        const content =
+          typeof m.content === 'string'
+            ? m.content.replace(/<!--think-->[\s\S]*?<!--endthink-->/g, '').trim()
+            : m.content;
+        return { role: m.role, content };
+      });
+
     agentMessageHistory = [
       { role: 'system', content: systemPrompt },
-      ...(await historyStorage.getMessages(session.id, { limit: 50 })),
+      ...formattedHistory,
       { role: 'user', content: userText }
     ];
 
@@ -271,9 +305,13 @@ function createAiAgentRunner(options) {
           updateStreamingMessage(aiMsgElement, fullText);
           finishStreamingMessage(aiMsgElement);
           agentMessageHistory.push({ role: 'assistant', content: result.content });
+          // 保存思考内容到历史（使用标记以便还原时渲染思考下拉框）
+          const savedContent = result.reasoningContent
+            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
+            : result.content;
           await historyStorage.addMessage(session.id, {
             role: 'assistant',
-            content: result.content
+            content: savedContent
           });
           break;
         }
@@ -317,6 +355,22 @@ function createAiAgentRunner(options) {
             tool_calls: openAiToolCalls
           });
 
+          // 保存带工具调用的助手消息到历史
+          const assistantSavedContent = result.reasoningContent
+            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
+            : result.content || '';
+          await historyStorage.addMessage(session.id, {
+            role: 'assistant',
+            content: assistantSavedContent,
+            metadata: {
+              toolCalls: result.toolCalls.map(call => ({
+                id: call.id,
+                name: call.name,
+                arguments: call.arguments
+              }))
+            }
+          });
+
           for (const toolCall of result.toolCalls) {
             const toolResult = await toolsExecutor.execute(toolCall);
             const target = toolMessages.get(toolCall.id) || addChatMessage('', 'ai');
@@ -326,6 +380,17 @@ function createAiAgentRunner(options) {
                 title: getToolTitle(toolCall.name),
                 description: '会话已结束',
                 status: 'success'
+              });
+              // 保存结束会话工具结果到历史
+              await historyStorage.addMessage(session.id, {
+                role: 'tool',
+                content: JSON.stringify(toolResult),
+                metadata: {
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.name,
+                  status: 'success',
+                  description: '会话已结束'
+                }
               });
               isAgentProcessing = false;
               break;
@@ -342,6 +407,17 @@ function createAiAgentRunner(options) {
               title: getToolTitle(toolCall.name),
               description: summary.text,
               status: summary.status
+            });
+            // 保存工具结果到历史
+            await historyStorage.addMessage(session.id, {
+              role: 'tool',
+              content: JSON.stringify(toolResult),
+              metadata: {
+                toolCallId: toolCall.id,
+                toolName: toolCall.name,
+                status: summary.status,
+                description: summary.text
+              }
             });
           }
 
