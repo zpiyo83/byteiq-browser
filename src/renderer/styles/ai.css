@@ -44,8 +44,23 @@
 }
 
 .ai-resize-handle:hover,
-.ai-resize-handle:active {
+.ai-resize-handle:active,
+.ai-resize-handle.resizing {
     background: var(--ai-accent);
+}
+
+.ai-resize-handle.resizing {
+    background: var(--ai-accent-strong);
+}
+
+.ai-sidebar.resizing {
+    transition: none;
+    border-left-color: var(--ai-accent);
+}
+
+body.ai-sidebar-resizing {
+    cursor: ew-resize !important;
+    user-select: none !important;
 }
 
 .ai-sidebar.collapsed {
@@ -469,7 +484,7 @@
     padding: 18px 16px 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
     min-height: 0;
     scrollbar-gutter: stable;
 }
@@ -952,7 +967,7 @@
 
 /* 思考下拉框样式 - 极简风格 */
 .think-dropdown {
-    margin-bottom: 12px;
+    margin-bottom: 0;
     border: none;
     background: transparent;
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);

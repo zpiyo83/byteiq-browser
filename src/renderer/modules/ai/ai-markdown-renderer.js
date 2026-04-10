@@ -90,20 +90,39 @@ function renderMarkdown(text) {
   );
 
   // 13. 表格
+  // 匹配格式：| 表头1 | 表头2 |\n| --- | --- |\n| 内容1 | 内容2 |
   html = html.replace(
-    /(?:\|?([^\n]+)\|?\n)(?:\|?[\s:?\-:?\-:?\s]+\|?\n)((?:\|?[^\n]+\|?\n?)*)/g,
-    (_m, headerRow, bodyRows) => {
-      const headers = headerRow.split('|').filter(c => c.trim());
-      const thCells = headers.map(h => `<th>${h.trim()}</th>`).join('');
+    /(?:^|\n)(?:\|([^\n|]*)\|[^\n]*\n\|[-\s:|]+\|[^\n]*(?:\n\|[^\n|]*\|[^\n]*)*)/g,
+    match => {
+      const lines = match.trim().split('\n');
+      if (lines.length < 2) return match;
+
+      // 第一行是表头
+      const headerLine = lines[0];
+      const headers = headerLine
+        .split('|')
+        .slice(1, -1)
+        .map(h => h.trim())
+        .filter(Boolean);
+      if (headers.length === 0) return match;
+
+      const thCells = headers.map(h => `<th>${h}</th>`).join('');
       let bodyHtml = '';
-      if (bodyRows) {
-        const rows = bodyRows.trim().split('\n');
-        for (const row of rows) {
-          const cells = row.split('|').filter(c => c.trim());
-          const tdCells = cells.map(c => `<td>${c.trim()}</td>`).join('');
-          if (tdCells) bodyHtml += `<tr>${tdCells}</tr>`;
+
+      // 从第三行开始是数据行（跳过表头和分隔符）
+      for (let i = 2; i < lines.length; i++) {
+        const rowLine = lines[i];
+        const cells = rowLine
+          .split('|')
+          .slice(1, -1)
+          .map(c => c.trim())
+          .filter(c => c);
+        if (cells.length > 0) {
+          const tdCells = cells.map(c => `<td>${c}</td>`).join('');
+          bodyHtml += `<tr>${tdCells}</tr>`;
         }
       }
+
       return `<table><thead><tr>${thCells}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
     }
   );
