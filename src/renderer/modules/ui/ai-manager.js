@@ -40,6 +40,10 @@ function createAiManager(options) {
   const contextText = documentRef.getElementById('ai-context-text');
   const contextClearBtn = documentRef.getElementById('ai-context-clear-btn');
 
+  // 页面状态指示器
+  const pageStatusBar = documentRef.getElementById('ai-page-status');
+  const pageStatusText = documentRef.getElementById('ai-page-status-text');
+
   // 工具栏与历史面板
   const newSessionBtn = documentRef.getElementById('ai-new-session-btn');
   const historyBtn = documentRef.getElementById('ai-history-btn');
@@ -116,6 +120,94 @@ function createAiManager(options) {
   const modeSelect = documentRef.getElementById('ai-mode-select');
   let currentMode = 'ask'; // 'ask' 或 'agent'
 
+  // Agent任务状态追踪
+  let taskState = null;
+
+  // 当前页面信息缓存（用于动态注入）
+  let lastKnownPageInfo = null;
+
+  /**
+   * 获取当前页面实时信息（轻量级，不提取完整内容）
+   */
+  function getCurrentPageInfo() {
+    const tabId = getActiveTabId();
+    const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
+    if (!webview || webview.tagName !== 'WEBVIEW') return null;
+    const loading = typeof webview.isLoading === 'function' ? webview.isLoading() : false;
+    let title = '';
+    let url = '';
+    try {
+      url = typeof webview.getURL === 'function' ? webview.getURL() : '';
+      title = webview.getTitle?.() || '';
+    } catch {
+      // webview尚未加载完成
+    }
+    return { title, url, loading, tabId };
+  }
+
+  /**
+   * 更新页面状态指示器UI
+   */
+  function updatePageStatusUI(pageInfo) {
+    if (!pageStatusBar || !pageStatusText) return;
+    if (!pageInfo || !pageInfo.url) {
+      pageStatusBar.style.display = 'none';
+      return;
+    }
+    const shortTitle = pageInfo.title || pageInfo.url;
+    pageStatusText.textContent = pageInfo.loading ? `加载中: ${shortTitle}` : shortTitle;
+    pageStatusBar.style.display = 'flex';
+  }
+
+  /**
+   * 页面变化时的处理：更新状态指示器和AI上下文
+   */
+  function onPageChanged(tabId, _url) {
+    const pageInfo = getCurrentPageInfo();
+    if (!pageInfo) return;
+
+    // 检测页面是否变化
+    const changed = lastKnownPageInfo && lastKnownPageInfo.url !== pageInfo.url;
+    lastKnownPageInfo = pageInfo;
+
+    updatePageStatusUI(pageInfo);
+
+    // 页面变化时闪烁提示
+    if (changed && pageStatusBar) {
+      pageStatusBar.classList.add('changed');
+      setTimeout(() => pageStatusBar.classList.remove('changed'), 600);
+    }
+
+    // Ask模式：自动更新session的pageContext（延迟提取，避免阻塞导航）
+    if (currentMode !== 'agent') {
+      const webview = documentRef.getElementById(`webview-${tabId}`);
+      if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
+        extractAndSetPageContext({
+          webview,
+          getCurrentSession,
+          updateSession,
+          updateContextBar,
+          renderSessionsList,
+          extractPageContentFn: extractPageContent
+        }).catch(err => console.error('Auto-extract page context failed:', err));
+      }
+    }
+  }
+
+  /**
+   * 更新Agent任务状态
+   */
+  function updateTaskState(patch) {
+    if (!taskState) {
+      taskState = { goal: '', completedSteps: [], currentPage: '', lastAction: '' };
+    }
+    Object.assign(taskState, patch);
+  }
+
+  function resetTaskState() {
+    taskState = null;
+  }
+
   // 模式切换事件监听
   if (modeSelect) {
     modeSelect.addEventListener('change', async e => {
@@ -161,7 +253,11 @@ function createAiManager(options) {
     t,
     buildSystemPrompt,
     setInputEnabled,
-    getPageList: getPageListSnapshot
+    getPageList: getPageListSnapshot,
+    getCurrentPageInfo,
+    updateTaskState,
+    resetTaskState,
+    getTaskState: () => taskState
   });
 
   async function switchToSession(sessionId) {
@@ -432,6 +528,7 @@ function createAiManager(options) {
       const systemPrompt = buildSystemPrompt({
         mode: session.mode || 'qa',
         pageContext: session.pageContext,
+        currentPageInfo: getCurrentPageInfo(),
         t
       });
       // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
@@ -586,6 +683,13 @@ function createAiManager(options) {
       buildSelectionContext
     });
 
+    // 初始化页面状态指示器
+    const initPageInfo = getCurrentPageInfo();
+    if (initPageInfo) {
+      lastKnownPageInfo = initPageInfo;
+      updatePageStatusUI(initPageInfo);
+    }
+
     // 初始化
     const session = await getCurrentSession();
     await renderSessionsList();
@@ -595,6 +699,7 @@ function createAiManager(options) {
   return {
     bindEvents,
     onTabChanged,
+    onPageChanged,
     clearTabConversation
   };
 }

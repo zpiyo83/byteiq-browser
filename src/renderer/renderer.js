@@ -178,10 +178,16 @@ const tabManager = createTabManager({
     if (translationManager && typeof translationManager.onWebviewDidStopLoading === 'function') {
       translationManager.onWebviewDidStopLoading(webview, tabId);
     }
+    if (aiManager && typeof aiManager.onPageChanged === 'function') {
+      aiManager.onPageChanged(tabId, webview.getURL?.() || '');
+    }
   },
   onWebviewUrlChanged: payload => {
     if (translationManager && typeof translationManager.onWebviewUrlChanged === 'function') {
       translationManager.onWebviewUrlChanged(payload);
+    }
+    if (aiManager && typeof aiManager.onPageChanged === 'function') {
+      aiManager.onPageChanged(payload.id, payload.url);
     }
   },
   onActiveWebviewChanged: webview => {

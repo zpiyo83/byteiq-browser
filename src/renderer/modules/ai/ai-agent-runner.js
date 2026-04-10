@@ -18,7 +18,11 @@ function createAiAgentRunner(options) {
     t,
     buildSystemPrompt,
     setInputEnabled,
-    getPageList
+    getPageList,
+    getCurrentPageInfo,
+    updateTaskState,
+    resetTaskState,
+    getTaskState
   } = options;
 
   let isAgentProcessing = false;
@@ -223,12 +227,26 @@ function createAiAgentRunner(options) {
   async function runAgentConversation(session, userText) {
     isAgentProcessing = true;
 
+    // 初始化任务状态
+    if (typeof resetTaskState === 'function') resetTaskState();
+    if (typeof updateTaskState === 'function') {
+      const initPageInfo = typeof getCurrentPageInfo === 'function' ? getCurrentPageInfo() : null;
+      updateTaskState({
+        goal: userText,
+        completedSteps: [],
+        currentPage: initPageInfo ? `${initPageInfo.title || initPageInfo.url}` : '未知',
+        lastAction: '用户发起任务'
+      });
+    }
+
     const systemPrompt =
       buildSystemPrompt({
         mode: 'agent',
         pageContext: session.pageContext,
         pageList: typeof getPageList === 'function' ? getPageList() : [],
         includePageContext: false,
+        currentPageInfo: typeof getCurrentPageInfo === 'function' ? getCurrentPageInfo() : null,
+        taskState: typeof getTaskState === 'function' ? getTaskState() : null,
         t
       }) +
       '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面' +
@@ -240,7 +258,7 @@ function createAiAgentRunner(options) {
       '\n3. 如果不是当前页面，请在工具参数中提供tab_id以切换到目标页面。' +
       '\n4. 仅使用controls中提供的selector或用户明确给出的selector。' +
       '\n5. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
-      '\n6. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出“等待X秒”。' +
+      '\n6. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出"等待X秒"。' +
       '\n7. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
 
     // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
@@ -408,6 +426,23 @@ function createAiAgentRunner(options) {
               description: summary.text,
               status: summary.status
             });
+            // 更新任务状态追踪
+            if (typeof updateTaskState === 'function') {
+              const steps =
+                typeof getTaskState === 'function' && getTaskState()
+                  ? getTaskState().completedSteps || []
+                  : [];
+              steps.push(`${getToolTitle(toolCall.name)}: ${summary.text}`);
+              const currentPageInfo =
+                typeof getCurrentPageInfo === 'function' ? getCurrentPageInfo() : null;
+              updateTaskState({
+                completedSteps: steps,
+                currentPage: currentPageInfo
+                  ? `${currentPageInfo.title || currentPageInfo.url}`
+                  : getTaskState()?.currentPage || '未知',
+                lastAction: summary.text
+              });
+            }
             // 保存工具结果到历史
             await historyStorage.addMessage(session.id, {
               role: 'tool',

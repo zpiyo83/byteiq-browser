@@ -257,34 +257,50 @@ function buildSelectionContext(options) {
 }
 
 function buildSystemPrompt(options) {
-  const { mode, pageContext, pageList, includePageContext = true, t } = options;
+  const {
+    mode,
+    pageContext,
+    pageList,
+    includePageContext = true,
+    currentPageInfo,
+    taskState,
+    t
+  } = options;
   const base =
     t('ai.systemPrompt') ||
     '你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。';
 
   let modePrompt;
   switch (mode) {
-  case 'outline':
-    modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
-    break;
-  case 'compare':
-    modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
-    break;
-  case 'translate_page':
-    modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
-    break;
-  case 'code_docs':
-    modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
-    break;
-  case 'qa':
-  default:
-    modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
-    break;
+    case 'outline':
+      modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
+      break;
+    case 'compare':
+      modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
+      break;
+    case 'translate_page':
+      modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
+      break;
+    case 'code_docs':
+      modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
+      break;
+    case 'qa':
+    default:
+      modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
+      break;
   }
 
   let systemPrompt = `${base}\n\n${modePrompt}`;
 
-  if (includePageContext && pageContext && pageContext.content) {
+  // 动态注入当前页面信息（优先于缓存的pageContext）
+  if (currentPageInfo) {
+    systemPrompt += '\n\n[当前页面状态]';
+    systemPrompt += `\n标题: ${currentPageInfo.title || '未知'}`;
+    systemPrompt += `\nURL: ${currentPageInfo.url || '未知'}`;
+    if (currentPageInfo.loading) {
+      systemPrompt += '\n状态: 页面加载中...';
+    }
+  } else if (includePageContext && pageContext && pageContext.content) {
     systemPrompt += '\n\n' + (t('ai.pageContext') || '当前页面信息：');
     systemPrompt += `\n标题: ${pageContext.title}`;
     systemPrompt += `\nURL: ${pageContext.url}`;
@@ -305,6 +321,23 @@ function buildSystemPrompt(options) {
     const controlsSummary = buildControlsSummary(pageContext.controls);
     if (controlsSummary) {
       systemPrompt += '\n\n可交互元素:\n' + controlsSummary;
+    }
+  }
+
+  // Agent任务状态追踪
+  if (mode === 'agent' && taskState) {
+    systemPrompt += '\n\n[任务状态]';
+    if (taskState.goal) {
+      systemPrompt += `\n目标: ${taskState.goal}`;
+    }
+    if (Array.isArray(taskState.completedSteps) && taskState.completedSteps.length > 0) {
+      systemPrompt += `\n已完成步骤:\n${taskState.completedSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
+    }
+    if (taskState.currentPage) {
+      systemPrompt += `\n当前所在页面: ${taskState.currentPage}`;
+    }
+    if (taskState.lastAction) {
+      systemPrompt += `\n上一步操作: ${taskState.lastAction}`;
     }
   }
 
