@@ -3,6 +3,7 @@
  */
 
 const { createStreamingThinkParser } = require('./ai-think-parser');
+const { renderMarkdownToElement } = require('./ai-markdown-renderer');
 
 function createAiMessageUI(options) {
   const { aiChatArea, documentRef, t } = options;
@@ -95,6 +96,14 @@ function createAiMessageUI(options) {
 
   function getRandomWorkingIndicator() {
     return workingIndicators[Math.floor(Math.random() * workingIndicators.length)];
+  }
+
+  /**
+   * 渲染 AI 消息正文内容（Markdown → HTML）
+   */
+  function renderAiContent(element, text) {
+    const cleaned = cleanContent(text);
+    renderMarkdownToElement(element, cleaned, documentRef);
   }
 
   function getThinkLineHeight(content) {
@@ -257,7 +266,7 @@ function createAiMessageUI(options) {
 
       const contentDiv = documentRef.createElement('div');
       contentDiv.className = 'message-content';
-      contentDiv.textContent = cleanContent(parsed.content);
+      renderAiContent(contentDiv, parsed.content);
       msg.appendChild(contentDiv);
 
       // 存储解析器实例用于流式更新
@@ -275,7 +284,12 @@ function createAiMessageUI(options) {
       if (isStreaming) {
         const contentDiv = documentRef.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = cleanContent(text || '');
+        renderAiContent(contentDiv, text || '');
+        msg.appendChild(contentDiv);
+      } else if (sender === 'ai') {
+        const contentDiv = documentRef.createElement('div');
+        contentDiv.className = 'message-content';
+        renderAiContent(contentDiv, text);
         msg.appendChild(contentDiv);
       } else {
         msg.innerText = cleanContent(text);
@@ -386,10 +400,10 @@ function createAiMessageUI(options) {
       if (!existingContent) {
         const contentDiv = documentRef.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = cleanContent(finalResult.content);
+        renderAiContent(contentDiv, finalResult.content);
         element.appendChild(contentDiv);
       } else {
-        existingContent.textContent = cleanContent(finalResult.content);
+        renderAiContent(existingContent, finalResult.content);
       }
     } else if (existingContent) {
       existingContent.remove();

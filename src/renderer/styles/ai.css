@@ -981,6 +981,151 @@
     word-break: break-word;
 }
 
+/* Markdown 渲染样式 */
+.message-content.markdown-body {
+    white-space: normal;
+}
+
+.message-content.markdown-body p {
+    margin: 0 0 8px;
+}
+
+.message-content.markdown-body p:last-child {
+    margin-bottom: 0;
+}
+
+.message-content.markdown-body h1,
+.message-content.markdown-body h2,
+.message-content.markdown-body h3,
+.message-content.markdown-body h4,
+.message-content.markdown-body h5,
+.message-content.markdown-body h6 {
+    margin: 14px 0 6px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.message-content.markdown-body h1:first-child,
+.message-content.markdown-body h2:first-child,
+.message-content.markdown-body h3:first-child {
+    margin-top: 0;
+}
+
+.message-content.markdown-body h1 { font-size: 18px; }
+.message-content.markdown-body h2 { font-size: 16px; }
+.message-content.markdown-body h3 { font-size: 15px; }
+.message-content.markdown-body h4 { font-size: 14px; }
+
+.message-content.markdown-body ul,
+.message-content.markdown-body ol {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+
+.message-content.markdown-body li {
+    margin: 2px 0;
+}
+
+.message-content.markdown-body li > p {
+    margin: 2px 0;
+}
+
+.message-content.markdown-body code {
+    background: var(--ai-surface-soft);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+}
+
+.message-content.markdown-body pre {
+    background: var(--ai-surface-soft);
+    padding: 10px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+    border: 1px solid var(--ai-border);
+}
+
+.message-content.markdown-body pre code {
+    background: transparent;
+    padding: 0;
+    font-size: 13px;
+    border-radius: 0;
+    border: none;
+}
+
+.message-content.markdown-body blockquote {
+    border-left: 3px solid var(--ai-accent);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--ai-muted);
+}
+
+.message-content.markdown-body blockquote p {
+    margin: 4px 0;
+}
+
+.message-content.markdown-body a {
+    color: var(--ai-accent);
+    text-decoration: none;
+}
+
+.message-content.markdown-body a:hover {
+    text-decoration: underline;
+}
+
+.message-content.markdown-body table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    width: 100%;
+    font-size: 13px;
+}
+
+.message-content.markdown-body th,
+.message-content.markdown-body td {
+    border: 1px solid var(--ai-border);
+    padding: 6px 10px;
+}
+
+.message-content.markdown-body th {
+    background: var(--ai-surface-soft);
+    font-weight: 600;
+}
+
+.message-content.markdown-body hr {
+    border: none;
+    border-top: 1px solid var(--ai-border);
+    margin: 12px 0;
+}
+
+.message-content.markdown-body img {
+    max-width: 100%;
+    border-radius: 6px;
+}
+
+.message-content.markdown-body strong {
+    font-weight: 600;
+}
+
+.message-content.markdown-body em {
+    font-style: italic;
+}
+
+/* 深色模式 - Markdown 代码块 */
+.dark-mode .message-content.markdown-body pre {
+    background: var(--ai-surface-soft);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .message-content.markdown-body code {
+    background: var(--ai-surface-soft);
+}
+
+.dark-mode .message-content.markdown-body th {
+    background: var(--ai-surface-soft);
+}
+
 /* 深色模式 - 思考下拉框 */
 .dark-mode .think-dropdown {
     background: transparent;
