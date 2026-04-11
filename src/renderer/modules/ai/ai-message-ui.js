@@ -30,10 +30,7 @@ function createAiMessageUI(options) {
     const label = documentRef.createElement('span');
     label.className = 'streaming-label';
     label.textContent = 'Working';
-    const shimmer = documentRef.createElement('div');
-    shimmer.className = 'streaming-shimmer';
     indicator.appendChild(label);
-    indicator.appendChild(shimmer);
     return indicator;
   }
 

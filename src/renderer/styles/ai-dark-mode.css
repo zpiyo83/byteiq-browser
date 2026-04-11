@@ -109,6 +109,17 @@
     border-color: var(--ai-border);
 }
 
+.dark-mode .chat-message.streaming .streaming-label::before {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 40%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0.3) 60%,
+        transparent 100%
+    );
+}
+
 .dark-mode .chat-message.cancelled {
     color: var(--ai-muted);
     background: var(--ai-surface-soft);
