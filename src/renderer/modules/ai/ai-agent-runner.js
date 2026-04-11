@@ -106,6 +106,8 @@ function createAiAgentRunner(options) {
         return '点击元素';
       case 'input_text':
         return '输入文本';
+      case 'search_page':
+        return '搜索页面';
       case 'end_session':
         return '结束会话';
       default:
@@ -161,6 +163,10 @@ function createAiAgentRunner(options) {
     if (!toolCall) return '准备执行工具';
     const args = toolCall.arguments || {};
     switch (toolCall.name) {
+      case 'search_page': {
+        const query = args.query ? `搜索: ${truncateText(args.query, 40)}` : '未提供搜索词';
+        return `准备搜索，${query}`;
+      }
       case 'get_page_info':
         return `获取页面信息（标题、URL、摘要、控件），${buildPageHintFromArgs(args)}`;
       case 'click_element': {
@@ -183,6 +189,22 @@ function createAiAgentRunner(options) {
 
   function buildToolResultSummary(toolCall, toolResult) {
     const toolName = toolCall ? toolCall.name : '';
+    if (toolName === 'search_page') {
+      const pageHint = buildPageHintFromResult(toolResult, toolCall);
+      const failed = toolResult && toolResult.success === false;
+      if (failed) {
+        return { status: 'error', text: toolResult.error || '搜索页面打开失败' };
+      }
+      const title = toolResult?.title || '';
+      const tabId = toolResult?.tabId || '';
+      const hint = title || pageHint || (tabId ? `tab_id: ${tabId}` : '');
+      return {
+        status: 'success',
+        text: hint ? `已打开搜索页面，${hint}` : '已打开搜索页面',
+        tabId
+      };
+    }
+
     if (toolName === 'get_page_info') {
       const pageHint = buildPageHintFromResult(toolResult, toolCall);
       const failed = toolResult && toolResult.success === false;
@@ -274,18 +296,22 @@ function createAiAgentRunner(options) {
         taskState: typeof getTaskState === 'function' ? getTaskState() : null,
         t
       }) +
-      '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面' +
-      '信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束会话并总结）。' +
-      '当你需要结束任务时，请调用end_session工具，必须通过summary参数提供最终总结，' +
-      'summary支持Markdown格式，将直接展示给用户。' +
+      '\n\n你是Agent模式，可以使用工具来帮助用户完成任务。' +
+      '\n\n可用工具：' +
+      '\n- search_page(query): 新建标签页搜索关键词，返回页面信息和tab_id。当需要在网上查找信息时使用。' +
+      '\n- get_page_info(tab_id?): 获取指定页面的URL、标题、摘要和可交互元素列表。默认当前标签页。' +
+      '\n- click_element(selector, tab_id?): 点击页面元素。selector必须来自get_page_info返回的controls。' +
+      '\n- input_text(selector, text, tab_id?): 在输入框中输入文本。selector必须来自get_page_info返回的controls。' +
+      '\n- end_session(summary): 结束会话，summary为最终总结（支持Markdown），将直接展示给用户。' +
       '\n\n操作规范：' +
-      '\n1. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
-      '\n2. get_page_info支持tab_id参数，可选择具体页面。' +
-      '\n3. 如果不是当前页面，请在工具参数中提供tab_id以切换到目标页面。' +
-      '\n4. 仅使用controls中提供的selector或用户明确给出的selector。' +
-      '\n5. 不要凭空猜测按钮名称或选择器；找不到就重新获取或向用户确认。' +
-      '\n6. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出"等待X秒"。' +
-      '\n7. 每次工具调用后，根据结果决定下一步。完成后调用end_session。';
+      '\n1. 需要搜索信息时，先调用search_page打开搜索结果页面。' +
+      '\n2. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
+      '\n3. 操作非当前页面时，在工具参数中提供tab_id以指定目标页面。' +
+      '\n4. 仅使用controls中提供的selector或用户明确给出的selector，不要凭空猜测。' +
+      '\n5. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出"等待X秒"。' +
+      '\n6. 每次工具调用后，根据结果决定下一步。任务完成后调用end_session并提供总结。' +
+      '\n7. 优先使用search_page查找信息，而非要求用户提供。' +
+      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。';
 
     // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
     const rawHistory = await historyStorage.getMessages(session.id, { limit: 50 });

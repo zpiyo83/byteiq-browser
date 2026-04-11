@@ -119,6 +119,101 @@ function getAiToolDefinitions() {
       }
     },
     {
+      name: 'search_page',
+      description:
+        '新建标签页并搜索指定内容，页面加载完成后返回页面信息。适用于需要在网上查找信息的场景。',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: '搜索关键词或短语'
+          }
+        },
+        required: ['query']
+      },
+      async execute(context, args) {
+        const query = args?.query;
+        if (!query) {
+          return { success: false, error: 'Missing search query' };
+        }
+        if (typeof context.openTab !== 'function') {
+          return { success: false, error: 'Cannot create new tab' };
+        }
+        const tabId = context.openTab(query);
+        if (!tabId) {
+          return { success: false, error: 'Failed to create search tab' };
+        }
+        // 切换到新标签页并等待加载
+        if (typeof context.switchTab === 'function') {
+          context.switchTab(tabId);
+        }
+        // 等待 webview 出现并加载完成
+        const maxWait = 15000;
+        const start = Date.now();
+        let webview = null;
+        while (Date.now() - start < maxWait) {
+          webview = context.getWebviewById(tabId);
+          if (webview) break;
+          await new Promise(r => setTimeout(r, 200));
+        }
+        if (!webview) {
+          return {
+            success: true,
+            tabId,
+            title: '',
+            url: '',
+            content: '',
+            message: '搜索页面已打开，但页面尚未加载完成，请使用 get_page_info 获取页面信息'
+          };
+        }
+        // 等待 dom-ready
+        if (typeof webview.isLoading === 'function' && webview.isLoading()) {
+          await new Promise((resolve, _reject) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              webview.removeEventListener('dom-ready', onReady);
+              resolve();
+            }, 10000);
+            function onReady() {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              webview.removeEventListener('dom-ready', onReady);
+              resolve();
+            }
+            webview.addEventListener('dom-ready', onReady);
+          });
+        }
+        // 提取页面信息
+        try {
+          const pageInfo = await context.extractPageContent(webview);
+          if (pageInfo) {
+            return {
+              success: true,
+              tabId,
+              title: pageInfo.title || '',
+              url: pageInfo.url || '',
+              content: pageInfo.content ? pageInfo.content.substring(0, 3000) : '',
+              controls: pageInfo.controls || []
+            };
+          }
+        } catch (error) {
+          console.warn('[ai-tools-registry] search_page extract failed:', error);
+        }
+        return {
+          success: true,
+          tabId,
+          title: '',
+          url: '',
+          content: '',
+          message: '搜索页面已打开，请使用 get_page_info 获取页面信息'
+        };
+      }
+    },
+    {
       name: 'end_session',
       description: '当任务完成时调用此工具结束会话，必须通过 summary 参数提供最终总结信息',
       parameters: {
