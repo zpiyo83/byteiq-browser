@@ -326,6 +326,19 @@ function createAiAgentRunner(options) {
 
     let maxIterations = 30;
     let textOnlyCount = 0;
+    const previousMessages = [];
+    const completionKeywords = [
+      '任务完成',
+      '总结如下',
+      '已完成',
+      '结束',
+      '完毕',
+      '完成了',
+      'summary',
+      'completed',
+      'finished',
+      'end'
+    ];
     while (isAgentProcessing && maxIterations > 0) {
       maxIterations--;
 
@@ -356,20 +369,39 @@ function createAiAgentRunner(options) {
             content: savedContent
           });
           // 纯文本回复不自动结束，继续循环等待AI决定是否调用end_session
-          // 但如果AI连续两次返回纯文本且没有调用工具，则视为任务完成
+          // 但如果AI连续返回纯文本且满足以下条件之一，则视为任务完成：
+          // 1. 内容为空
+          // 2. 内容与之前的回复重复
+          // 3. 内容包含完成关键词
+          // 4. 连续5次返回纯文本
           if (!result.content || result.content.trim().length === 0) {
             break;
           }
+
+          const content = result.content.trim().toLowerCase();
+          previousMessages.push(content);
+
+          // 检查内容是否重复
+          const isDuplicate = previousMessages.filter(msg => msg === content).length > 1;
+
+          // 检查内容是否包含完成关键词
+          const containsCompletionKeyword = completionKeywords.some(keyword =>
+            content.includes(keyword.toLowerCase())
+          );
+
           textOnlyCount++;
-          if (textOnlyCount >= 2) {
+
+          // 智能终止策略
+          if (isDuplicate || containsCompletionKeyword || textOnlyCount >= 5) {
             break;
           }
           continue;
         }
 
         if (result.type === 'tool_calls') {
-          // 重置纯文本回复计数器，因为AI调用了工具
+          // 重置纯文本回复计数器和历史消息数组，因为AI调用了工具
           textOnlyCount = 0;
+          previousMessages.length = 0;
           // 渲染思考内容（如果有）
           let firstToolTarget = aiMsgElement;
           const fullText = result.reasoningContent
