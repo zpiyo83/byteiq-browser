@@ -209,6 +209,20 @@
                             data-i18n-placeholder="ai.placeholder"
                             role="textbox" aria-label="AI输入框"
                             placeholder="Ask a question or give a command...">
+                        <div class="ai-context-pie" id="ai-context-pie" aria-label="上下文使用量">
+                            <svg viewBox="0 0 36 36" width="28" height="28">
+                                <circle class="pie-bg" cx="18" cy="18" r="15.9155" fill="none" stroke="#e0e0e0" stroke-width="3"/>
+                                <circle class="pie-used" id="ai-pie-used" cx="18" cy="18" r="15.9155" fill="none" stroke="#4285f4" stroke-width="3"
+                                    stroke-dasharray="0 100" stroke-dashoffset="25" stroke-linecap="round"/>
+                            </svg>
+                            <div class="ai-context-tooltip" id="ai-context-tooltip">
+                                <div class="tooltip-row"><span>已使用</span><span id="tt-used">0%</span></div>
+                                <div class="tooltip-row"><span>已用</span><span id="tt-used-k">0K</span></div>
+                                <div class="tooltip-row"><span>剩余</span><span id="tt-remain-k">8K</span></div>
+                                <div class="tooltip-row"><span>系统提示</span><span id="tt-system">0</span></div>
+                                <div class="tooltip-row"><span>历史消息</span><span id="tt-history">0</span></div>
+                            </div>
+                        </div>
                         <button id="ai-send-btn" class="icon-btn send-btn" data-i18n-title="ai.send" role="button" aria-label="发送">
                             <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
                                 <path fill="currentColor" d="M2.01,21L23,12L2.01,3L2,10L17,12L2,14L2.01,21Z"/>

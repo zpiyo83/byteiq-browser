@@ -11,6 +11,7 @@ function createAiAgentRunner(options) {
     toolsExecutor,
     historyStorage,
     store,
+    onIteration,
     updateSession,
     renderSessionsList,
     addChatMessage,
@@ -598,6 +599,7 @@ function createAiAgentRunner(options) {
 
         await updateSession(session.id, { updatedAt: Date.now() });
         renderSessionsList();
+        if (typeof onIteration === 'function') onIteration();
       } catch (error) {
         console.error('Agent error:', error);
         const errMsg = error && error.message ? String(error.message) : '';
@@ -636,7 +638,8 @@ function createAiAgentRunner(options) {
   return {
     runAgentConversation,
     setupAgentStreamingListener,
-    isProcessing: () => isAgentProcessing
+    isProcessing: () => isAgentProcessing,
+    getMessageHistory: () => agentMessageHistory
   };
 }
 

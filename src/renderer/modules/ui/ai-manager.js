@@ -42,6 +42,78 @@ function createAiManager(options) {
   const contextText = documentRef.getElementById('ai-context-text');
   const contextClearBtn = documentRef.getElementById('ai-context-clear-btn');
 
+  // 上下文饼图元素
+  const pieUsed = documentRef.getElementById('ai-pie-used');
+  const ttUsed = documentRef.getElementById('tt-used');
+  const ttUsedK = documentRef.getElementById('tt-used-k');
+  const ttRemainK = documentRef.getElementById('tt-remain-k');
+  const ttSystem = documentRef.getElementById('tt-system');
+  const ttHistory = documentRef.getElementById('tt-history');
+
+  // 简易 token 估算：中文约 1.5 token/字，英文约 1.3 token/4字符
+  function estimateTokens(text) {
+    if (!text) return 0;
+    const str = typeof text === 'string' ? text : JSON.stringify(text);
+    let tokens = 0;
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      // CJK 字符
+      if (code >= 0x4e00 && code <= 0x9fff) {
+        tokens += 1.5;
+      } else {
+        tokens += 0.25;
+      }
+    }
+    return Math.ceil(tokens);
+  }
+
+  // 估算消息历史的 token 用量
+  function estimateHistoryTokens(messages) {
+    if (!Array.isArray(messages)) return { total: 0, system: 0, history: 0 };
+    let system = 0;
+    let history = 0;
+    for (const msg of messages) {
+      const msgTokens =
+        estimateTokens(msg.content) +
+        estimateTokens(JSON.stringify(msg.tool_calls || msg.tool_call_id || ''));
+      if (msg.role === 'system') {
+        system += msgTokens;
+      } else {
+        history += msgTokens;
+      }
+    }
+    return { total: system + history, system, history };
+  }
+
+  // 更新上下文饼图
+  function updateContextPie() {
+    if (!pieUsed) return;
+    const contextSize = store ? store.get('settings.aiContextSize', 8192) : 8192;
+    const messages = agentRunner.getMessageHistory();
+    const { total, system, history } = estimateHistoryTokens(messages);
+    const pct = Math.min(100, Math.round((total / contextSize) * 100));
+
+    // 更新饼图 SVG
+    pieUsed.setAttribute('stroke-dasharray', `${pct} ${100 - pct}`);
+
+    // 根据使用率变色
+    if (pct > 90) {
+      pieUsed.setAttribute('stroke', '#ef4444');
+    } else if (pct > 70) {
+      pieUsed.setAttribute('stroke', '#f59e0b');
+    } else {
+      pieUsed.setAttribute('stroke', '#4285f4');
+    }
+
+    // 更新 tooltip
+    if (ttUsed) ttUsed.textContent = `${pct}%`;
+    if (ttUsedK) ttUsedK.textContent = `${(total / 1000).toFixed(1)}K`;
+    if (ttRemainK)
+      ttRemainK.textContent = `${(Math.max(0, contextSize - total) / 1000).toFixed(1)}K`;
+    if (ttSystem) ttSystem.textContent = `${system}`;
+    if (ttHistory) ttHistory.textContent = `${history}`;
+  }
+
   // 工具栏与历史面板
   const newSessionBtn = documentRef.getElementById('ai-new-session-btn');
   const historyBtn = documentRef.getElementById('ai-history-btn');
@@ -200,6 +272,7 @@ function createAiManager(options) {
     toolsExecutor,
     historyStorage,
     store,
+    onIteration: updateContextPie,
     updateSession,
     renderSessionsList: (...args) => renderSessionsList(...args),
     addChatMessage,
@@ -379,13 +452,19 @@ function createAiManager(options) {
     });
 
     // 发送按钮
-    aiSendBtn.addEventListener('click', () => chatHandler.handleAISend(aiInput, currentMode));
+    aiSendBtn.addEventListener('click', async () => {
+      await chatHandler.handleAISend(aiInput, currentMode);
+      updateContextPie();
+    });
 
     // 回车发送
     aiInput.addEventListener('keypress', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        chatHandler.handleAISend(aiInput, currentMode);
+        (async () => {
+          await chatHandler.handleAISend(aiInput, currentMode);
+          updateContextPie();
+        })();
       }
     });
 

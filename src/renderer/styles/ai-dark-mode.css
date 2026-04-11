@@ -180,6 +180,21 @@
     color: var(--ai-muted);
 }
 
+/* Dark mode - Context pie chart */
+.dark-mode .ai-context-pie .pie-bg {
+    stroke: #5f6368;
+}
+
+.dark-mode .ai-context-pie .pie-used {
+    stroke: var(--ai-accent);
+}
+
+.dark-mode .ai-context-tooltip {
+    background: var(--ai-surface-alt);
+    border-color: var(--ai-border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 /* Dark mode - History popup */
 .dark-mode .ai-history-popup {
     background: var(--ai-surface);
