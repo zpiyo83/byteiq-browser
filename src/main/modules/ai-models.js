@@ -11,14 +11,14 @@ function getHeaders(requestType, apiKey) {
   };
 
   switch (requestType) {
-  case 'openai-chat':
-  case 'openai-response':
-    headers['Authorization'] = `Bearer ${apiKey}`;
-    break;
-  case 'anthropic':
-    headers['x-api-key'] = apiKey;
-    headers['anthropic-version'] = '2023-06-01';
-    break;
+    case 'openai-chat':
+    case 'openai-response':
+      headers['Authorization'] = `Bearer ${apiKey}`;
+      break;
+    case 'anthropic':
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      break;
   }
 
   return headers;

@@ -326,6 +326,8 @@ function createAiAgentRunner(options) {
 
     let maxIterations = 30;
     let textOnlyCount = 0;
+    // 使用Set存储处理后的消息内容，用于快速检测重复
+    // 存储的是trim().toLowerCase()处理后的内容，以忽略大小写和前后空格的差异
     const previousMessages = new Set();
     const completionKeywords = [
       '任务完成',

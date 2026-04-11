@@ -40,7 +40,7 @@ module.exports = [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
 
       // 代码风格
-      'indent': ['error', 2],
+      'indent': ['warn', 2, { 'SwitchCase': 1 }],
       'quotes': ['error', 'single'],
       'semi': ['error', 'always'],
 
