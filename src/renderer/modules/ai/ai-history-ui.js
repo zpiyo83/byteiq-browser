@@ -117,7 +117,8 @@ function createAiHistoryUI(options) {
             if (s && !s.deleted) matched.push(s);
           }
           sessions = matched;
-        } catch {
+        } catch (err) {
+          console.error('Failed to search messages', err);
           // 搜索失败则仅用标题过滤
         }
       }
@@ -337,8 +338,8 @@ function createAiHistoryUI(options) {
 
     if (!messages || messages.length === 0) {
       const welcomeMsg = documentRef.createElement('div');
-      welcomeMsg.className = 'chat-message ai';
-      welcomeMsg.innerHTML = `<span>${t('ai.welcome')}</span>`;
+      welcomeMsg.className = 'chat-message ai welcome-message';
+      welcomeMsg.innerHTML = `<div class="welcome-icon">✨</div><div class="welcome-text">${t('ai.welcome')}</div>`;
       aiChatArea.appendChild(welcomeMsg);
       return;
     }

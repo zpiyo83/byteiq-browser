@@ -12,77 +12,7 @@ function createAiMessageUI(options) {
   const streamingParsers = new WeakMap();
   const THINK_MAX_LINES = 7;
 
-  // 工作状态指示器选项
-  const workingIndicators = [
-    'working',
-    'processing',
-    'thinking',
-    'analyzing',
-    'generating',
-    'crafting',
-    'composing',
-    'building',
-    'creating',
-    'developing',
-    'calculating',
-    'computing',
-    'designing',
-    'formulating',
-    'constructing',
-    'assembling',
-    'preparing',
-    'organizing',
-    'structuring',
-    'planning',
-    'researching',
-    'investigating',
-    'exploring',
-    'discovering',
-    'learning',
-    'adapting',
-    'optimizing',
-    'refining',
-    'improving',
-    'enhancing',
-    'modifying',
-    'adjusting',
-    'configuring',
-    'customizing',
-    'tailoring',
-    'personalizing',
-    'streamlining',
-    'simplifying',
-    'clarifying',
-    'explaining',
-    'describing',
-    'detailing',
-    'elaborating',
-    'specifying',
-    'defining',
-    'outlining',
-    'sketching',
-    'drafting',
-    'prototyping',
-    'modeling',
-    'simulating',
-    'testing',
-    'validating',
-    'verifying',
-    'checking',
-    'reviewing',
-    'examining',
-    'inspecting',
-    'auditing',
-    'monitoring',
-    'tracking',
-    'measuring',
-    'evaluating',
-    'assessing',
-    'judging',
-    'deciding',
-    'selecting',
-    'choosing'
-  ];
+  // 创建流式动画圆点指示器
 
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -94,8 +24,15 @@ function createAiMessageUI(options) {
     return text.replace(/^>\s*/, '');
   }
 
-  function getRandomWorkingIndicator() {
-    return workingIndicators[Math.floor(Math.random() * workingIndicators.length)];
+  function createStreamingDots() {
+    const indicator = documentRef.createElement('span');
+    indicator.className = 'streaming-indicator';
+    for (let i = 0; i < 3; i++) {
+      const dot = documentRef.createElement('span');
+      dot.className = 'streaming-dot';
+      indicator.appendChild(dot);
+    }
+    return indicator;
   }
 
   /**
@@ -242,10 +179,8 @@ function createAiMessageUI(options) {
     msg.className = `chat-message ${sender}`;
     if (isStreaming) {
       msg.classList.add('streaming');
-      // 添加 working 指示器
-      const indicator = documentRef.createElement('span');
-      indicator.className = 'streaming-indicator';
-      indicator.textContent = getRandomWorkingIndicator();
+      // 添加动画圆点指示器
+      const indicator = createStreamingDots();
       msg.appendChild(indicator);
     }
 
@@ -431,9 +366,7 @@ function createAiMessageUI(options) {
     element.classList.add('streaming');
     if (shouldShowIndicator) {
       if (!indicator) {
-        const newIndicator = documentRef.createElement('span');
-        newIndicator.className = 'streaming-indicator';
-        newIndicator.textContent = getRandomWorkingIndicator();
+        const newIndicator = createStreamingDots();
         element.prepend(newIndicator);
       }
     } else if (indicator) {
@@ -494,8 +427,8 @@ function createAiMessageUI(options) {
   function clearChatArea() {
     aiChatArea.innerHTML = '';
     const welcomeMsg = documentRef.createElement('div');
-    welcomeMsg.className = 'chat-message ai';
-    welcomeMsg.innerHTML = `<span>${t('ai.welcome')}</span>`;
+    welcomeMsg.className = 'chat-message ai welcome-message';
+    welcomeMsg.innerHTML = `<div class="welcome-icon">✨</div><div class="welcome-text">${t('ai.welcome')}</div>`;
     aiChatArea.appendChild(welcomeMsg);
   }
 

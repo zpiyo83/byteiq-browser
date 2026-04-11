@@ -75,17 +75,33 @@
  }
 
 .dark-mode .chat-message.ai {
-    background: transparent;
+    background: var(--ai-bubble-ai);
     color: var(--ai-text);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
-.dark-mode .chat-message.streaming::after {
-    background: var(--ai-muted);
+.dark-mode .chat-message.user {
+    background: linear-gradient(135deg, var(--ai-accent), var(--ai-accent-strong));
+    box-shadow: 0 2px 10px rgba(138, 180, 248, 0.2);
+}
+
+.dark-mode .streaming-dot {
+    background: var(--ai-accent);
+}
+
+.dark-mode .chat-message.welcome-message {
+    background: var(--ai-bubble-ai);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .welcome-text {
+    color: var(--ai-muted);
 }
 
 .dark-mode .chat-message.page-info {
-    background: #1d2b3d;
+    background: rgba(138, 180, 248, 0.12);
     color: #a5c5fb;
+    border-color: rgba(138, 180, 248, 0.2);
 }
 
 .dark-mode .chat-message.page-info strong {
@@ -95,6 +111,18 @@
 .dark-mode .chat-message.tool-card {
     background: var(--ai-surface-alt);
     border-color: var(--ai-border);
+}
+
+.dark-mode .chat-message.cancelled {
+    color: var(--ai-muted);
+    background: var(--ai-surface-soft);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .chat-message.error {
+    background: rgba(248, 113, 113, 0.12);
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.25);
 }
 
 .dark-mode .tool-card-status.success {
@@ -132,6 +160,15 @@
 }
 
 .dark-mode .ai-input-area input:disabled {
+    background: var(--ai-surface-soft);
+    color: var(--ai-muted);
+}
+
+.dark-mode .ai-input-area button {
+    background: linear-gradient(135deg, var(--ai-accent), var(--ai-accent-strong));
+}
+
+.dark-mode .ai-input-area button:disabled {
     background: var(--ai-surface-soft);
     color: var(--ai-muted);
 }
