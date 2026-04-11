@@ -232,8 +232,57 @@ async function extractPageContent(webview) {
         });
       }
     }
-    const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
-    return content;
+
+    try {
+      const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
+      return content;
+    } catch (error) {
+      const message = error && error.message ? error.message : '';
+      if (
+        message.includes('dom-ready event emitted before this method can be called') &&
+        webview &&
+        webview.isConnected
+      ) {
+        try {
+          await new Promise((resolve, reject) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              webview.removeEventListener('dom-ready', onReady);
+              reject(new Error('Webview dom-ready timeout'));
+            }, 100000);
+
+            function onReady() {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              if (webview.dataset) {
+                webview.dataset.domReady = 'true';
+              }
+              webview.removeEventListener('dom-ready', onReady);
+              resolve();
+            }
+
+            webview.addEventListener('dom-ready', onReady);
+          });
+        } catch (waitError) {
+          console.error('Failed to extract page content:', waitError);
+          return null;
+        }
+
+        try {
+          const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
+          return content;
+        } catch (retryError) {
+          console.error('Failed to extract page content:', retryError);
+          return null;
+        }
+      }
+
+      console.error('Failed to extract page content:', error);
+      return null;
+    }
   } catch (error) {
     console.error('Failed to extract page content:', error);
     return null;
