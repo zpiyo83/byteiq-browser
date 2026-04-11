@@ -144,10 +144,27 @@ function getAiToolDefinitions() {
         if (!tabId) {
           return { success: false, error: 'Failed to create search tab' };
         }
+
+        // 切换到新标签页
+        if (typeof context.switchTab === 'function') {
+          context.switchTab(tabId);
+        }
+
+        // 等待新标签页的 WebView 节点真正出现在 DOM 中
+        const start = Date.now();
+        const waitTimeout = 10000;
+        while (Date.now() - start < waitTimeout) {
+          const wv = context.getWebviewById(tabId);
+          if (wv && wv.isConnected) {
+            break;
+          }
+          await new Promise(r => setTimeout(r, 100));
+        }
+
         return {
           success: true,
           tabId,
-          message: `已打开搜索页面，请使用 get_page_info(tab_id="${tabId}") 获取页面信息`
+          message: `已打开搜索页面，请使用 get_page_info(tab_id="${tabId}") 获取内容。`
         };
       }
     },

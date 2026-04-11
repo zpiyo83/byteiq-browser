@@ -146,44 +146,9 @@ async function ensureWebviewDomReady(webview, timeout = 100000) {
     throw new Error('Invalid webview');
   }
 
+  // 只确保 webview 挂载到 DOM，不再预测 dom-ready
+  // 真正的就绪检测交给 executeJavaScriptWithRetry 的重试机制
   await waitForWebviewAttached(webview, timeout);
-
-  if (webview.dataset && webview.dataset.domReady === 'true') {
-    return;
-  }
-
-  await new Promise((resolve, reject) => {
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      webview.removeEventListener('dom-ready', onReady);
-      clearInterval(pollTimer);
-      reject(new Error('Webview dom-ready timeout'));
-    }, timeout);
-
-    function onReady() {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      clearInterval(pollTimer);
-      if (webview.dataset) {
-        webview.dataset.domReady = 'true';
-      }
-      webview.removeEventListener('dom-ready', onReady);
-      resolve();
-    }
-
-    // 轮询 isLoading：dom-ready 事件可能已触发但被错过
-    const pollTimer = setInterval(() => {
-      if (settled) return;
-      if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-        onReady();
-      }
-    }, 100);
-
-    webview.addEventListener('dom-ready', onReady);
-  });
 }
 
 async function executeJavaScriptWithRetry(webview, script, userGesture) {
@@ -196,14 +161,18 @@ async function executeJavaScriptWithRetry(webview, script, userGesture) {
       return await webview.executeJavaScript(script, userGesture);
     } catch (error) {
       lastError = error;
-      if (!isWebviewNotReadyError(error)) {
-        throw error;
-      }
+      const message = error && error.message ? String(error.message) : '';
+      console.warn(`[ai-webview-bridge] executeJavaScript attempt ${attempt + 1} failed:`, message);
 
-      if (webview && webview.dataset) {
-        webview.dataset.domReady = 'false';
+      if (isWebviewNotReadyError(error) || message.includes('attached to the DOM')) {
+        if (webview && webview.dataset) {
+          webview.dataset.domReady = 'false';
+        }
+        // 对于刚创建的 WebView，给一点喘息时间让它在渲染进程中真正挂载
+        await sleep(500 * (attempt + 1));
+        continue;
       }
-      await sleep(150);
+      throw error;
     }
   }
 

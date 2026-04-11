@@ -50,53 +50,8 @@ function createAiToolsExecutor(options) {
       return { success: false, error: '目标标签页未打开网页，请先打开网页' };
     }
 
-    if (webview.dataset && webview.dataset.domReady === 'true') {
-      return { success: true };
-    }
-
-    const remaining = timeout - (Date.now() - start);
-    if (remaining <= 0) {
-      return { success: false, error: '目标页面尚未准备好，请稍后重试' };
-    }
-
-    try {
-      await new Promise((resolve, reject) => {
-        let settled = false;
-        const timer = setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          webview.removeEventListener('dom-ready', onReady);
-          clearInterval(pollTimer);
-          reject(new Error('Webview dom-ready timeout'));
-        }, remaining);
-
-        function onReady() {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          clearInterval(pollTimer);
-          if (webview.dataset) {
-            webview.dataset.domReady = 'true';
-          }
-          webview.removeEventListener('dom-ready', onReady);
-          resolve();
-        }
-
-        // 轮询 isLoading：dom-ready 事件可能已触发但被错过
-        const pollTimer = setInterval(() => {
-          if (settled) return;
-          if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-            onReady();
-          }
-        }, 100);
-
-        webview.addEventListener('dom-ready', onReady);
-      });
-    } catch (error) {
-      console.warn('[ai-tools-executor] ensureTabActive failed:', error);
-      return { success: false, error: '目标页面尚未准备好，请稍后重试' };
-    }
-
+    // 不再预测 dom-ready，只确保 webview 在 DOM 中即可
+    // 真正的就绪检测交给 extractPageContent / executeJavaScriptWithRetry 的重试机制
     return { success: true };
   }
 

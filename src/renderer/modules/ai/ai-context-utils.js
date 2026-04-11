@@ -181,12 +181,22 @@ const EXTRACT_PAGE_CONTENT_SCRIPT = `
 })();
 `;
 
+function isWebviewNotReadyError(error) {
+  const msg = error && error.message ? String(error.message) : '';
+  return (
+    msg.includes('WebView must be attached to the DOM') ||
+    msg.includes('dom-ready event emitted before this method can be called') ||
+    msg.includes('dom-ready')
+  );
+}
+
 async function extractPageContent(webview) {
   if (!webview || webview.tagName !== 'WEBVIEW') {
     return null;
   }
 
   try {
+    // 等待 webview 挂载到 DOM
     if (!webview.isConnected) {
       const start = Date.now();
       await new Promise((resolve, reject) => {
@@ -204,107 +214,31 @@ async function extractPageContent(webview) {
       });
     }
 
-    if (webview.dataset && webview.dataset.domReady !== 'true') {
-      await new Promise((resolve, reject) => {
-        let settled = false;
-        const timer = setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          webview.removeEventListener('dom-ready', onReady);
-          clearInterval(pollTimer);
-          reject(new Error('Webview dom-ready timeout'));
-        }, 100000);
-
-        function onReady() {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          clearInterval(pollTimer);
-          if (webview.dataset) {
-            webview.dataset.domReady = 'true';
-          }
-          webview.removeEventListener('dom-ready', onReady);
-          resolve();
+    // 核心策略：不再试图预测 dom-ready，直接尝试 executeJavaScript，
+    // 如果报 WebView 未就绪错误则延迟重试
+    const maxAttempts = 5;
+    const delays = [300, 500, 1000, 2000, 3000];
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
+        if (webview.dataset) {
+          webview.dataset.domReady = 'true';
         }
-
-        // 轮询 isLoading：dom-ready 事件可能已触发但被错过，
-        // 此时 isLoading() 会变为 false，可作兜底信号
-        const pollTimer = setInterval(() => {
-          if (settled) return;
-          if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-            onReady();
-          }
-        }, 100);
-
-        webview.addEventListener('dom-ready', onReady);
-      });
-    }
-
-    try {
-      const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
-      return content;
-    } catch (error) {
-      const message = error && error.message ? error.message : '';
-      if (
-        (message.includes('WebView must be attached to the DOM') ||
-          message.includes('dom-ready event emitted before this method can be called') ||
-          message.includes('dom-ready')) &&
-        webview &&
-        webview.isConnected
-      ) {
-        try {
-          await new Promise((resolve, reject) => {
-            let settled = false;
-            const start = Date.now();
-            const timer = setTimeout(() => {
-              if (settled) return;
-              settled = true;
-              webview.removeEventListener('dom-ready', onReady);
-              clearInterval(pollTimer);
-              reject(new Error('Webview dom-ready timeout'));
-            }, 100000);
-
-            function onReady() {
-              if (settled) return;
-              settled = true;
-              clearTimeout(timer);
-              clearInterval(pollTimer);
-              if (webview.dataset) {
-                webview.dataset.domReady = 'true';
-              }
-              webview.removeEventListener('dom-ready', onReady);
-              resolve();
-            }
-
-            const pollTimer = setInterval(() => {
-              if (settled) return;
-              if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-                onReady();
-              }
-              if (Date.now() - start > 100000) {
-                return;
-              }
-            }, 50);
-
-            webview.addEventListener('dom-ready', onReady);
-          });
-        } catch (waitError) {
-          console.error('Failed to extract page content:', waitError);
-          return null;
+        return content;
+      } catch (error) {
+        if (isWebviewNotReadyError(error) && attempt < maxAttempts - 1) {
+          console.warn(
+            `[ai-context-utils] extractPageContent attempt ${attempt + 1} not ready, ` +
+              `retrying in ${delays[attempt]}ms...`
+          );
+          await new Promise(r => setTimeout(r, delays[attempt]));
+          continue;
         }
-
-        try {
-          const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
-          return content;
-        } catch (retryError) {
-          console.error('Failed to extract page content:', retryError);
-          return null;
-        }
+        throw error;
       }
-
-      console.error('Failed to extract page content:', error);
-      return null;
     }
+
+    return null;
   } catch (error) {
     console.error('Failed to extract page content:', error);
     return null;
