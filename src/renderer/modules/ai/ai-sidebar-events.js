@@ -19,7 +19,7 @@ function bindAiSidebarResize(options) {
   };
 
   const MIN_WIDTH = 280;
-  const MAX_WIDTH = 600;
+  const MAX_WIDTH = 900;
 
   const applyWidth = () => {
     if (pendingWidth !== null) {

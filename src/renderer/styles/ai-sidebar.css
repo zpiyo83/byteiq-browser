@@ -19,7 +19,7 @@
     height: 100%;
     width: 360px;
     min-width: 280px;
-    max-width: 600px;
+    max-width: 900px;
     color: var(--ai-text);
     background: linear-gradient(180deg, var(--ai-surface-alt), var(--ai-surface) 140px);
     border-left: 1px solid var(--ai-border);
