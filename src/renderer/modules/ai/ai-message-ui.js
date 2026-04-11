@@ -53,6 +53,8 @@ function createAiMessageUI(options) {
     indicator.appendChild(label);
     return indicator;
   }
+  /**
+   * 渲染 AI 消息正文内容（Markdown → HTML）
    */
   function renderAiContent(element, text) {
     const cleaned = cleanContent(text);
