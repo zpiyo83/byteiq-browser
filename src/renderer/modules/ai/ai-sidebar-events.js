@@ -6,6 +6,8 @@ function bindAiSidebarResize(options) {
   const { documentRef, resizeHandle, aiSidebar } = options;
   if (!resizeHandle || !aiSidebar) return;
 
+  const webviewsContainer = documentRef.getElementById('webviews-container');
+
   let isResizing = false;
   let startX = 0;
   let startWidth = 0;
@@ -24,6 +26,10 @@ function bindAiSidebarResize(options) {
   const applyWidth = () => {
     if (pendingWidth !== null) {
       aiSidebar.style.width = `${pendingWidth}px`;
+      // 同步更新webview容器边距，避免webview覆盖侧边栏
+      if (webviewsContainer && !aiSidebar.classList.contains('collapsed')) {
+        webviewsContainer.style.marginRight = `${pendingWidth}px`;
+      }
       pendingWidth = null;
     }
     rafId = null;
@@ -61,6 +67,11 @@ function bindAiSidebarResize(options) {
     resizeHandle.style.cursor = 'ew-resize';
     documentRef.body.style.cursor = 'ew-resize';
     documentRef.body.style.userSelect = 'none';
+
+    // 拖动时禁用侧边栏过渡，避免延迟
+    if (webviewsContainer) {
+      webviewsContainer.style.transition = 'none';
+    }
   };
 
   const stopResize = () => {
@@ -83,6 +94,11 @@ function bindAiSidebarResize(options) {
     resizeHandle.style.cursor = '';
     documentRef.body.style.cursor = originalStyles.cursor;
     documentRef.body.style.userSelect = originalStyles.userSelect;
+
+    // 恢复webview容器过渡
+    if (webviewsContainer) {
+      webviewsContainer.style.transition = '';
+    }
   };
 
   // 鼠标事件
@@ -158,6 +174,15 @@ function bindAskSelectionEvent(options) {
 
     const wasCollapsed = aiSidebar.classList.contains('collapsed');
     aiSidebar.classList.remove('collapsed');
+
+    // 同步webview容器边距
+    if (wasCollapsed) {
+      const wvc = documentRef.getElementById('webviews-container');
+      if (wvc) {
+        const width = aiSidebar.offsetWidth || 360;
+        wvc.style.marginRight = `${width}px`;
+      }
+    }
 
     const session = await getCurrentSession();
     if (session) {

@@ -403,6 +403,8 @@ function closeAllPanels() {
 
   if (aiSidebar && !aiSidebar.classList.contains('collapsed')) {
     aiSidebar.classList.add('collapsed');
+    const wvc = document.getElementById('webviews-container');
+    if (wvc) wvc.style.marginRight = '';
   }
 }
 

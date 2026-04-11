@@ -49,6 +49,18 @@ function createAiManager(options) {
   const historyListEl = documentRef.getElementById('ai-history-list');
   const closeHistoryBtn = documentRef.getElementById('ai-close-history-btn');
   const resizeHandle = documentRef.getElementById('ai-resize-handle');
+  const webviewsContainer = documentRef.getElementById('webviews-container');
+
+  // 同步webview容器边距，避免webview覆盖侧边栏
+  function syncWebviewMargin() {
+    if (!webviewsContainer) return;
+    if (aiSidebar.classList.contains('collapsed')) {
+      webviewsContainer.style.marginRight = '';
+    } else {
+      const width = aiSidebar.offsetWidth || 360;
+      webviewsContainer.style.marginRight = `${width}px`;
+    }
+  }
 
   const historyStorage = getAIHistoryStorage();
 
@@ -322,6 +334,7 @@ function createAiManager(options) {
     toggleAiBtn.addEventListener('click', async () => {
       const wasCollapsed = aiSidebar.classList.contains('collapsed');
       aiSidebar.classList.toggle('collapsed');
+      syncWebviewMargin();
 
       if (wasCollapsed) {
         const tabId = getActiveTabId();
@@ -348,6 +361,7 @@ function createAiManager(options) {
     // 关闭按钮
     closeAiBtn.addEventListener('click', () => {
       aiSidebar.classList.add('collapsed');
+      syncWebviewMargin();
     });
 
     // 发送按钮

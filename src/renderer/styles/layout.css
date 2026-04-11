@@ -21,7 +21,7 @@
     height: 100%;
     min-width: 0;
     min-height: 0;
-    transition: margin-right 0.15s ease;
+    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 当开发者工具打开时，webview容器收缩 */
