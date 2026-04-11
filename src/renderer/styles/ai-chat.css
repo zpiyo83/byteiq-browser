@@ -180,14 +180,9 @@
 }
 
 .chat-message.streaming .streaming-indicator {
-    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 0;
-    margin: 4px 0;
-    background: transparent;
-    overflow: visible;
+    gap: 6px;
 }
 
 .chat-message.streaming .streaming-label {
@@ -197,25 +192,28 @@
     letter-spacing: 0.3px;
     position: relative;
     z-index: 1;
-    animation: workingPulse 2s ease-in-out infinite;
+    overflow: hidden;
 }
 
-.chat-message.streaming .streaming-shimmer {
+.chat-message.streaming .streaming-label::before {
+    content: '';
     position: absolute;
     top: 0;
     left: -100%;
-    width: 100%;
+    width: 50%;
     height: 100%;
     background: linear-gradient(
         90deg,
         transparent 0%,
-        rgba(59, 130, 246, 0.08) 30%,
-        rgba(59, 130, 246, 0.18) 50%,
-        rgba(59, 130, 246, 0.08) 70%,
+        rgba(255, 255, 255, 0.8) 40%,
+        rgba(255, 255, 255, 1) 50%,
+        rgba(255, 255, 255, 0.8) 60%,
         transparent 100%
     );
-    animation: shimmerSweep 2s ease-in-out infinite;
+    transform: skewX(-20deg);
+    animation: labelShimmer 1.5s ease-in-out infinite;
     pointer-events: none;
+    z-index: 0;
 }
 
 @keyframes workingPulse {
@@ -227,12 +225,12 @@
     }
 }
 
-@keyframes shimmerSweep {
+@keyframes labelShimmer {
     0% {
         left: -100%;
     }
     100% {
-        left: 100%;
+        left: 200%;
     }
 }
 
