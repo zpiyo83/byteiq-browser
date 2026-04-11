@@ -324,7 +324,7 @@ function createAiAgentRunner(options) {
       { role: 'user', content: userText }
     ];
 
-    let maxIterations = 10;
+    let maxIterations = 30;
     while (isAgentProcessing && maxIterations > 0) {
       maxIterations--;
 
@@ -354,7 +354,12 @@ function createAiAgentRunner(options) {
             role: 'assistant',
             content: savedContent
           });
-          break;
+          // 纯文本回复不自动结束，继续循环等待AI决定是否调用end_session
+          // 但如果AI连续两次返回纯文本且没有调用工具，则视为任务完成
+          if (!result.content || result.content.trim().length === 0) {
+            break;
+          }
+          continue;
         }
 
         if (result.type === 'tool_calls') {

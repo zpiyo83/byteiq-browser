@@ -157,6 +157,8 @@ function bindAskSelectionEvent(options) {
     buildSelectionContext
   } = options;
 
+  const webviewsContainer = documentRef.getElementById('webviews-container');
+
   windowRef.addEventListener('ai-ask-selection', async e => {
     const text = e?.detail?.text || '';
     const selectionContext = buildSelectionContext({
@@ -176,12 +178,9 @@ function bindAskSelectionEvent(options) {
     aiSidebar.classList.remove('collapsed');
 
     // 同步webview容器边距
-    if (wasCollapsed) {
-      const wvc = documentRef.getElementById('webviews-container');
-      if (wvc) {
-        const width = aiSidebar.offsetWidth || 360;
-        wvc.style.marginRight = `${width}px`;
-      }
+    if (wasCollapsed && webviewsContainer) {
+      const width = aiSidebar.offsetWidth || 360;
+      webviewsContainer.style.marginRight = `${width}px`;
     }
 
     const session = await getCurrentSession();
