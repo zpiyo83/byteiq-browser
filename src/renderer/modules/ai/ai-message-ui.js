@@ -126,7 +126,7 @@ function createAiMessageUI(options) {
     clearAutoCollapseTimer(container);
 
     const expandedAt = getAutoExpandedAt(container);
-    const elapsed = expandedAt ? Date.now() - expandedAt : THINK_MIN_EXPANDED_MS;
+    const elapsed = expandedAt ? Date.now() - expandedAt : 0;
     const remaining = Math.max(0, THINK_MIN_EXPANDED_MS - elapsed);
     const timer = setTimeout(() => {
       autoCollapseTimers.delete(container);
