@@ -31,11 +31,23 @@ function createAiMessageUI(options) {
     indicator.className = 'streaming-indicator';
     const label = documentRef.createElement('span');
     label.className = 'streaming-label';
-    label.textContent = 'Working';
+
+    // 多单词轮换显示
+    const words = ['Working', 'Thinking', 'Processing', 'Analyzing', 'Generating'];
+    let wordIndex = 0;
+    label.textContent = words[wordIndex];
+
+    // 每隔 1.5 秒切换单词
+    const intervalId = setInterval(() => {
+      wordIndex = (wordIndex + 1) % words.length;
+      label.textContent = words[wordIndex];
+    }, 1500);
+
+    // 存储定时器ID，方便后续清理
+    indicator.dataset.intervalId = intervalId;
     indicator.appendChild(label);
     return indicator;
   }
-
   /**
    * 渲染 AI 消息正文内容（Markdown → HTML）
    */
