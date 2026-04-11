@@ -88,7 +88,15 @@ function createAiManager(options) {
   // 更新上下文饼图
   function updateContextPie() {
     if (!pieUsed) return;
-    const contextSize = store ? store.get('settings.aiContextSize', 8192) : 8192;
+    // 优先从输入框读取最新值，再 fallback 到 store
+    const contextSizeInput = documentRef.getElementById('ai-context-size-input');
+    let contextSize = 8192;
+    if (contextSizeInput && contextSizeInput.value) {
+      const inputVal = parseInt(contextSizeInput.value);
+      if (inputVal && inputVal >= 1024) contextSize = inputVal;
+    } else if (store) {
+      contextSize = store.get('settings.aiContextSize', 8192);
+    }
     const messages = agentRunner.getMessageHistory();
     const { total, system, history } = estimateHistoryTokens(messages);
     const pct = Math.min(100, Math.round((total / contextSize) * 100));
