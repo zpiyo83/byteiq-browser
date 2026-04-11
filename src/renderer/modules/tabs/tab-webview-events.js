@@ -78,8 +78,14 @@ function createTabWebviewEvents(options) {
 
     webview.addEventListener('did-stop-loading', () => {
       setTabLoading(id, false);
+      let stopUrl = '';
+      try {
+        stopUrl = webview.getURL();
+      } catch {
+        // webview 尚未 dom-ready
+      }
       if (id === getActiveTabId()) {
-        urlInput.value = webview.getURL();
+        urlInput.value = stopUrl;
         progressBar.classList.remove('loading');
         progressBar.style.width = '100%';
         setTimeout(() => {
@@ -89,9 +95,9 @@ function createTabWebviewEvents(options) {
           }, 200);
         }, 300);
       }
-      updateTabUrl(id, webview.getURL());
+      updateTabUrl(id, stopUrl);
       applyStoredZoom(webview);
-      updateBookmarkIcon(webview.getURL());
+      updateBookmarkIcon(stopUrl);
       if (typeof onWebviewDidStopLoading === 'function') {
         onWebviewDidStopLoading(webview, id);
       }
@@ -124,7 +130,13 @@ function createTabWebviewEvents(options) {
       if (tab) {
         tab.title = e.title;
       }
-      saveHistory(webview.getURL(), e.title);
+      let historyUrl = '';
+      try {
+        historyUrl = webview.getURL();
+      } catch {
+        // webview 尚未 dom-ready
+      }
+      saveHistory(historyUrl, e.title);
     });
 
     webview.addEventListener('did-navigate', e => {

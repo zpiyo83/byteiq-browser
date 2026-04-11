@@ -44,15 +44,25 @@ function createBrowserManager(options) {
   // 同步缩放UI显示
   function syncZoomUI(webview) {
     if (!webview || webview.tagName !== 'WEBVIEW') return;
-    webview.getZoomFactor(factor => {
-      updateZoomUI(factor);
-    });
+    try {
+      webview.getZoomFactor(factor => {
+        updateZoomUI(factor);
+      });
+    } catch {
+      // webview 尚未 dom-ready，getZoomFactor 不可用
+    }
   }
 
   // 应用存储的缩放级别
   function applyStoredZoom(webview) {
     if (!webview || webview.tagName !== 'WEBVIEW') return;
-    const storedZoom = getZoomForUrl(webview.getURL());
+    let currentUrl = '';
+    try {
+      currentUrl = webview.getURL();
+    } catch {
+      // webview 尚未 dom-ready，getURL 不可用
+    }
+    const storedZoom = getZoomForUrl(currentUrl);
     if (storedZoom) {
       webview.setZoomFactor(storedZoom);
       if (webview.id === `webview-${getActiveTabId()}`) {
@@ -134,7 +144,12 @@ function createBrowserManager(options) {
 
   function onActiveWebviewChanged(webview) {
     if (webview && webview.tagName === 'WEBVIEW') {
-      const url = webview.getURL();
+      let url = '';
+      try {
+        url = webview.getURL();
+      } catch {
+        // webview 尚未 dom-ready，getURL 不可用
+      }
       urlInput.value = url;
       updateBookmarkIcon(url);
       applyStoredZoom(webview);

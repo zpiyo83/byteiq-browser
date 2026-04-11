@@ -36,14 +36,15 @@ function createAiPageContext(deps) {
     const tabId = getActiveTabId();
     const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
     if (!webview || webview.tagName !== 'WEBVIEW') return null;
-    const loading = typeof webview.isLoading === 'function' ? webview.isLoading() : false;
+    let loading = false;
     let title = '';
     let url = '';
     try {
+      loading = typeof webview.isLoading === 'function' ? webview.isLoading() : false;
       url = typeof webview.getURL === 'function' ? webview.getURL() : '';
       title = webview.getTitle?.() || '';
     } catch {
-      // webview尚未加载完成
+      // webview 尚未 dom-ready，isLoading/getURL/getTitle 不可用
     }
     return { title, url, loading, tabId };
   }
