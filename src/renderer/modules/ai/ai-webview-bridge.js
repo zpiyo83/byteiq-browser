@@ -25,8 +25,12 @@ function waitForWebviewDidStopLoading(webview, timeout = 100000) {
     return Promise.reject(new Error('Invalid webview'));
   }
 
-  if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-    return Promise.resolve();
+  try {
+    if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
+      return Promise.resolve();
+    }
+  } catch {
+    // webview 尚未 dom-ready，isLoading 不可用，等待事件
   }
 
   return new Promise((resolve, reject) => {
@@ -88,10 +92,15 @@ async function waitForWebviewAfterInteraction(webview, options = {}) {
     throw new Error('Webview after-interaction timeout');
   }
 
-  if (typeof webview.isLoading === 'function' && webview.isLoading()) {
-    if (webview.dataset) {
-      webview.dataset.domReady = 'false';
+  try {
+    if (typeof webview.isLoading === 'function' && webview.isLoading()) {
+      if (webview.dataset) {
+        webview.dataset.domReady = 'false';
+      }
+      await waitForWebviewDidStopLoading(webview, remaining);
     }
+  } catch {
+    // webview 尚未 dom-ready，等待事件
     await waitForWebviewDidStopLoading(webview, remaining);
   }
 
@@ -107,7 +116,13 @@ async function waitForWebviewAfterInteraction(webview, options = {}) {
     throw new Error('Webview after-interaction timeout');
   }
 
-  if (typeof webview.isLoading === 'function' && webview.isLoading()) {
+  let stillLoading = false;
+  try {
+    stillLoading = typeof webview.isLoading === 'function' && webview.isLoading();
+  } catch {
+    // webview 尚未 dom-ready
+  }
+  if (stillLoading) {
     await waitForWebviewDidStopLoading(webview, remaining);
     remaining = timeout - (Date.now() - start);
     if (remaining <= 0) {
@@ -295,7 +310,12 @@ async function clickElement(webview, { selector }) {
     }
 
     // 检测点击是否触发了页面导航
-    const urlAfterClick = typeof webview.getURL === 'function' ? webview.getURL() : '';
+    let urlAfterClick = '';
+    try {
+      urlAfterClick = typeof webview.getURL === 'function' ? webview.getURL() : '';
+    } catch {
+      // webview 尚未 dom-ready
+    }
     const navigated = urlBeforeClick !== urlAfterClick;
     if (navigated) {
       // 导航发生后，等待新页面完全加载

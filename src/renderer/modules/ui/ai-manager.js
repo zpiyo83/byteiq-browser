@@ -245,12 +245,16 @@ function createAiManager(options) {
 
     const tabId = getActiveTabId();
     const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
-    if (
-      currentMode !== 'agent' &&
-      webview &&
-      webview.tagName === 'WEBVIEW' &&
-      !webview.isLoading()
-    ) {
+    if (currentMode !== 'agent' && webview && webview.tagName === 'WEBVIEW') {
+      let isReady = false;
+      try {
+        isReady = !webview.isLoading();
+      } catch {
+        // webview 尚未 dom-ready
+      }
+      if (!isReady) {
+        return;
+      }
       await extractAndSetPageContext({
         tabId,
         webview,

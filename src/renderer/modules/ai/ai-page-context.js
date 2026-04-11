@@ -85,7 +85,13 @@ function createAiPageContext(deps) {
     // Ask模式：自动更新session的pageContext（延迟提取，避免阻塞导航）
     if (currentMode !== 'agent') {
       const webview = documentRef.getElementById(`webview-${tabId}`);
-      if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
+      let isReady = false;
+      try {
+        isReady = webview && webview.tagName === 'WEBVIEW' && !webview.isLoading();
+      } catch {
+        // webview 尚未 dom-ready
+      }
+      if (isReady) {
         extractAndSetPageContext({
           webview,
           getCurrentSession,
@@ -110,7 +116,12 @@ function createAiPageContext(deps) {
     }
 
     // 等待页面加载完成
-    if (webview.isLoading && webview.isLoading()) {
+    try {
+      if (webview.isLoading && webview.isLoading()) {
+        return;
+      }
+    } catch {
+      // webview 尚未 dom-ready，isLoading 不可用
       return;
     }
 

@@ -115,7 +115,13 @@ function createAiChatHandler(deps) {
 
     const tabId = getActiveTabId();
     const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
-    if (webview && webview.tagName === 'WEBVIEW' && !webview.isLoading()) {
+    let isReady = false;
+    try {
+      isReady = webview && webview.tagName === 'WEBVIEW' && !webview.isLoading();
+    } catch {
+      // webview 尚未 dom-ready
+    }
+    if (isReady) {
       await extractAndSetPageContext({
         tabId,
         webview,
