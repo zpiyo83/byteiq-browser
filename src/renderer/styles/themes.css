@@ -295,14 +295,16 @@ body.dark-mode .setting-item .setting-desc {
 }
 
 body.dark-mode .setting-item select,
-body.dark-mode .setting-item input[type="text"] {
+body.dark-mode .setting-item input[type="text"],
+body.dark-mode .setting-item input[type="number"] {
     background: #202124;
     border-color: #3c4043;
     color: #e8eaed;
 }
 
 body.dark-mode .setting-item select:focus,
-body.dark-mode .setting-item input[type="text"]:focus {
+body.dark-mode .setting-item input[type="text"]:focus,
+body.dark-mode .setting-item input[type="number"]:focus {
     border-color: #8ab4f8;
     outline-color: #8ab4f8;
 }
