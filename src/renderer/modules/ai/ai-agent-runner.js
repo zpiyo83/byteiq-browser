@@ -326,7 +326,7 @@ function createAiAgentRunner(options) {
 
     let maxIterations = 30;
     let textOnlyCount = 0;
-    const previousMessages = [];
+    const previousMessages = new Set();
     const completionKeywords = [
       '任务完成',
       '总结如下',
@@ -381,8 +381,8 @@ function createAiAgentRunner(options) {
           const content = result.content.trim().toLowerCase();
 
           // 检查内容是否与历史消息重复
-          previousMessages.push(content);
-          const isDuplicate = previousMessages.filter(msg => msg === content).length > 1;
+          const isDuplicate = previousMessages.has(content);
+          previousMessages.add(content);
 
           // 检查内容是否包含完成关键词
           const containsCompletionKeyword = completionKeywords.some(keyword =>
@@ -399,9 +399,9 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'tool_calls') {
-          // 重置纯文本回复计数器和历史消息数组，因为AI调用了工具
+          // 重置纯文本回复计数器和历史消息集合，因为AI调用了工具
           textOnlyCount = 0;
-          previousMessages.length = 0;
+          previousMessages.clear();
           // 渲染思考内容（如果有）
           let firstToolTarget = aiMsgElement;
           const fullText = result.reasoningContent
