@@ -37,19 +37,22 @@ function createAiMessageUI(options) {
     let wordIndex = 0;
     label.textContent = words[wordIndex];
 
-    // 每隔 1.5 秒切换单词
-    const intervalId = setInterval(() => {
+    // 随机间隔切换单词 (5-8秒)
+    let timeoutId;
+    function rotateWord() {
       wordIndex = (wordIndex + 1) % words.length;
       label.textContent = words[wordIndex];
-    }, 1500);
+      const delay = 5000 + Math.random() * 3000; // 5000-8000ms
+      timeoutId = setTimeout(rotateWord, delay);
+    }
+    // 首次延迟也是随机的
+    timeoutId = setTimeout(rotateWord, 5000 + Math.random() * 3000);
 
     // 存储定时器ID，方便后续清理
-    indicator.dataset.intervalId = intervalId;
+    indicator.dataset.timeoutId = timeoutId;
     indicator.appendChild(label);
     return indicator;
   }
-  /**
-   * 渲染 AI 消息正文内容（Markdown → HTML）
    */
   function renderAiContent(element, text) {
     const cleaned = cleanContent(text);
