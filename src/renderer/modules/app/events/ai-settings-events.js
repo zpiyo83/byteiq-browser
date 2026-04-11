@@ -17,7 +17,7 @@ function bindAiSettingsEvents(deps) {
     aiModelListStatus,
     aiModelRefreshBtn,
     aiRequestTypeSelect,
-    aiContextSizeSelect,
+    aiContextSizeInput,
     ipcRenderer,
     store,
     translationApiEnabledToggle,
@@ -168,10 +168,15 @@ function bindAiSettingsEvents(deps) {
     });
   }
 
-  if (aiContextSizeSelect) {
-    aiContextSizeSelect.addEventListener('change', () => {
-      store.set('settings.aiContextSize', parseInt(aiContextSizeSelect.value) || 8192);
-    });
+  if (aiContextSizeInput) {
+    const saveContextSize = () => {
+      const val = parseInt(aiContextSizeInput.value);
+      if (val && val >= 1024) {
+        store.set('settings.aiContextSize', val);
+      }
+    };
+    aiContextSizeInput.addEventListener('input', saveContextSize);
+    aiContextSizeInput.addEventListener('change', saveContextSize);
   }
 
   // 翻译设置事件绑定
