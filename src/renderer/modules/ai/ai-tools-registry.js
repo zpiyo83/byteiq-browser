@@ -47,7 +47,7 @@ function getAiToolDefinitions() {
         required: ['selector']
       },
       async execute(context, args) {
-        const tabId = args.tab_id || '';
+        const tabId = args?.tab_id || '';
         const webview = tabId ? context.getWebviewById(tabId) : context.getActiveWebview();
         if (!webview) {
           return {
@@ -56,10 +56,11 @@ function getAiToolDefinitions() {
           };
         }
         const result = await clickElement(webview, {
-          selector: String(args.selector || '')
+          selector: String(args?.selector || '')
         });
 
         // 点击成功后提取页面信息反馈给AI
+        // 页面加载等待已在 ai-webview-bridge.js 中处理
         if (result.success) {
           try {
             const pageInfo = await context.extractPageContent(webview);
@@ -76,6 +77,7 @@ function getAiToolDefinitions() {
             }
           } catch (error) {
             console.warn('[ai-tools-registry] Failed to extract page info after click:', error);
+            // 返回原始结果，不阻塞工具调用
           }
         }
 
@@ -98,7 +100,7 @@ function getAiToolDefinitions() {
         required: ['selector', 'text']
       },
       async execute(context, args) {
-        const tabId = args.tab_id || '';
+        const tabId = args?.tab_id || '';
         const webview = tabId ? context.getWebviewById(tabId) : context.getActiveWebview();
         if (!webview) {
           return {
@@ -107,8 +109,8 @@ function getAiToolDefinitions() {
           };
         }
         const result = await inputText(webview, {
-          selector: String(args.selector || ''),
-          text: String(args.text || '')
+          selector: String(args?.selector || ''),
+          text: String(args?.text || '')
         });
         return {
           ...result,

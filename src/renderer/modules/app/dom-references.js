@@ -56,9 +56,7 @@ function getDomReferences(documentRef) {
     translationApiEnabledToggle: documentRef.getElementById('translation-api-enabled-toggle'),
     translationEndpointInput: documentRef.getElementById('translation-endpoint-input'),
     translationApiKeyInput: documentRef.getElementById('translation-api-key-input'),
-    translationRequestTypeSelect: documentRef.getElementById(
-      'translation-request-type-select'
-    ),
+    translationRequestTypeSelect: documentRef.getElementById('translation-request-type-select'),
     translationModelIdInput: documentRef.getElementById('translation-model-id-input'),
     translationTargetLanguageSelect: documentRef.getElementById(
       'translation-target-language-select'
@@ -94,7 +92,25 @@ function getDomReferences(documentRef) {
     tabContextMenu: documentRef.getElementById('tab-context-menu'),
     overlayBackdrop: documentRef.getElementById('overlay-backdrop'),
     moreMenuBtn: documentRef.getElementById('more-menu-btn'),
-    moreMenuDropdown: documentRef.getElementById('more-menu-dropdown')
+    moreMenuDropdown: documentRef.getElementById('more-menu-dropdown'),
+    // AI 历史面板元素
+    aiHistoryPopup: documentRef.getElementById('ai-history-popup'),
+    aiHistoryList: documentRef.getElementById('ai-history-list'),
+    aiHistorySearchInput: documentRef.getElementById('ai-history-search-input'),
+    aiCloseHistoryBtn: documentRef.getElementById('ai-close-history-btn'),
+    aiNewSessionBtn: documentRef.getElementById('ai-new-session-btn'),
+    aiModeSelect: documentRef.getElementById('ai-mode-select'),
+    aiPageStatus: documentRef.getElementById('ai-page-status'),
+    aiPageStatusText: documentRef.getElementById('ai-page-status-text'),
+    aiContextBar: documentRef.getElementById('ai-context-bar'),
+    aiContextText: documentRef.getElementById('ai-context-text'),
+    aiContextClearBtn: documentRef.getElementById('ai-context-clear-btn'),
+    aiResizeHandle: documentRef.getElementById('ai-resize-handle'),
+    aiHistoryBtn: documentRef.getElementById('ai-history-btn'),
+    // 开发者工具面板元素
+    devtoolsSidebar: documentRef.getElementById('devtools-sidebar'),
+    devtoolsResizeHandle: documentRef.getElementById('devtools-resize-handle'),
+    closeDevtoolsBtn: documentRef.getElementById('close-devtools-btn')
   };
 }
 

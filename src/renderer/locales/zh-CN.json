@@ -190,7 +190,12 @@
     "sessionDeleted": "会话已删除",
     "sessionRestored": "会话已恢复",
     "confirmPermanentDelete": "确定要永久删除此会话吗？此操作不可撤销。",
-    "sessionPermanentlyDeleted": "会话已永久删除"
+    "sessionPermanentlyDeleted": "会话已永久删除",
+    "modeSelect": "AI模式选择",
+    "modeAsk": "询问",
+    "modeAgent": "代理",
+    "searchHistory": "搜索会话...",
+    "closeHistory": "关闭历史面板"
   },
   "newTab": {
     "searchPlaceholder": "搜索或输入 URL...",

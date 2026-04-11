@@ -82,6 +82,7 @@ $RECYCLE.BIN/
 # ==================== 开发工具 ====================
 # Windsurf
 .windsurfrules
+.windsurf/
 
 # Claude
 .claude/

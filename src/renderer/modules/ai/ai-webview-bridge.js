@@ -234,6 +234,25 @@ async function clickElement(webview, { selector }) {
         el.focus({ preventScroll: true });
       }
 
+      // 拦截 target="_blank" 链接，改为当前页面导航
+      const anchor = el.closest('a') || (el.tagName === 'A' ? el : null);
+      if (anchor && anchor.href) {
+        const target = anchor.getAttribute('target') || '';
+        if (target === '_blank' || target === 'blank') {
+          // 移除 target 属性，使链接在当前页面打开
+          anchor.removeAttribute('target');
+        }
+      }
+
+      // 临时覆盖 window.open，防止 JS 调用 window.open() 在新标签页打开
+      const originalWindowOpen = window.open;
+      window.open = function(url) {
+        if (url) {
+          window.location.href = url;
+        }
+        return null;
+      };
+
       let cancelled = false;
       let clicked = false;
 
@@ -260,17 +279,28 @@ async function clickElement(webview, { selector }) {
         clicked = true;
       }
 
+      // 恢复 window.open
+      window.open = originalWindowOpen;
+
       return {
         success: clicked,
         tagName: el.tagName,
         role: el.getAttribute('role') || '',
         type: el.getAttribute('type') || '',
-        cancelled
+        cancelled,
+        urlBeforeClick: window.location.href
       };
     } catch (error) {
+      // 恢复 window.open（异常路径）
+      if (typeof originalWindowOpen === 'function') {
+        window.open = originalWindowOpen;
+      }
       return { success: false, error: error && error.message ? error.message : 'Click failed' };
     }
     `;
+
+    // 记录点击前的 URL，用于检测导航
+    const urlBeforeClick = typeof webview.getURL === 'function' ? webview.getURL() : '';
 
     const result = await executeJavaScriptWithRetry(
       webview,
@@ -291,7 +321,26 @@ async function clickElement(webview, { selector }) {
       }
       return { ...result, success: false, error: message || '页面尚未准备好，请稍后重试' };
     }
-    return result;
+
+    // 检测点击是否触发了页面导航
+    const urlAfterClick = typeof webview.getURL === 'function' ? webview.getURL() : '';
+    const navigated = urlBeforeClick !== urlAfterClick;
+    if (navigated) {
+      // 导航发生后，等待新页面完全加载
+      try {
+        if (webview.dataset) {
+          webview.dataset.domReady = 'false';
+        }
+        if (typeof webview.isLoading === 'function' && webview.isLoading()) {
+          await waitForWebviewDidStopLoading(webview, 15000);
+        }
+        await ensureWebviewDomReady(webview, 15000);
+      } catch (navError) {
+        console.warn('[ai-webview-bridge] Navigation wait failed after click:', navError);
+      }
+    }
+
+    return { ...result, navigated };
   } catch (error) {
     console.error('[ai-webview-bridge] clickElement failed:', error);
     const message = error && error.message ? String(error.message) : '';

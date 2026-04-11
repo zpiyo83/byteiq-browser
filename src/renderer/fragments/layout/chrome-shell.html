@@ -115,4 +115,126 @@
             data-i18n-title="toolbar.translate" role="button" aria-label="翻译"
             style="display:none">
             <!-- 默认翻译图标 -->
-            <svg class="translate-icon" viewBox="0 0 24 24
+            <svg class="translate-icon" viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                <path fill="currentColor"
+                    d="M12.87,15.07L10.33,12.56L10.36,12.53C12.1,10.59 13.34,8.36 14.07,6H17V4H10V2H8V4H1V5.99H12.17C11.5,7.92 10.44,9.75 9,11.35C8.07,10.32 7.3,9.19 6.69,8H4.69C5.42,9.63 6.42,11.17 7.67,12.56L2.58,17.58L4,19L9,14L12.11,17.11L12.87,15.07M18.5,10H16.5L12,22H14L15.12,19H19.87L21,22H23L18.5,10M15.88,17L17.5,12.67L19.12,17H15.88Z"/>
+            </svg>
+            <!-- 加载旋转图标 -->
+            <svg class="loading-icon" viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                <path fill="currentColor"
+                    d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/>
+            </svg>
+            <!-- 成功打勾图标 -->
+            <svg class="success-icon" viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                <path fill="currentColor"
+                    d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="main-container">
+        <div id="webviews-container">
+            <!-- Webviews will be added here -->
+        </div>
+
+        <!-- 开发者工具侧边栏 -->
+        <div id="devtools-sidebar" class="devtools-sidebar">
+            <div class="devtools-resize-handle" id="devtools-resize-handle"></div>
+            <div class="devtools-header">
+                <span>开发者工具</span>
+                <button id="close-devtools-btn" class="icon-btn" aria-label="关闭开发者工具">
+                    <svg viewBox="0 0 24 24" width="16" height="16" role="img" aria-hidden="true">
+                        <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="devtools-placeholder">
+                <p>开发者工具已打开</p>
+                <p class="devtools-hint">使用上方面板检查页面元素</p>
+            </div>
+        </div>
+
+        <div class="ai-sidebar collapsed" id="ai-sidebar" role="complementary" aria-label="AI助手面板">
+            <div class="ai-resize-handle" id="ai-resize-handle" role="separator" aria-label="调整AI助手面板宽度"></div>
+            <div class="ai-header">
+                <h3 data-i18n="ai.title">Byteiq AI Assistant</h3>
+                <button id="ai-history-btn" class="icon-btn" data-i18n-title="ai.history" role="button" aria-label="历史会话">
+                    <svg viewBox="0 0 24 24" width="20" height="20" role="img" aria-hidden="true">
+                        <path fill="currentColor" d="M13,3A9,9 0 0,0 4,12H1L4.89,15.89L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.13 8.11,16.73L6.7,18.14C8.25,19.87 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3M12,8V13L16.28,15.54L17,14.33L13.5,12.25V8H12Z"/>
+                    </svg>
+                </button>
+                <button id="close-ai-btn" class="icon-btn" data-i18n-title="ai.close" role="button" aria-label="关闭AI助手">
+                    <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                        <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="ai-body">
+                <div class="ai-sidebar-toolbar">
+                    <button id="ai-new-session-btn" class="ai-toolbar-btn" data-i18n-title="ai.newSession" aria-label="新建会话">
+                        <svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-hidden="true">
+                            <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+                        </svg>
+                    </button>
+                    <select id="ai-mode-select" class="ai-mode-select" data-i18n-title="ai.modeSelect" aria-label="AI模式选择">
+                        <option value="ask" data-i18n="ai.modeAsk">💬 询问</option>
+                        <option value="agent" data-i18n="ai.modeAgent">🤖 代理</option>
+                    </select>
+                </div>
+
+                <div class="ai-page-status" id="ai-page-status" style="display: none;">
+                    <span class="ai-page-status-icon">📄</span>
+                    <span class="ai-page-status-text" id="ai-page-status-text"></span>
+                </div>
+
+                <div class="ai-chat-panel" aria-label="AI聊天面板">
+                    <div class="ai-chat-area" id="ai-chat-area" role="log" aria-live="polite" aria-label="AI对话区域">
+                        <div class="chat-message ai">
+                            <span data-i18n="ai.welcome">
+                                Hello! I'm Byteiq AI Assistant. I can help summarize
+                                pages, answer questions, and assist your browsing.
+                            </span>
+                        </div>
+                    </div>
+                    <div class="ai-context-bar" id="ai-context-bar" style="display: none;">
+                        <span class="context-text" id="ai-context-text"></span>
+                        <button class="context-clear-btn" id="ai-context-clear-btn" aria-label="清除页面上下文">
+                            <svg viewBox="0 0 24 24" width="14" height="14" role="img" aria-hidden="true">
+                                <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="ai-input-area">
+                        <input type="text" id="ai-input"
+                            data-i18n-placeholder="ai.placeholder"
+                            role="textbox" aria-label="AI输入框"
+                            placeholder="Ask a question or give a command...">
+                        <button id="ai-send-btn" class="icon-btn send-btn" data-i18n-title="ai.send" role="button" aria-label="发送">
+                            <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                                <path fill="currentColor" d="M2.01,21L23,12L2.01,3L2,10L17,12L2,14L2.01,21Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ai-history-popup" id="ai-history-popup" role="dialog" aria-label="历史会话">
+                <div class="ai-history-header">
+                    <span data-i18n="ai.historyTitle">历史会话</span>
+                    <button id="ai-close-history-btn" class="icon-btn" data-i18n-title="ai.closeHistory" aria-label="关闭历史面板">
+                        <svg viewBox="0 0 24 24" width="16" height="16" role="img" aria-hidden="true">
+                            <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="ai-history-search">
+                    <input type="text" id="ai-history-search-input" data-i18n-placeholder="ai.searchHistory" placeholder="搜索会话..." aria-label="搜索历史会话">
+                </div>
+                <div class="ai-history-list" id="ai-history-list" role="list" aria-label="会话历史列表"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay-backdrop" class="overlay-backdrop"></div>
+
+    <!-- Template for New Tab Page -->

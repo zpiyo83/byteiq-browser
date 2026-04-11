@@ -62,7 +62,6 @@
     line-height: 1.45;
     color: var(--ai-muted);
     background: transparent;
-    border-left: 2px solid var(--ai-border);
     margin-left: 2px;
     will-change: max-height, padding;
 }
@@ -80,7 +79,6 @@
 }
 
 .dark-mode .think-dropdown-content {
-    border-left-color: rgba(255, 255, 255, 0.15);
     background: transparent;
 }
 
