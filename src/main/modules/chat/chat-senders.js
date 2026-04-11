@@ -22,7 +22,7 @@ const {
   normalizeToolsForResponses
 } = require('./stream-parsers');
 
-function sendResponsesStreamForAgent(messages, config) {
+function sendResponsesStreamForAgent(messages, config, onTextChunk) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, model, timeout, tools } = config;
 
@@ -82,6 +82,9 @@ function sendResponsesStreamForAgent(messages, config) {
               : trimmed.slice(5).trim();
             const payload = JSON.parse(jsonStr);
             parseResponsesStreamEvent(payload, state);
+            if (onTextChunk && state.text) {
+              onTextChunk(state.text, '');
+            }
           } catch {
             continue;
           }
@@ -99,6 +102,9 @@ function sendResponsesStreamForAgent(messages, config) {
                   : trimmed.slice(5).trim();
                 const payload = JSON.parse(jsonStr);
                 parseResponsesStreamEvent(payload, state);
+                if (onTextChunk && state.text) {
+                  onTextChunk(state.text, '');
+                }
               } catch {
                 // ignore trailing parse failure
               }
@@ -125,7 +131,7 @@ function sendResponsesStreamForAgent(messages, config) {
   });
 }
 
-function sendChatCompletionsStreamForAgent(messages, config) {
+function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, model, timeout, tools } = config;
 
@@ -185,6 +191,9 @@ function sendChatCompletionsStreamForAgent(messages, config) {
               : trimmed.slice(5).trim();
             const payload = JSON.parse(jsonStr);
             parseChatCompletionsStreamEvent(payload, state);
+            if (onTextChunk && (state.text || state.reasoningContent)) {
+              onTextChunk(state.text, state.reasoningContent);
+            }
           } catch {
             continue;
           }
@@ -202,6 +211,9 @@ function sendChatCompletionsStreamForAgent(messages, config) {
                   : trimmed.slice(5).trim();
                 const payload = JSON.parse(jsonStr);
                 parseChatCompletionsStreamEvent(payload, state);
+                if (onTextChunk && (state.text || state.reasoningContent)) {
+                  onTextChunk(state.text, state.reasoningContent);
+                }
               } catch {
                 // ignore trailing parse failure
               }

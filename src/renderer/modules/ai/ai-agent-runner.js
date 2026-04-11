@@ -28,6 +28,25 @@ function createAiAgentRunner(options) {
   let isAgentProcessing = false;
   let agentMessageHistory = [];
 
+  // Agent 流式显示状态
+  let agentStreamingElement = null;
+  let agentStreamingTaskId = null;
+
+  /**
+   * 监听 Agent 流式响应
+   */
+  function setupAgentStreamingListener() {
+    ipcRenderer.on('ai-agent-streaming', (_event, data) => {
+      if (!agentStreamingElement) return;
+      if (data.taskId !== agentStreamingTaskId) return;
+
+      const fullText = data.reasoningContent
+        ? `<!--think-->${data.reasoningContent}<!--endthink-->${data.accumulated}`
+        : data.accumulated;
+      updateStreamingMessage(agentStreamingElement, fullText);
+    });
+  }
+
   function renderToolCard(target, options) {
     if (!target) return;
     if (!documentRef) {
@@ -208,18 +227,22 @@ function createAiAgentRunner(options) {
     };
   }
 
-  async function sendAgentRequest(messages) {
+  async function sendAgentRequest(messages, streamingElement) {
+    agentStreamingTaskId = `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    agentStreamingElement = streamingElement;
     setInputEnabled(false);
     try {
       const tools = getAiToolsSchema();
       const result = await ipcRenderer.invoke('ai-agent', {
         messages,
         tools,
-        taskId: `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`
+        taskId: agentStreamingTaskId
       });
 
       return result;
     } finally {
+      agentStreamingElement = null;
+      agentStreamingTaskId = null;
       setInputEnabled(true);
     }
   }
@@ -308,7 +331,7 @@ function createAiAgentRunner(options) {
       const aiMsgElement = addChatMessage('', 'ai', true);
 
       try {
-        const result = await sendAgentRequest(agentMessageHistory);
+        const result = await sendAgentRequest(agentMessageHistory, aiMsgElement);
         finishStreamingMessage(aiMsgElement);
 
         if (!result?.success) {
@@ -474,6 +497,7 @@ function createAiAgentRunner(options) {
 
   return {
     runAgentConversation,
+    setupAgentStreamingListener,
     isProcessing: () => isAgentProcessing
   };
 }

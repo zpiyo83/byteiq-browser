@@ -18,7 +18,12 @@ const {
   translateTextsStreaming,
   chunkTexts
 } = require('./modules/translation/ai-translator');
-const { sendStreamingChatRequest, sendChatRequest } = require('./modules/ai-chat');
+const {
+  sendStreamingChatRequest,
+  sendChatRequest,
+  sendResponsesStreamForAgent,
+  sendChatCompletionsStreamForAgent
+} = require('./modules/ai-chat');
 const { fetchAiModels } = require('./modules/ai-models');
 const { createDownloadsManager } = require('./modules/ipc/downloads-ipc');
 const { registerTranslationIpc } = require('./modules/ipc/translation-ipc');
@@ -63,6 +68,8 @@ registerAiIpc({
   store,
   sendStreamingChatRequest,
   sendChatRequest,
+  sendResponsesStreamForAgent,
+  sendChatCompletionsStreamForAgent,
   fetchAiModels
 });
 registerVersionIpc({

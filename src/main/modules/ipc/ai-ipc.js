@@ -3,7 +3,15 @@
  */
 
 function registerAiIpc(options) {
-  const { ipcMain, store, sendStreamingChatRequest, sendChatRequest, fetchAiModels } = options;
+  const {
+    ipcMain,
+    store,
+    sendStreamingChatRequest,
+    sendChatRequest,
+    sendResponsesStreamForAgent,
+    sendChatCompletionsStreamForAgent,
+    fetchAiModels
+  } = options;
 
   const activeChatRequests = new Map(); // taskId -> ClientRequest
 
@@ -87,7 +95,9 @@ function registerAiIpc(options) {
     }
   });
 
-  ipcMain.handle('ai-agent', async (event, { messages, tools }) => {
+  ipcMain.handle('ai-agent', async (event, { messages, tools, taskId }) => {
+    const resolvedTaskId = taskId || `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
     try {
       const endpoint = store.get('settings.aiEndpoint', '');
       const apiKey = store.get('settings.aiApiKey', '');
@@ -102,14 +112,39 @@ function registerAiIpc(options) {
         };
       }
 
-      const result = await sendChatRequest(messages, {
-        endpoint,
-        apiKey,
-        requestType,
-        model,
-        timeout,
-        tools
-      });
+      // 流式回调：向渲染进程发送增量文本
+      const onTextChunk = (accumulated, reasoningContent) => {
+        event.sender.send('ai-agent-streaming', {
+          taskId: resolvedTaskId,
+          accumulated,
+          reasoningContent
+        });
+      };
+
+      let result;
+      if (requestType === 'openai-response' && sendResponsesStreamForAgent) {
+        result = await sendResponsesStreamForAgent(
+          messages,
+          { endpoint, apiKey, model, timeout, tools },
+          onTextChunk
+        );
+      } else if (requestType === 'openai-chat' && sendChatCompletionsStreamForAgent) {
+        result = await sendChatCompletionsStreamForAgent(
+          messages,
+          { endpoint, apiKey, model, timeout, tools },
+          onTextChunk
+        );
+      } else {
+        // Anthropic 或其他类型：降级为非流式
+        result = await sendChatRequest(messages, {
+          endpoint,
+          apiKey,
+          requestType,
+          model,
+          timeout,
+          tools
+        });
+      }
 
       let responseData;
       try {
@@ -118,7 +153,8 @@ function registerAiIpc(options) {
         return {
           success: true,
           type: 'message',
-          content: result
+          content: result,
+          taskId: resolvedTaskId
         };
       }
 
@@ -142,7 +178,8 @@ function registerAiIpc(options) {
           type: 'tool_calls',
           toolCalls,
           reasoningContent,
-          content: message?.content || ''
+          content: message?.content || '',
+          taskId: resolvedTaskId
         };
       }
 
@@ -150,13 +187,15 @@ function registerAiIpc(options) {
         success: true,
         type: 'message',
         content: message?.content || result,
-        reasoningContent
+        reasoningContent,
+        taskId: resolvedTaskId
       };
     } catch (error) {
       console.error('AI agent error:', error);
       return {
         success: false,
-        error: error.message || 'Agent请求失败'
+        error: error.message || 'Agent请求失败',
+        taskId: resolvedTaskId
       };
     }
   });

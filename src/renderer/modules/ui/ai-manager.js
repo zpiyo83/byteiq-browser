@@ -363,6 +363,7 @@ function createAiManager(options) {
 
     // 设置流式响应监听
     chatHandler.setupStreamingListener();
+    agentRunner.setupAgentStreamingListener();
 
     // 清除上下文按钮
     if (contextClearBtn) {
