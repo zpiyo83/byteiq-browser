@@ -472,6 +472,13 @@ function createAiManager(options) {
     chatHandler.setupStreamingListener();
     agentRunner.setupAgentStreamingListener();
 
+    // 上下文大小设置变化时同步更新饼图
+    const contextSizeInput = documentRef.getElementById('ai-context-size-input');
+    if (contextSizeInput) {
+      contextSizeInput.addEventListener('input', updateContextPie);
+      contextSizeInput.addEventListener('change', updateContextPie);
+    }
+
     // 清除上下文按钮
     if (contextClearBtn) {
       contextClearBtn.addEventListener('click', clearCurrentContext);
