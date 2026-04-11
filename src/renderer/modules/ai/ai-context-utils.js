@@ -211,6 +211,7 @@ async function extractPageContent(webview) {
           if (settled) return;
           settled = true;
           webview.removeEventListener('dom-ready', onReady);
+          clearInterval(pollTimer);
           reject(new Error('Webview dom-ready timeout'));
         }, 100000);
 
@@ -218,6 +219,7 @@ async function extractPageContent(webview) {
           if (settled) return;
           settled = true;
           clearTimeout(timer);
+          clearInterval(pollTimer);
           if (webview.dataset) {
             webview.dataset.domReady = 'true';
           }
@@ -225,16 +227,14 @@ async function extractPageContent(webview) {
           resolve();
         }
 
-        // 如果 dom-ready 已经在更早之前触发，监听不到事件，则用 isLoading 的状态作为兜底
-        if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-          settled = true;
-          clearTimeout(timer);
-          if (webview.dataset) {
-            webview.dataset.domReady = 'true';
+        // 轮询 isLoading：dom-ready 事件可能已触发但被错过，
+        // 此时 isLoading() 会变为 false，可作兜底信号
+        const pollTimer = setInterval(() => {
+          if (settled) return;
+          if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
+            onReady();
           }
-          resolve();
-          return;
-        }
+        }, 100);
 
         webview.addEventListener('dom-ready', onReady);
       });

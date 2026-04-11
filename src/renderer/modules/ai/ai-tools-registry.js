@@ -121,7 +121,7 @@ function getAiToolDefinitions() {
     {
       name: 'search_page',
       description:
-        '新建标签页并搜索指定内容，页面加载完成后返回页面信息。适用于需要在网上查找信息的场景。',
+        '新建标签页并搜索指定内容，返回新标签页的tab_id。页面加载后请使用get_page_info获取页面信息。',
       parameters: {
         type: 'object',
         properties: {
@@ -144,54 +144,10 @@ function getAiToolDefinitions() {
         if (!tabId) {
           return { success: false, error: 'Failed to create search tab' };
         }
-        // 切换到新标签页并等待加载
-        if (typeof context.switchTab === 'function') {
-          context.switchTab(tabId);
-        }
-        // 等待 webview 元素出现
-        const maxWait = 15000;
-        const start = Date.now();
-        let webview = null;
-        while (Date.now() - start < maxWait) {
-          webview = context.getWebviewById(tabId);
-          if (webview) break;
-          await new Promise(r => setTimeout(r, 200));
-        }
-        if (!webview) {
-          return {
-            success: true,
-            tabId,
-            title: '',
-            url: '',
-            content: '',
-            message: '搜索页面已打开，但页面尚未加载完成，请使用 get_page_info 获取页面信息'
-          };
-        }
-        // 短暂延迟确保 webview 完全挂载到 DOM
-        await new Promise(r => setTimeout(r, 300));
-        // extractPageContent 内部已有完整的 isConnected + dom-ready 等待逻辑
-        try {
-          const pageInfo = await context.extractPageContent(webview);
-          if (pageInfo) {
-            return {
-              success: true,
-              tabId,
-              title: pageInfo.title || '',
-              url: pageInfo.url || '',
-              content: pageInfo.content ? pageInfo.content.substring(0, 3000) : '',
-              controls: pageInfo.controls || []
-            };
-          }
-        } catch (error) {
-          console.warn('[ai-tools-registry] search_page extract failed:', error);
-        }
         return {
           success: true,
           tabId,
-          title: '',
-          url: '',
-          content: '',
-          message: '搜索页面已打开，请使用 get_page_info 获取页面信息'
+          message: `已打开搜索页面，请使用 get_page_info(tab_id="${tabId}") 获取页面信息`
         };
       }
     },

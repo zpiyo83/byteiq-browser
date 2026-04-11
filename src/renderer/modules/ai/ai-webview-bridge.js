@@ -152,19 +152,13 @@ async function ensureWebviewDomReady(webview, timeout = 100000) {
     return;
   }
 
-  if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-    if (webview.dataset) {
-      webview.dataset.domReady = 'true';
-    }
-    return;
-  }
-
   await new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
       webview.removeEventListener('dom-ready', onReady);
+      clearInterval(pollTimer);
       reject(new Error('Webview dom-ready timeout'));
     }, timeout);
 
@@ -172,12 +166,21 @@ async function ensureWebviewDomReady(webview, timeout = 100000) {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      clearInterval(pollTimer);
       if (webview.dataset) {
         webview.dataset.domReady = 'true';
       }
       webview.removeEventListener('dom-ready', onReady);
       resolve();
     }
+
+    // 轮询 isLoading：dom-ready 事件可能已触发但被错过
+    const pollTimer = setInterval(() => {
+      if (settled) return;
+      if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
+        onReady();
+      }
+    }, 100);
 
     webview.addEventListener('dom-ready', onReady);
   });
