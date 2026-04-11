@@ -325,6 +325,7 @@ function createAiAgentRunner(options) {
     ];
 
     let maxIterations = 30;
+    let textOnlyCount = 0;
     while (isAgentProcessing && maxIterations > 0) {
       maxIterations--;
 
@@ -359,10 +360,16 @@ function createAiAgentRunner(options) {
           if (!result.content || result.content.trim().length === 0) {
             break;
           }
+          textOnlyCount++;
+          if (textOnlyCount >= 2) {
+            break;
+          }
           continue;
         }
 
         if (result.type === 'tool_calls') {
+          // 重置纯文本回复计数器，因为AI调用了工具
+          textOnlyCount = 0;
           // 渲染思考内容（如果有）
           let firstToolTarget = aiMsgElement;
           const fullText = result.reasoningContent
