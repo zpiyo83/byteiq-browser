@@ -14,6 +14,7 @@ function createAiAgentRunner(options) {
     addChatMessage,
     updateStreamingMessage,
     finishStreamingMessage,
+    autoCollapseThinkingDropdown,
     documentRef,
     t,
     buildSystemPrompt,
@@ -412,6 +413,19 @@ function createAiAgentRunner(options) {
           if (fullText) {
             updateStreamingMessage(aiMsgElement, fullText);
             finishStreamingMessage(aiMsgElement);
+            firstToolTarget = null;
+          }
+
+          if (typeof autoCollapseThinkingDropdown === 'function') {
+            autoCollapseThinkingDropdown(aiMsgElement);
+          }
+
+          if (
+            firstToolTarget &&
+            (firstToolTarget.querySelector('.think-dropdown') ||
+              firstToolTarget.querySelector('.message-content') ||
+              String(firstToolTarget.textContent || '').trim().length > 0)
+          ) {
             firstToolTarget = null;
           }
 

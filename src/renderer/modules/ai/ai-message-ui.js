@@ -10,7 +10,9 @@ function createAiMessageUI(options) {
 
   // 流式思考解析器实例映射
   const streamingParsers = new WeakMap();
+  const autoCollapseTimers = new WeakMap();
   const THINK_MAX_LINES = 7;
+  const THINK_MIN_EXPANDED_MS = 800;
 
   // 创建流式动画圆点指示器
 
@@ -98,6 +100,46 @@ function createAiMessageUI(options) {
   function markAutoCollapsed(container) {
     if (!container) return;
     container.dataset.autoCollapsed = 'true';
+  }
+
+  function clearAutoCollapseTimer(container) {
+    const timer = autoCollapseTimers.get(container);
+    if (timer) {
+      clearTimeout(timer);
+      autoCollapseTimers.delete(container);
+    }
+  }
+
+  function markAutoExpanded(container) {
+    if (!container) return;
+    container.dataset.autoExpandedAt = String(Date.now());
+  }
+
+  function getAutoExpandedAt(container) {
+    if (!container) return 0;
+    const value = Number(container.dataset.autoExpandedAt);
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function scheduleAutoCollapse(container, contentEl) {
+    if (!container || !contentEl) return;
+    clearAutoCollapseTimer(container);
+
+    const expandedAt = getAutoExpandedAt(container);
+    const elapsed = expandedAt ? Date.now() - expandedAt : THINK_MIN_EXPANDED_MS;
+    const remaining = Math.max(0, THINK_MIN_EXPANDED_MS - elapsed);
+    const timer = setTimeout(() => {
+      autoCollapseTimers.delete(container);
+      if (hasUserToggled(container) || hasAutoCollapsed(container)) return;
+      markAutoCollapsed(container);
+      container.classList.remove('expanded');
+      syncThinkContentHeight(contentEl, false);
+      const toggle = container.querySelector('.think-toggle');
+      if (toggle) {
+        toggle.textContent = '▼';
+      }
+    }, remaining);
+    autoCollapseTimers.set(container, timer);
   }
 
   function syncThinkContentHeight(content, expanded, lockToMax = false) {
@@ -191,7 +233,7 @@ function createAiMessageUI(options) {
 
     if (parsed.thinking) {
       const hasContent = Boolean(parsed.content && parsed.content.trim());
-      const shouldForceExpand = Boolean(isStreaming && parsed.thinking && !hasContent);
+      const shouldForceExpand = Boolean(isStreaming && parsed.isThinking && !hasContent);
       // 有思考内容，创建带下拉框的消息（先折叠，插入DOM后再展开触发动画）
       const { container, content } = createThinkDropdown({
         isThinking: parsed.isThinking,
@@ -266,7 +308,7 @@ function createAiMessageUI(options) {
     const isThinking = result.isThinking || !result.thinkingComplete;
     const hasThinking = Boolean(finalResult.thinking);
     const hasContent = Boolean(finalResult.content && finalResult.content.trim());
-    const shouldForceExpand = Boolean(hasThinking && !hasContent);
+    const shouldForceExpand = Boolean(hasThinking && isThinking && !hasContent);
     let dropdown = existingDropdown;
 
     // 1. 处理思考部分
@@ -290,9 +332,13 @@ function createAiMessageUI(options) {
         }
 
         // 下一帧展开，触发CSS过渡动画
-        if (shouldForceExpand) {
+        if (
+          shouldForceExpand ||
+          (hasContent && !hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown))
+        ) {
           requestAnimationFrame(() => {
             dropdown.classList.add('expanded');
+            markAutoExpanded(dropdown);
             const toggle = dropdown.querySelector('.think-toggle');
             if (toggle) toggle.textContent = '▲';
             syncThinkContentHeight(content, true, true);
@@ -321,10 +367,11 @@ function createAiMessageUI(options) {
             });
           }
         }
-        // 保持展开状态（如果正在思考）
+        // 思考阶段自动展开（尊重用户手动操作；若已自动折叠过则不再自动展开）
         if (shouldForceExpand && !dropdown.classList.contains('expanded')) {
-          if (!hasUserToggled(dropdown)) {
+          if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
             dropdown.classList.add('expanded');
+            markAutoExpanded(dropdown);
             const toggle = dropdown.querySelector('.think-toggle');
             if (toggle) toggle.textContent = '▲';
             const contentEl = dropdown.querySelector('.think-dropdown-content');
@@ -353,18 +400,11 @@ function createAiMessageUI(options) {
       existingContent.remove();
     }
 
-    // 正文出现后自动折叠（丝滑动画，仅第一次，尊重用户手动操作）
     if (hasContent && dropdown) {
       if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
-        markAutoCollapsed(dropdown);
-        dropdown.classList.remove('expanded');
         const contentEl = dropdown.querySelector('.think-dropdown-content');
         if (contentEl) {
-          syncThinkContentHeight(contentEl, false);
-        }
-        const toggle = dropdown.querySelector('.think-toggle');
-        if (toggle) {
-          toggle.textContent = '▼';
+          scheduleAutoCollapse(dropdown, contentEl);
         }
       }
     }
@@ -385,6 +425,16 @@ function createAiMessageUI(options) {
     scrollToBottom();
   }
 
+  function autoCollapseThinkingDropdown(element) {
+    if (!element) return;
+    const dropdown = element.querySelector('.think-dropdown');
+    if (!dropdown) return;
+    if (hasUserToggled(dropdown) || hasAutoCollapsed(dropdown)) return;
+    const thinkContent = dropdown.querySelector('.think-dropdown-content');
+    if (!thinkContent) return;
+    scheduleAutoCollapse(dropdown, thinkContent);
+  }
+
   /**
    * 完成流式消息（思考完成后收起下拉框）
    */
@@ -393,7 +443,11 @@ function createAiMessageUI(options) {
 
     const dropdown = element.querySelector('.think-dropdown');
     const contentEl = element.querySelector('.message-content');
-    const hasContent = Boolean(contentEl && contentEl.textContent.trim());
+    const hasContent = Boolean(
+      contentEl &&
+      ((contentEl.innerHTML && contentEl.innerHTML.trim()) ||
+        (contentEl.childNodes && contentEl.childNodes.length > 0))
+    );
     if (dropdown) {
       dropdown.classList.remove('thinking');
       dropdown.classList.add('thought');
@@ -406,6 +460,7 @@ function createAiMessageUI(options) {
 
       const thinkContent = dropdown.querySelector('.think-dropdown-content');
       if (hasContent && !hasUserToggled(dropdown)) {
+        clearAutoCollapseTimer(dropdown);
         dropdown.classList.remove('expanded');
         markAutoCollapsed(dropdown);
         if (thinkContent) {
@@ -445,6 +500,7 @@ function createAiMessageUI(options) {
     addChatMessage,
     updateStreamingMessage,
     finishStreamingMessage,
+    autoCollapseThinkingDropdown,
     scrollToBottom,
     clearChatArea
   };

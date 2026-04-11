@@ -107,6 +107,7 @@ function createAiManager(options) {
     addChatMessage,
     updateStreamingMessage,
     finishStreamingMessage,
+    autoCollapseThinkingDropdown,
     scrollToBottom,
     clearChatArea
   } = messageUI;
@@ -196,6 +197,7 @@ function createAiManager(options) {
     addChatMessage,
     updateStreamingMessage,
     finishStreamingMessage,
+    autoCollapseThinkingDropdown,
     documentRef,
     t,
     buildSystemPrompt,
