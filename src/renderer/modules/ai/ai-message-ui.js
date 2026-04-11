@@ -190,10 +190,10 @@ function createAiMessageUI(options) {
     if (parsed.thinking) {
       const hasContent = Boolean(parsed.content && parsed.content.trim());
       const shouldForceExpand = Boolean(isStreaming && parsed.thinking && !hasContent);
-      // 有思考内容，创建带下拉框的消息
+      // 有思考内容，创建带下拉框的消息（先折叠，插入DOM后再展开触发动画）
       const { container, content } = createThinkDropdown({
         isThinking: parsed.isThinking,
-        expanded: shouldForceExpand
+        expanded: false
       });
       content.textContent = cleanContent(parsed.thinking);
       msg.appendChild(container);
@@ -209,6 +209,11 @@ function createAiMessageUI(options) {
         streamingParsers.set(msg, parser);
       }
       requestAnimationFrame(() => {
+        if (shouldForceExpand) {
+          container.classList.add('expanded');
+          const toggle = container.querySelector('.think-toggle');
+          if (toggle) toggle.textContent = '▲';
+        }
         syncThinkContentHeight(content, shouldForceExpand, shouldForceExpand);
         if (shouldForceExpand) {
           scrollThinkContentToBottom(content);
@@ -265,29 +270,32 @@ function createAiMessageUI(options) {
     // 1. 处理思考部分
     if (hasThinking) {
       if (!dropdown) {
-        // 首次创建思考下拉框
+        // 首次创建思考下拉框（先不展开，等插入DOM后再触发过渡动画）
         const { container, content } = createThinkDropdown({
           isThinking,
-          expanded: shouldForceExpand
+          expanded: false
         });
         content.textContent = cleanContent(finalResult.thinking);
         dropdown = container;
 
         container.classList.toggle('thinking', isThinking);
-        if (shouldForceExpand) {
-          const toggle = container.querySelector('.think-toggle');
-          if (toggle) toggle.textContent = '▲';
-          requestAnimationFrame(() => {
-            syncThinkContentHeight(content, true, true);
-            scrollThinkContentToBottom(content);
-          });
-        }
 
         // 插入到最前面，或者在 indicator 之后
         if (indicator) {
           indicator.after(container);
         } else {
           element.prepend(container);
+        }
+
+        // 下一帧展开，触发CSS过渡动画
+        if (shouldForceExpand) {
+          requestAnimationFrame(() => {
+            dropdown.classList.add('expanded');
+            const toggle = dropdown.querySelector('.think-toggle');
+            if (toggle) toggle.textContent = '▲';
+            syncThinkContentHeight(content, true, true);
+            scrollThinkContentToBottom(content);
+          });
         }
       } else {
         // 更新现有思考内容
@@ -343,11 +351,11 @@ function createAiMessageUI(options) {
       existingContent.remove();
     }
 
-    // 正文出现后自动折叠（仅第一次自动折叠，尊重用户手动操作）
+    // 正文出现后自动折叠（丝滑动画，仅第一次，尊重用户手动操作）
     if (hasContent && dropdown) {
       if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
-        dropdown.classList.remove('expanded');
         markAutoCollapsed(dropdown);
+        dropdown.classList.remove('expanded');
         const contentEl = dropdown.querySelector('.think-dropdown-content');
         if (contentEl) {
           syncThinkContentHeight(contentEl, false);
