@@ -82,7 +82,9 @@
         "openaiResponse": "OpenAI Response",
         "anthropic": "Anthropic",
         "modelId": "Model ID",
-        "modelIdDesc": "Specify the model name to use"
+        "modelIdDesc": "Specify the model name to use",
+        "contextSize": "Context Size",
+        "contextSizeDesc": "Model context window token count, affects conversation history retention length"
       },
       "translation": {
         "title": "Translation Settings",

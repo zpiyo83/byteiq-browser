@@ -160,6 +160,10 @@ function bindSettingsAndPanelEvents(options) {
             aiSettingsHelpers.setAiModelStatus('等待获取', '');
           }
         }
+        if (options.aiContextSizeSelect) {
+          const ctxSize = store.get('settings.aiContextSize', 8192);
+          options.aiContextSizeSelect.value = String(ctxSize);
+        }
         // 加载翻译设置
         if (options.translationApiEnabledToggle) {
           options.translationApiEnabledToggle.checked = store.get(

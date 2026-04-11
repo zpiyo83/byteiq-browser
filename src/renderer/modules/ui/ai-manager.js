@@ -199,6 +199,7 @@ function createAiManager(options) {
     ipcRenderer,
     toolsExecutor,
     historyStorage,
+    store,
     updateSession,
     renderSessionsList: (...args) => renderSessionsList(...args),
     addChatMessage,

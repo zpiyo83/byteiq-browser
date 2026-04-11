@@ -236,6 +236,21 @@
                             <div class="model-list-status" id="ai-model-list-status">等待获取</div>
                         </div>
                     </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.ai.contextSize">上下文大小</label>
+                            <div class="setting-desc" data-i18n="panels.settings.ai.contextSizeDesc">模型上下文窗口的 token 数量，影响对话历史保留长度</div>
+                        </div>
+                        <select id="ai-context-size-select">
+                            <option value="4096">4K</option>
+                            <option value="8192">8K</option>
+                            <option value="16384">16K</option>
+                            <option value="32768">32K</option>
+                            <option value="65536">64K</option>
+                            <option value="128000">128K</option>
+                            <option value="200000">200K</option>
+                        </select>
+                    </div>
                 </div>
                 <!-- 翻译设置 -->
                 <div id="settings-translation" class="settings-section">

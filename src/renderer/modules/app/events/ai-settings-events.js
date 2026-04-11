@@ -17,6 +17,7 @@ function bindAiSettingsEvents(deps) {
     aiModelListStatus,
     aiModelRefreshBtn,
     aiRequestTypeSelect,
+    aiContextSizeSelect,
     ipcRenderer,
     store,
     translationApiEnabledToggle,
@@ -164,6 +165,12 @@ function bindAiSettingsEvents(deps) {
   if (aiModelRefreshBtn) {
     aiModelRefreshBtn.addEventListener('click', () => {
       refreshAiModelList();
+    });
+  }
+
+  if (aiContextSizeSelect) {
+    aiContextSizeSelect.addEventListener('change', () => {
+      store.set('settings.aiContextSize', parseInt(aiContextSizeSelect.value) || 8192);
     });
   }
 

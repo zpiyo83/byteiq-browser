@@ -10,6 +10,7 @@ function createAiAgentRunner(options) {
     ipcRenderer,
     toolsExecutor,
     historyStorage,
+    store,
     updateSession,
     renderSessionsList,
     addChatMessage,
@@ -348,8 +349,9 @@ function createAiAgentRunner(options) {
       });
 
     // 截断历史消息，保留最近的消息防止 token 超限
-    // 保留策略：system prompt + 最近 maxHistoryMessages 条消息 + 当前用户消息
-    const maxHistoryMessages = 20;
+    // 根据上下文大小动态计算：每条消息约 500 token，保留 60% 给历史
+    const contextSize = store ? store.get('settings.aiContextSize', 8192) : 8192;
+    const maxHistoryMessages = Math.max(6, Math.floor((contextSize * 0.6) / 500));
     const truncatedHistory =
       formattedHistory.length > maxHistoryMessages
         ? formattedHistory.slice(-maxHistoryMessages)
@@ -382,9 +384,10 @@ function createAiAgentRunner(options) {
       maxIterations--;
 
       // 动态截断：保留 system prompt + 最近的消息，防止 token 超限
-      if (agentMessageHistory.length > 40) {
+      const maxLiveMessages = Math.max(10, Math.floor((contextSize * 0.8) / 500));
+      if (agentMessageHistory.length > maxLiveMessages) {
         const systemMsg = agentMessageHistory[0];
-        const recentMessages = agentMessageHistory.slice(-30);
+        const recentMessages = agentMessageHistory.slice(-(maxLiveMessages - 5));
         agentMessageHistory = [systemMsg, ...recentMessages];
       }
 
@@ -607,11 +610,12 @@ function createAiAgentRunner(options) {
             errMsg.includes('too many tokens') ||
             errMsg.includes('maximum context') ||
             errMsg.includes('context window')) &&
-          agentMessageHistory.length > 10
+          agentMessageHistory.length > 6
         ) {
           console.warn('[agent] Token limit exceeded, truncating history and retrying...');
           const systemMsg = agentMessageHistory[0];
-          const recentMessages = agentMessageHistory.slice(-10);
+          const minKeep = Math.max(4, Math.floor((contextSize * 0.3) / 500));
+          const recentMessages = agentMessageHistory.slice(-minKeep);
           agentMessageHistory = [systemMsg, ...recentMessages];
           // 移除失败的空消息元素
           if (aiMsgElement && aiMsgElement.parentNode) {
