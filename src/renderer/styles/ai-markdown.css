@@ -72,6 +72,8 @@
 }
 
 .think-dropdown.expanded .think-dropdown-content {
+    max-height: var(--think-max-height);
+    padding: 4px 0 4px 16px;
     overflow-y: auto;
     scrollbar-gutter: stable;
     border-top: none;
