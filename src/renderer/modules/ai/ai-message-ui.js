@@ -108,6 +108,7 @@ function createAiMessageUI(options) {
     }
     if (!expanded) {
       content.style.maxHeight = '0px';
+      content.style.padding = '0';
       content.classList.remove('show');
       return;
     }
@@ -116,6 +117,7 @@ function createAiMessageUI(options) {
     const duration = clamp(Math.round(height * 0.4), 180, 320);
     content.style.setProperty('--think-duration', `${duration}ms`);
     content.style.maxHeight = `${height}px`;
+    content.style.padding = '4px 0 4px 16px';
     content.classList.add('show');
   }
 

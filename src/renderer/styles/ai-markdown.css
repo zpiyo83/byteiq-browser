@@ -55,6 +55,7 @@
     --think-duration: 320ms;
     --think-max-height: 120px;
     max-height: 0;
+    padding: 0;
     overflow: hidden;
     transition: max-height var(--think-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94), 
                 padding var(--think-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -71,8 +72,6 @@
 }
 
 .think-dropdown.expanded .think-dropdown-content {
-    max-height: var(--think-max-height);
-    padding: 4px 0 4px 16px;
     overflow-y: auto;
     scrollbar-gutter: stable;
     border-top: none;
