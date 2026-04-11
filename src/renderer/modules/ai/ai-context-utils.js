@@ -205,32 +205,39 @@ async function extractPageContent(webview) {
     }
 
     if (webview.dataset && webview.dataset.domReady !== 'true') {
-      if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
-        webview.dataset.domReady = 'true';
-      } else {
-        await new Promise((resolve, reject) => {
-          let settled = false;
-          const timer = setTimeout(() => {
-            if (settled) return;
-            settled = true;
-            webview.removeEventListener('dom-ready', onReady);
-            reject(new Error('Webview dom-ready timeout'));
-          }, 100000);
+      await new Promise((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          webview.removeEventListener('dom-ready', onReady);
+          reject(new Error('Webview dom-ready timeout'));
+        }, 100000);
 
-          function onReady() {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            if (webview.dataset) {
-              webview.dataset.domReady = 'true';
-            }
-            webview.removeEventListener('dom-ready', onReady);
-            resolve();
+        function onReady() {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          if (webview.dataset) {
+            webview.dataset.domReady = 'true';
           }
+          webview.removeEventListener('dom-ready', onReady);
+          resolve();
+        }
 
-          webview.addEventListener('dom-ready', onReady);
-        });
-      }
+        // 如果 dom-ready 已经在更早之前触发，监听不到事件，则用 isLoading 的状态作为兜底
+        if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
+          settled = true;
+          clearTimeout(timer);
+          if (webview.dataset) {
+            webview.dataset.domReady = 'true';
+          }
+          resolve();
+          return;
+        }
+
+        webview.addEventListener('dom-ready', onReady);
+      });
     }
 
     try {
@@ -239,17 +246,21 @@ async function extractPageContent(webview) {
     } catch (error) {
       const message = error && error.message ? error.message : '';
       if (
-        message.includes('dom-ready event emitted before this method can be called') &&
+        (message.includes('WebView must be attached to the DOM') ||
+          message.includes('dom-ready event emitted before this method can be called') ||
+          message.includes('dom-ready')) &&
         webview &&
         webview.isConnected
       ) {
         try {
           await new Promise((resolve, reject) => {
             let settled = false;
+            const start = Date.now();
             const timer = setTimeout(() => {
               if (settled) return;
               settled = true;
               webview.removeEventListener('dom-ready', onReady);
+              clearInterval(pollTimer);
               reject(new Error('Webview dom-ready timeout'));
             }, 100000);
 
@@ -257,12 +268,23 @@ async function extractPageContent(webview) {
               if (settled) return;
               settled = true;
               clearTimeout(timer);
+              clearInterval(pollTimer);
               if (webview.dataset) {
                 webview.dataset.domReady = 'true';
               }
               webview.removeEventListener('dom-ready', onReady);
               resolve();
             }
+
+            const pollTimer = setInterval(() => {
+              if (settled) return;
+              if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
+                onReady();
+              }
+              if (Date.now() - start > 100000) {
+                return;
+              }
+            }, 50);
 
             webview.addEventListener('dom-ready', onReady);
           });
