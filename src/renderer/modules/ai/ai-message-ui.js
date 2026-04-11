@@ -25,13 +25,15 @@ function createAiMessageUI(options) {
   }
 
   function createStreamingDots() {
-    const indicator = documentRef.createElement('span');
+    const indicator = documentRef.createElement('div');
     indicator.className = 'streaming-indicator';
-    for (let i = 0; i < 3; i++) {
-      const dot = documentRef.createElement('span');
-      dot.className = 'streaming-dot';
-      indicator.appendChild(dot);
-    }
+    const label = documentRef.createElement('span');
+    label.className = 'streaming-label';
+    label.textContent = 'Working';
+    const shimmer = documentRef.createElement('div');
+    shimmer.className = 'streaming-shimmer';
+    indicator.appendChild(label);
+    indicator.appendChild(shimmer);
     return indicator;
   }
 

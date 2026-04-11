@@ -85,8 +85,19 @@
     box-shadow: 0 2px 10px rgba(138, 180, 248, 0.2);
 }
 
-.dark-mode .streaming-dot {
-    background: var(--ai-accent);
+.dark-mode .chat-message.streaming .streaming-indicator {
+    background: transparent;
+}
+
+.dark-mode .chat-message.streaming .streaming-shimmer {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(138, 180, 248, 0.1) 30%,
+        rgba(138, 180, 248, 0.25) 50%,
+        rgba(138, 180, 248, 0.1) 70%,
+        transparent 100%
+    );
 }
 
 .dark-mode .chat-message.welcome-message {
