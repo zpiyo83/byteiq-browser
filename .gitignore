@@ -1,82 +1,131 @@
-# Dependencies
+# ==================== 依赖项 ====================
 node_modules/
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
-# Build output
+# ==================== 构建输出 ====================
 dist/
 build/
 out/
+release/
+
+# ==================== Electron 打包产物 ====================
 *.exe
+*.msi
+*.msix
 *.dmg
+*.app
 *.AppImage
 *.deb
 *.rpm
-
-# Electron
+*.snap
 *.asar
+*.nupkg
 
-# Logs
+# ==================== NSIS 打包相关 ====================
+*.nsi.tmp
+installer/
+
+# ==================== 日志文件 ====================
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# OS files
+# ==================== 操作系统文件 ====================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
+*.lnk
 
-# IDE
+# Linux
+.directory
+
+# ==================== IDE 编辑器 ====================
+# VS Code
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
 .idea/
+*.iml
+*.iws
+
+# Vim
 *.swp
 *.swo
+*.swn
+
+# Emacs
 *~
+\#*\#
+
+# Eclipse
 .project
 .classpath
 .settings/
 
+# ==================== 开发工具 ====================
 # Windsurf
 .windsurfrules
 
 # Claude
 .claude/
 
-# Environment variables
+# ==================== 环境变量 ====================
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+.env.test
 
-# Testing
+# ==================== 测试覆盖率 ====================
 coverage/
 .nyc_output/
+*.lcov
 
-# Temporary files
+# ==================== 缓存目录 ====================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# ==================== 临时文件 ====================
 tmp/
 temp/
 *.tmp
 *.temp
+*.bak
 
-# Cache
-.cache/
-.parcel-cache/
-
-# User data
+# ==================== 用户数据目录 ====================
 userData/
 appData/
+user-data/
 
-# Build artifacts
-*.o
-*.obj
-*.exe
-*.out
-*.app
-*.dmg
-*.msi
-*.msix
-*.snap
+# ==================== GitNexus 索引数据 ====================
+.gitnexus/
 
-# Local planning workspace
+# ==================== 其他 ====================
+# 本地规划工作区
 plans/
+
+# 系统卷信息
+System Volume Information/
+
+# 网络驱动器
+.fuse_hidden*
