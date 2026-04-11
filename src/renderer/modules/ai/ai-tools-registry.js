@@ -148,7 +148,7 @@ function getAiToolDefinitions() {
         if (typeof context.switchTab === 'function') {
           context.switchTab(tabId);
         }
-        // 等待 webview 出现并加载完成
+        // 等待 webview 元素出现
         const maxWait = 15000;
         const start = Date.now();
         let webview = null;
@@ -167,27 +167,9 @@ function getAiToolDefinitions() {
             message: '搜索页面已打开，但页面尚未加载完成，请使用 get_page_info 获取页面信息'
           };
         }
-        // 等待 dom-ready
-        if (typeof webview.isLoading === 'function' && webview.isLoading()) {
-          await new Promise((resolve, _reject) => {
-            let settled = false;
-            const timer = setTimeout(() => {
-              if (settled) return;
-              settled = true;
-              webview.removeEventListener('dom-ready', onReady);
-              resolve();
-            }, 10000);
-            function onReady() {
-              if (settled) return;
-              settled = true;
-              clearTimeout(timer);
-              webview.removeEventListener('dom-ready', onReady);
-              resolve();
-            }
-            webview.addEventListener('dom-ready', onReady);
-          });
-        }
-        // 提取页面信息
+        // 短暂延迟确保 webview 完全挂载到 DOM
+        await new Promise(r => setTimeout(r, 300));
+        // extractPageContent 内部已有完整的 isConnected + dom-ready 等待逻辑
         try {
           const pageInfo = await context.extractPageContent(webview);
           if (pageInfo) {
