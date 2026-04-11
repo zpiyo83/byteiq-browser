@@ -160,7 +160,14 @@ function createAiManager(options) {
     const tabs = tabManager.getTabsSnapshot();
     return tabs.map((tab, index) => {
       const webview = documentRef.getElementById(`webview-${tab.id}`);
-      const url = tab.url || (webview && webview.tagName === 'WEBVIEW' ? webview.getURL() : '');
+      let url = tab.url || '';
+      if (!url && webview && webview.tagName === 'WEBVIEW') {
+        try {
+          url = webview.getURL();
+        } catch {
+          // webview 尚未 dom-ready
+        }
+      }
       const title = tab.title || url || t('tabs.newTab');
       return {
         id: tab.id,

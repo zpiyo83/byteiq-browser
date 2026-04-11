@@ -347,9 +347,17 @@ function createAiAgentRunner(options) {
         return { role: m.role, content };
       });
 
+    // 截断历史消息，保留最近的消息防止 token 超限
+    // 保留策略：system prompt + 最近 maxHistoryMessages 条消息 + 当前用户消息
+    const maxHistoryMessages = 20;
+    const truncatedHistory =
+      formattedHistory.length > maxHistoryMessages
+        ? formattedHistory.slice(-maxHistoryMessages)
+        : formattedHistory;
+
     agentMessageHistory = [
       { role: 'system', content: systemPrompt },
-      ...formattedHistory,
+      ...truncatedHistory,
       { role: 'user', content: userText }
     ];
 
@@ -372,6 +380,13 @@ function createAiAgentRunner(options) {
     ];
     while (isAgentProcessing && maxIterations > 0) {
       maxIterations--;
+
+      // 动态截断：保留 system prompt + 最近的消息，防止 token 超限
+      if (agentMessageHistory.length > 40) {
+        const systemMsg = agentMessageHistory[0];
+        const recentMessages = agentMessageHistory.slice(-30);
+        agentMessageHistory = [systemMsg, ...recentMessages];
+      }
 
       const aiMsgElement = addChatMessage('', 'ai', true);
 
@@ -582,7 +597,30 @@ function createAiAgentRunner(options) {
         renderSessionsList();
       } catch (error) {
         console.error('Agent error:', error);
-        aiMsgElement.innerText = `${t('ai.error') || '发生错误'}: ${error.message}`;
+        const errMsg = error && error.message ? String(error.message) : '';
+
+        // token 超限错误：自动截断历史重试一次
+        if (
+          (errMsg.includes('context_length') ||
+            errMsg.includes('max_tokens') ||
+            errMsg.includes('token limit') ||
+            errMsg.includes('too many tokens') ||
+            errMsg.includes('maximum context') ||
+            errMsg.includes('context window')) &&
+          agentMessageHistory.length > 10
+        ) {
+          console.warn('[agent] Token limit exceeded, truncating history and retrying...');
+          const systemMsg = agentMessageHistory[0];
+          const recentMessages = agentMessageHistory.slice(-10);
+          agentMessageHistory = [systemMsg, ...recentMessages];
+          // 移除失败的空消息元素
+          if (aiMsgElement && aiMsgElement.parentNode) {
+            aiMsgElement.parentNode.removeChild(aiMsgElement);
+          }
+          continue;
+        }
+
+        aiMsgElement.innerText = `${t('ai.error') || '发生错误'}: ${errMsg}`;
         finishStreamingMessage(aiMsgElement);
         isAgentProcessing = false;
       }
