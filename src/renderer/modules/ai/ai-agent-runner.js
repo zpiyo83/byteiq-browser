@@ -3,6 +3,7 @@
  */
 
 const { getAiToolsSchema } = require('./ai-tools-registry');
+const { renderMarkdownToElement } = require('./ai-markdown-renderer');
 
 function createAiAgentRunner(options) {
   const {
@@ -274,8 +275,9 @@ function createAiAgentRunner(options) {
         t
       }) +
       '\n\n你是Agent模式，可以使用工具来帮助用户。可用工具：get_page_info（获取页面' +
-      '信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束会话）。' +
-      '当你需要结束任务时，请调用end_session工具。' +
+      '信息）、click_element（点击元素）、input_text（输入文本）、end_session（结束会话并总结）。' +
+      '当你需要结束任务时，请调用end_session工具，必须通过summary参数提供最终总结，' +
+      'summary支持Markdown格式，将直接展示给用户。' +
       '\n\n操作规范：' +
       '\n1. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
       '\n2. get_page_info支持tab_id参数，可选择具体页面。' +
@@ -431,6 +433,10 @@ function createAiAgentRunner(options) {
 
           const toolMessages = new Map();
           result.toolCalls.forEach((toolCall, index) => {
+            if (toolCall.name === 'end_session') {
+              toolMessages.set(toolCall.id, null);
+              return;
+            }
             const target =
               index === 0 && firstToolTarget ? firstToolTarget : addChatMessage('', 'ai');
             toolMessages.set(toolCall.id, target);
@@ -477,11 +483,15 @@ function createAiAgentRunner(options) {
             const target = toolMessages.get(toolCall.id) || addChatMessage('', 'ai');
 
             if (toolCall.name === 'end_session') {
-              renderToolCard(target, {
-                title: getToolTitle(toolCall.name),
-                description: '会话已结束',
-                status: 'success'
-              });
+              // 将 summary 以 Markdown 渲染到消息区域，不显示工具卡片
+              const summaryText = toolCall.arguments?.summary || toolResult?.summary || '';
+              if (summaryText) {
+                const summaryMsg = addChatMessage('', 'ai');
+                const contentDiv = documentRef.createElement('div');
+                contentDiv.className = 'message-content';
+                renderMarkdownToElement(contentDiv, summaryText, documentRef);
+                summaryMsg.appendChild(contentDiv);
+              }
               // 保存结束会话工具结果到历史
               await historyStorage.addMessage(session.id, {
                 role: 'tool',
@@ -490,7 +500,7 @@ function createAiAgentRunner(options) {
                   toolCallId: toolCall.id,
                   toolName: toolCall.name,
                   status: 'success',
-                  description: '会话已结束'
+                  description: summaryText || '会话已结束'
                 }
               });
               isAgentProcessing = false;

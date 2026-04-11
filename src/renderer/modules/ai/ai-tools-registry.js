@@ -120,13 +120,19 @@ function getAiToolDefinitions() {
     },
     {
       name: 'end_session',
-      description: '当任务完成时调用此工具结束会话',
+      description: '当任务完成时调用此工具结束会话，必须通过 summary 参数提供最终总结信息',
       parameters: {
         type: 'object',
-        properties: {}
+        properties: {
+          summary: {
+            type: 'string',
+            description: '任务完成后的总结信息，将直接展示给用户，支持 Markdown 格式'
+          }
+        },
+        required: ['summary']
       },
-      async execute() {
-        return { success: true, ended: true };
+      async execute(_context, args) {
+        return { success: true, ended: true, summary: args?.summary || '' };
       }
     }
   ];
