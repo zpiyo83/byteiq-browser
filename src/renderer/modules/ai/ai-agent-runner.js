@@ -380,10 +380,9 @@ function createAiAgentRunner(options) {
 
           const content = result.content.trim().toLowerCase();
 
-          // 检查内容是否重复（不包括当前消息）
-          const isDuplicate = previousMessages.includes(content);
-
+          // 检查内容是否与历史消息重复
           previousMessages.push(content);
+          const isDuplicate = previousMessages.filter(msg => msg === content).length > 1;
 
           // 检查内容是否包含完成关键词
           const containsCompletionKeyword = completionKeywords.some(keyword =>
