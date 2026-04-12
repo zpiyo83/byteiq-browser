@@ -6,8 +6,15 @@
 const { getAiToolByName } = require('./ai-tools-registry');
 
 function createAiToolsExecutor(options) {
-  const { documentRef, getActiveTabId, extractPageContent, openTab, formatUrl, switchTab } =
-    options;
+  const {
+    documentRef,
+    getActiveTabId,
+    extractPageContent,
+    openTab,
+    formatUrl,
+    switchTab,
+    bindTabToSession
+  } = options;
 
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -106,7 +113,8 @@ function createAiToolsExecutor(options) {
           extractPageContent,
           openTab,
           formatUrl,
-          switchTab
+          switchTab,
+          bindTabToSession
         },
         args
       );

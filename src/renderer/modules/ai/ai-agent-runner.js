@@ -26,7 +26,8 @@ function createAiAgentRunner(options) {
     getCurrentPageInfo,
     updateTaskState,
     resetTaskState,
-    getTaskState
+    getTaskState,
+    bindTabToSession
   } = options;
 
   let isAgentProcessing = false;
@@ -313,7 +314,9 @@ function createAiAgentRunner(options) {
       '\n5. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出"等待X秒"。' +
       '\n6. 每次工具调用后，根据结果决定下一步。任务完成后调用end_session并提供总结。' +
       '\n7. 优先使用search_page查找信息，而非要求用户提供。' +
-      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。';
+      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。' +
+      '\n9. 重要：不要重复搜索相同的关键词。如果已经搜索过，不要再次搜索相同的内容。' +
+      '\n10. 记住：每个工具调用都是真实执行，不要多次执行相同的工具调用。';
 
     // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
     const rawHistory = await historyStorage.getMessages(session.id, { limit: 50 });
@@ -352,11 +355,39 @@ function createAiAgentRunner(options) {
     // 截断历史消息，保留最近的消息防止 token 超限
     // 根据上下文大小动态计算：每条消息约 500 token，保留 60% 给历史
     const contextSize = store ? store.get('settings.aiContextSize', 8192) : 8192;
-    const maxHistoryMessages = Math.max(6, Math.floor((contextSize * 0.6) / 500));
-    const truncatedHistory =
-      formattedHistory.length > maxHistoryMessages
-        ? formattedHistory.slice(-maxHistoryMessages)
-        : formattedHistory;
+    const maxHistoryMessages = Math.max(8, Math.floor((contextSize * 0.6) / 500));
+
+    // 智能截断：优先保留工具调用和最近的用户/助手消息
+    // 这样 AI 不会忘记已调用的工具（如已搜索过的关键词），避免重复
+    let truncatedHistory = formattedHistory;
+    if (formattedHistory.length > maxHistoryMessages) {
+      const toolMessages = [];
+      const otherMessages = [];
+
+      // 分离工具相关消息和其他消息
+      for (const msg of formattedHistory) {
+        if (msg.role === 'tool' || (msg.role === 'assistant' && msg.tool_calls)) {
+          toolMessages.push(msg);
+        } else {
+          otherMessages.push(msg);
+        }
+      }
+
+      // 保留：最近的工具消息 + 最近的其他消息
+      const keepToolCount = Math.min(toolMessages.length, Math.ceil(maxHistoryMessages * 0.5));
+      const keepOtherCount = maxHistoryMessages - keepToolCount;
+
+      const recentToolMessages = toolMessages.slice(-keepToolCount);
+      const recentOtherMessages = otherMessages.slice(-keepOtherCount);
+
+      // 合并并排序（保持时间顺序）
+      const allKept = [...recentToolMessages, ...recentOtherMessages];
+      truncatedHistory = allKept.sort((a, b) => {
+        const aIdx = formattedHistory.indexOf(a);
+        const bIdx = formattedHistory.indexOf(b);
+        return aIdx - bIdx;
+      });
+    }
 
     agentMessageHistory = [
       { role: 'system', content: systemPrompt },
@@ -369,6 +400,8 @@ function createAiAgentRunner(options) {
     // 使用Set存储处理后的消息内容，用于快速检测重复
     // 存储的是trim().toLowerCase()处理后的内容，以忽略大小写和前后空格的差异
     const previousMessages = new Set();
+    // 使用Set存储已调用的工具，用于检测重复（避免重复打开网站）
+    const previousToolCalls = new Set();
     const completionKeywords = [
       '任务完成',
       '总结如下',
@@ -376,6 +409,8 @@ function createAiAgentRunner(options) {
       '结束',
       '完毕',
       '完成了',
+      '任务已',
+      '已完',
       'summary',
       'completed',
       'finished',
@@ -384,12 +419,50 @@ function createAiAgentRunner(options) {
     while (isAgentProcessing && maxIterations > 0) {
       maxIterations--;
 
-      // 动态截断：保留 system prompt + 最近的消息，防止 token 超限
-      const maxLiveMessages = Math.max(10, Math.floor((contextSize * 0.8) / 500));
+      // 智能动态截断：保留系统消息、工具调用历史和最近消息，防止 token 超限
+      const maxLiveMessages = Math.max(12, Math.floor((contextSize * 0.8) / 500));
       if (agentMessageHistory.length > maxLiveMessages) {
         const systemMsg = agentMessageHistory[0];
-        const recentMessages = agentMessageHistory.slice(-(maxLiveMessages - 5));
-        agentMessageHistory = [systemMsg, ...recentMessages];
+        const toolAndRecentMessages = [];
+
+        // 将工具调用和结果全部保留，再保留最近的消息
+        for (let i = 1; i < agentMessageHistory.length; i++) {
+          const msg = agentMessageHistory[i];
+          // 保留所有工具相关消息，防止 AI 忘记已执行的工具
+          if (msg.role === 'tool' || (msg.role === 'assistant' && msg.tool_calls)) {
+            toolAndRecentMessages.push(msg);
+          }
+        }
+
+        // 保留最近的用户消息和助手消息
+        const recentMessages = [];
+        for (let i = agentMessageHistory.length - 1; i >= 1; i--) {
+          const msg = agentMessageHistory[i];
+          if ((msg.role === 'user' || msg.role === 'assistant') && !msg.tool_calls) {
+            recentMessages.unshift(msg);
+            if (recentMessages.length >= Math.ceil(maxLiveMessages * 0.3)) break;
+          }
+        }
+
+        // 去重合并：先保留工具消息，再加最近的其他消息
+        const combined = [...toolAndRecentMessages, ...recentMessages];
+        const unique = [];
+        const seen = new Set();
+        for (const msg of combined) {
+          const key = JSON.stringify([
+            msg.role,
+            msg.tool_calls?.map(t => `${t.function.name}:${t.function.arguments}`) ||
+              msg.content?.substring(0, 100)
+          ]);
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(msg);
+          }
+        }
+
+        // 最终截断到 maxLiveMessages，保留至少5条消息
+        const finalMessages = unique.slice(-Math.max(5, maxLiveMessages - 2));
+        agentMessageHistory = [systemMsg, ...finalMessages];
       }
 
       const aiMsgElement = addChatMessage('', 'ai', true);
@@ -449,9 +522,17 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'tool_calls') {
-          // 重置纯文本回复计数器和历史消息集合，因为AI调用了工具
+          // 重置纯文本回复计数器，因为AI调用了工具
           textOnlyCount = 0;
           previousMessages.clear();
+
+          // 记录本次工具调用到历史集合，用于后续检测重复
+          for (const toolCall of result.toolCalls) {
+            if (toolCall.name !== 'end_session') {
+              const toolKey = `${toolCall.name}:${JSON.stringify(toolCall.arguments || {})}`;
+              previousToolCalls.add(toolKey);
+            }
+          }
           // 渲染思考内容（如果有）
           let firstToolTarget = aiMsgElement;
           const fullText = result.reasoningContent
@@ -524,7 +605,68 @@ function createAiAgentRunner(options) {
           });
 
           for (const toolCall of result.toolCalls) {
+            // 检测重复：如果同样的工具和参数已调用过，则记录警告并模拟成功返回
+            const toolKey = `${toolCall.name}:${JSON.stringify(toolCall.arguments || {})}`;
+            const isDuplicateCall =
+              previousToolCalls.has(toolKey) &&
+              toolCall.name !== 'get_page_info' &&
+              toolCall.name !== 'end_session';
+
+            if (isDuplicateCall) {
+              console.warn(
+                `[ai-agent-runner] Detected duplicate tool call in same session: ${toolCall.name}`,
+                toolCall.arguments
+              );
+              const target = toolMessages.get(toolCall.id) || addChatMessage('', 'ai');
+              renderToolCard(target, {
+                title: getToolTitle(toolCall.name),
+                description: '此工具在本会话中已执行过相同操作，已跳过以避免重复',
+                status: 'success'
+              });
+              agentMessageHistory.push({
+                role: 'tool',
+                tool_call_id: toolCall.id,
+                content: JSON.stringify({
+                  success: true,
+                  skipped: true,
+                  message: '检测到重复的工具调用，已跳过执行'
+                })
+              });
+              // 保存工具结果到历史
+              await historyStorage.addMessage(session.id, {
+                role: 'tool',
+                content: JSON.stringify({
+                  success: true,
+                  skipped: true,
+                  message: '检测到重复的工具调用，已跳过执行'
+                }),
+                metadata: {
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.name,
+                  status: 'skipped',
+                  description: '工具调用重复，已跳过'
+                }
+              });
+              continue;
+            }
+
             const toolResult = await toolsExecutor.execute(toolCall);
+
+            // 对于 search_page 工具，将新创建的标签页绑定到当前会话
+            if (
+              toolCall.name === 'search_page' &&
+              toolResult?.success &&
+              toolResult?.tabId &&
+              session?.id &&
+              typeof bindTabToSession === 'function'
+            ) {
+              try {
+                bindTabToSession(toolResult.tabId, session.id);
+              } catch (error) {
+                console.warn('[ai-agent-runner] Failed to bind tab to session:', error);
+              }
+            }
+
             const target = toolMessages.get(toolCall.id) || addChatMessage('', 'ai');
 
             if (toolCall.name === 'end_session') {

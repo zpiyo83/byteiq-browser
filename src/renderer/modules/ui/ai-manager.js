@@ -144,20 +144,21 @@ function createAiManager(options) {
 
   const historyStorage = getAIHistoryStorage();
 
+  const sessionService = createAiSessionService({
+    historyStorage,
+    store,
+    t,
+    getActiveTabId
+  });
+
   const toolsExecutor = createAiToolsExecutor({
     documentRef,
     getActiveTabId,
     extractPageContent,
     openTab: tabManager ? tabManager.createTab : null,
     formatUrl,
-    switchTab: tabManager ? tabManager.switchTab : null
-  });
-
-  const sessionService = createAiSessionService({
-    historyStorage,
-    store,
-    t,
-    getActiveTabId
+    switchTab: tabManager ? tabManager.switchTab : null,
+    bindTabToSession: sessionService.bindTabToSession
   });
 
   const {
@@ -174,7 +175,8 @@ function createAiManager(options) {
     setActiveSessionId,
     readTabToSessionFromStore,
     createSession,
-    clearTabConversation
+    clearTabConversation,
+    bindTabToSession
   } = sessionService;
 
   const messageUI = createAiMessageUI({
@@ -295,7 +297,8 @@ function createAiManager(options) {
     getCurrentPageInfo: pageContext.getCurrentPageInfo,
     updateTaskState,
     resetTaskState,
-    getTaskState: () => taskState
+    getTaskState: () => taskState,
+    bindTabToSession: sessionService.bindTabToSession
   });
 
   // 创建聊天处理器

@@ -163,6 +163,15 @@ function createAiSessionService(options) {
     writeTabToSessionToStore(tabToSession);
   }
 
+  // 强制绑定特定的tabId到特定的sessionId
+  // 用于Agent工具创建新标签页时，确保新标签页属于当前Agent的会话
+  function bindTabToSession(tabId, sessionId) {
+    if (!tabId || !sessionId) return;
+    const tabToSession = readTabToSessionFromStore();
+    tabToSession[tabId] = sessionId;
+    writeTabToSessionToStore(tabToSession);
+  }
+
   function clearTabConversation(tabId) {
     if (!tabId || !store) return;
     const tabToSession = readTabToSessionFromStore();
@@ -181,6 +190,7 @@ function createAiSessionService(options) {
     getSortedSessions,
     unbindSessionFromTab,
     bindSessionToCurrentTab,
+    bindTabToSession,
     clearTabConversation,
     readTabToSessionFromStore,
     writeTabToSessionToStore,
