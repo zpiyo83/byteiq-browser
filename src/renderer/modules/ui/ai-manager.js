@@ -18,6 +18,7 @@ const {
 const { createAiAgentRunner } = require('../ai/ai-agent-runner');
 const { createAiPageContext } = require('../ai/ai-page-context');
 const { createAiChatHandler } = require('../ai/ai-chat-handler');
+const { createAiTodoManager } = require('../ai/ai-todo-manager');
 
 function createAiManager(options) {
   const {
@@ -144,6 +145,10 @@ function createAiManager(options) {
 
   const historyStorage = getAIHistoryStorage();
 
+  const todoManager = createAiTodoManager({
+    store
+  });
+
   const sessionService = createAiSessionService({
     historyStorage,
     store,
@@ -158,7 +163,8 @@ function createAiManager(options) {
     openTab: tabManager ? tabManager.createTab : null,
     formatUrl,
     switchTab: tabManager ? tabManager.switchTab : null,
-    bindTabToSession: sessionService.bindTabToSession
+    bindTabToSession: sessionService.bindTabToSession,
+    getTodoManager: () => todoManager
   });
 
   const {
@@ -298,7 +304,8 @@ function createAiManager(options) {
     updateTaskState,
     resetTaskState,
     getTaskState: () => taskState,
-    bindTabToSession: sessionService.bindTabToSession
+    bindTabToSession: sessionService.bindTabToSession,
+    externalTodoManager: todoManager
   });
 
   // 创建聊天处理器
@@ -319,7 +326,8 @@ function createAiManager(options) {
     extractPageContent,
     getActiveTabId,
     documentRef,
-    updateContextBar: ctx => updateContextBar(ctx)
+    updateContextBar: ctx => updateContextBar(ctx),
+    todoManager
   });
 
   async function switchToSession(sessionId) {

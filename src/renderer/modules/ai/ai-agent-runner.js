@@ -27,106 +27,15 @@ function createAiAgentRunner(options) {
     updateTaskState,
     resetTaskState,
     getTaskState,
-    bindTabToSession
+    bindTabToSession,
+    externalTodoManager
   } = options;
 
   let isAgentProcessing = false;
   let agentMessageHistory = [];
 
   // Todo 管理器
-  class TodoManager {
-    constructor() {
-      this.todos = [];
-      this.nextId = 1;
-    }
-
-    addTodo(title, priority = 'medium') {
-      const id = `todo-${this.nextId++}`;
-      const todo = {
-        id,
-        title,
-        priority,
-        completed: false,
-        createdAt: new Date().toISOString()
-      };
-      this.todos.push(todo);
-      return {
-        success: true,
-        todo,
-        message: `✅ Already added "${title}"`
-      };
-    }
-
-    listTodos(filter = 'pending') {
-      let filtered = this.todos;
-      if (filter === 'pending') {
-        filtered = this.todos.filter(t => !t.completed);
-      } else if (filter === 'completed') {
-        filtered = this.todos.filter(t => t.completed);
-      }
-      const todoList = filtered
-        .map(t => {
-          const status = t.completed ? '✅' : '⭕';
-          const priorityMark = { high: '🔴', medium: '🟡', low: '🟢' };
-          return `${status} [${t.id}] ${t.title} ${priorityMark[t.priority] || ''}`;
-        })
-        .join('\n');
-      return {
-        success: true,
-        todos: filtered,
-        display: todoList || 'No todos',
-        count: filtered.length
-      };
-    }
-
-    completeTodo(todoId) {
-      const todo = this.todos.find(t => t.id === todoId);
-      if (!todo) {
-        return { success: false, error: `Todo with ID "${todoId}" not found` };
-      }
-      todo.completed = true;
-      todo.completedAt = new Date().toISOString();
-      return {
-        success: true,
-        todo,
-        message: `✅ Marked "${todo.title}" as completed`
-      };
-    }
-
-    removeTodo(todoId) {
-      const index = this.todos.findIndex(t => t.id === todoId);
-      if (index === -1) {
-        return { success: false, error: `Todo with ID "${todoId}" not found` };
-      }
-      const removed = this.todos.splice(index, 1)[0];
-      return {
-        success: true,
-        removed,
-        message: `🗑️ Removed "${removed.title}"`
-      };
-    }
-
-    getTodosSummary() {
-      const pending = this.todos.filter(t => !t.completed).length;
-      const completed = this.todos.filter(t => t.completed).length;
-      const total = this.todos.length;
-      if (total === 0) return '';
-      return `📋 To do List: ${pending} pending, ${completed} completed (Total: ${total})`;
-    }
-
-    getAllTodosForPrompt() {
-      if (this.todos.length === 0) return '';
-      const lines = ['📋 Current To do List:'];
-      for (const todo of this.todos) {
-        const status = todo.completed ? '✅' : '⭕';
-        const priorityMark = { high: '🔴', medium: '🟡', low: '🟢' }[todo.priority] || '';
-        lines.push(`  ${status} [${todo.id}] ${todo.title} ${priorityMark}`);
-      }
-      return lines.join('\n');
-    }
-  }
-
-  const todoManager = new TodoManager();
+  const todoManager = externalTodoManager;
 
   // Agent 流式显示状态
   let agentStreamingElement = null;
@@ -441,6 +350,10 @@ function createAiAgentRunner(options) {
       });
     }
 
+    const todoPrompt =
+      todoManager && typeof todoManager.buildTodoPrompt === 'function'
+        ? todoManager.buildTodoPrompt()
+        : '';
     const systemPrompt =
       buildSystemPrompt({
         mode: 'agent',
@@ -451,12 +364,17 @@ function createAiAgentRunner(options) {
         taskState: typeof getTaskState === 'function' ? getTaskState() : null,
         t
       }) +
+      todoPrompt +
       '\n\n你是Agent模式，可以使用工具来帮助用户完成任务。' +
       '\n\n可用工具：' +
       '\n- search_page(query): 新建标签页搜索关键词，返回页面信息和tab_id。当需要在网上查找信息时使用。' +
       '\n- get_page_info(tab_id?): 获取指定页面的URL、标题、摘要和可交互元素列表。默认当前标签页。' +
       '\n- click_element(selector, tab_id?): 点击页面元素。selector必须来自get_page_info返回的controls。' +
       '\n- input_text(selector, text, tab_id?): 在输入框中输入文本。selector必须来自get_page_info返回的controls。' +
+      '\n- add_todo(title, priority?): 添加待办项。priority可选：low/medium/high。' +
+      '\n- list_todos(filter?): 显示待办列表。filter可选：all/pending/completed。' +
+      '\n- complete_todo(todo_id): 完成指定ID的待办项。' +
+      '\n- remove_todo(todo_id): 删除指定ID的待办项。' +
       '\n- end_session(summary): 结束会话，summary为最终总结（支持Markdown），将直接展示给用户。' +
       '\n\n操作规范：' +
       '\n1. 需要搜索信息时，先调用search_page打开搜索结果页面。' +
