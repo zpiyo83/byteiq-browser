@@ -377,6 +377,12 @@ function createAiAgentRunner(options) {
       '\n- remove_todo(todo_id): 删除指定ID的待办项。' +
       '\n- end_session(summary): 结束会话，summary为最终总结（支持Markdown），将直接展示给用户。' +
       '\n\n操作规范：' +
+      '\n0. 【To Do 工具使用规则 - 最高优先级】' +
+      '\n   a) 收到用户任务时，必须先调用add_todo将任务步骤拆分为待办项' +
+      '\n   b) 每完成一个步骤，必须调用complete_todo标记完成' +
+      '\n   c) 用户提到"待办""任务""计划""要做的事""提醒"时，必须使用todo工具' +
+      '\n   d) 用户询问"还有什么没做""任务进度"时，必须调用list_todos' +
+      '\n   e) 不要用文字描述待办列表，必须调用list_todos工具来展示' +
       '\n1. 需要搜索信息时，先调用search_page打开搜索结果页面。' +
       '\n2. 需要点击或输入前，先调用get_page_info获取页面信息与controls。' +
       '\n3. 操作非当前页面时，在工具参数中提供tab_id以指定目标页面。' +

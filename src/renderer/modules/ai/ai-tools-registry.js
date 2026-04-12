@@ -170,7 +170,8 @@ function getAiToolDefinitions() {
     },
     {
       name: 'add_todo',
-      description: '添加一个新的待办项到To do列表',
+      description:
+        '添加一个新的待办项到To do列表。当用户提到任务、计划、要做的事、待办、提醒时必须调用此工具。执行多步骤任务时，应将每个步骤拆分为待办项。',
       parameters: {
         type: 'object',
         properties: {
@@ -198,7 +199,8 @@ function getAiToolDefinitions() {
     },
     {
       name: 'list_todos',
-      description: '显示所有待办项，可选按优先级或完成状态筛选',
+      description:
+        '显示所有待办项，可选按优先级或完成状态筛选。当用户询问待办列表、任务进度、还有什么没做时必须调用。每次开始新任务前也应调用此工具查看现有待办。',
       parameters: {
         type: 'object',
         properties: {
@@ -217,7 +219,8 @@ function getAiToolDefinitions() {
     },
     {
       name: 'complete_todo',
-      description: '标记待办项为已完成',
+      description:
+        '标记待办项为已完成。当某个待办项对应的任务步骤已经执行完毕时，必须调用此工具将其标记为完成。',
       parameters: {
         type: 'object',
         properties: {
@@ -239,7 +242,7 @@ function getAiToolDefinitions() {
     },
     {
       name: 'remove_todo',
-      description: '从To do列表中删除一个待办项',
+      description: '从To do列表中删除一个待办项。当用户要求删除、取消某个待办项时调用。',
       parameters: {
         type: 'object',
         properties: {
