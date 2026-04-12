@@ -63,7 +63,10 @@ function createAiAgentRunner(options) {
     const { title, description, status } = options;
     target.classList.remove('streaming');
     target.classList.add('tool-card');
-    target.innerHTML = '';
+
+    // 确保目标元素为空（移除流式指示圆点和其他内容）
+    // 但要保留 class，以保持消息样式
+    target.textContent = '';
 
     const header = documentRef.createElement('div');
     header.className = 'tool-card-header';
@@ -533,22 +536,17 @@ function createAiAgentRunner(options) {
           }
 
           // 判断流式元素是否已有内容（来自流式监听器渲染的文字）
-          // 如果有内容，工具卡片必须使用新元素，避免 renderToolCard 的 innerHTML='' 清除AI文字
-          const hasRenderedContent =
-            aiMsgElement.querySelector('.think-dropdown') ||
-            aiMsgElement.querySelector('.message-content') ||
-            String(aiMsgElement.textContent || '').trim().length > 0;
-          // 仅当流式元素完全为空时，才复用它作为第一个工具卡片的目标
-          const firstToolTarget = hasRenderedContent ? null : aiMsgElement;
+          // 工具卡片总是创建新的消息元素，避免覆盖思考内容或已渲染的文字
+          // 这样可以保证思考框和工具卡片分离显示，不会相互遮挡
 
           const toolMessages = new Map();
-          result.toolCalls.forEach((toolCall, index) => {
+          result.toolCalls.forEach(toolCall => {
             if (toolCall.name === 'end_session') {
               toolMessages.set(toolCall.id, null);
               return;
             }
-            const target =
-              index === 0 && firstToolTarget ? firstToolTarget : addChatMessage('', 'ai');
+            // 强制为每个工具创建新消息，不复用 aiMsgElement
+            const target = addChatMessage('', 'ai');
             toolMessages.set(toolCall.id, target);
             renderToolCard(target, {
               title: getToolTitle(toolCall.name),
