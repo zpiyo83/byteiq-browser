@@ -294,7 +294,7 @@ function createAiHistoryUI(options) {
 
     const titleEl = documentRef.createElement('div');
     titleEl.className = 'tool-card-title';
-    titleEl.textContent = `工具：${getToolTitle(toolName)}`;
+    titleEl.textContent = getToolTitle(toolName);
     header.appendChild(titleEl);
 
     if (status) {

@@ -84,7 +84,10 @@
         "modelId": "模型ID",
         "modelIdDesc": "指定使用的模型名称",
         "contextSize": "上下文大小",
-        "contextSizeDesc": "模型上下文窗口的 token 数量，影响对话历史保留长度"
+        "contextSizeDesc": "模型上下文窗口的 token 数量，影响对话历史保留长度",
+        "advancedOptions": "高级选项",
+        "requestTimeout": "请求超时时间（秒）",
+        "requestTimeoutDesc": "等待API响应的最大时间"
       },
       "translation": {
         "title": "翻译设置",

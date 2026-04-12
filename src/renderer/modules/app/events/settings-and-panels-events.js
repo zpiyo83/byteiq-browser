@@ -28,6 +28,8 @@ function bindSettingsAndPanelEvents(options) {
     aiModelListStatus: options.aiModelListStatus,
     aiModelRefreshBtn: options.aiModelRefreshBtn,
     aiRequestTypeSelect: options.aiRequestTypeSelect,
+    aiContextSizeInput: options.aiContextSizeInput,
+    aiTimeoutInput: options.aiTimeoutInput,
     ipcRenderer,
     store,
     documentRef,
@@ -163,6 +165,10 @@ function bindSettingsAndPanelEvents(options) {
         if (options.aiContextSizeInput) {
           const ctxSize = store.get('settings.aiContextSize', 8192);
           options.aiContextSizeInput.value = ctxSize;
+        }
+        if (options.aiTimeoutInput) {
+          const timeout = store.get('settings.aiTimeout', 120);
+          options.aiTimeoutInput.value = timeout;
         }
         // 加载翻译设置
         if (options.translationApiEnabledToggle) {

@@ -54,6 +54,7 @@ function getDomReferences(documentRef) {
     aiModelListSelect: documentRef.getElementById('ai-model-list-select'),
     aiModelListStatus: documentRef.getElementById('ai-model-list-status'),
     aiContextSizeInput: documentRef.getElementById('ai-context-size-input'),
+    aiTimeoutInput: documentRef.getElementById('ai-timeout-input'),
     translationApiEnabledToggle: documentRef.getElementById('translation-api-enabled-toggle'),
     translationEndpointInput: documentRef.getElementById('translation-endpoint-input'),
     translationApiKeyInput: documentRef.getElementById('translation-api-key-input'),

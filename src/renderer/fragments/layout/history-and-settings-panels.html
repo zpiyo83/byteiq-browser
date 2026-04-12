@@ -243,6 +243,17 @@
                         </div>
                         <input type="number" id="ai-context-size-input" min="1024" max="1000000" step="1" value="8192" placeholder="8192">
                     </div>
+                    <!-- 高级选项 -->
+                    <details class="advanced-options">
+                        <summary data-i18n="panels.settings.ai.advancedOptions">高级选项</summary>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label data-i18n="panels.settings.ai.requestTimeout">请求超时时间（秒）</label>
+                                <div class="setting-desc" data-i18n="panels.settings.ai.requestTimeoutDesc">等待API响应的最大时间</div>
+                            </div>
+                            <input type="number" id="ai-timeout-input" placeholder="120" min="30" max="300">
+                        </div>
+                    </details>
                 </div>
                 <!-- 翻译设置 -->
                 <div id="settings-translation" class="settings-section">

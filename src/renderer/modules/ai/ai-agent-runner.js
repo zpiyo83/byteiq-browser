@@ -70,7 +70,7 @@ function createAiAgentRunner(options) {
 
     const titleEl = documentRef.createElement('div');
     titleEl.className = 'tool-card-title';
-    titleEl.textContent = `工具：${title}`;
+    titleEl.textContent = title;
     header.appendChild(titleEl);
 
     if (status) {

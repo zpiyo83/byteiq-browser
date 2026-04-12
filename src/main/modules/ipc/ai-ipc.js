@@ -23,7 +23,7 @@ function registerAiIpc(options) {
       const apiKey = store.get('settings.aiApiKey', '');
       const requestType = store.get('settings.aiRequestType', 'openai-chat');
       const model = store.get('settings.aiModelId', 'gpt-3.5-turbo');
-      const timeout = (store.get('settings.translationTimeout', 120) || 120) * 1000;
+      const timeout = (store.get('settings.aiTimeout', 120) || 120) * 1000;
 
       if (!endpoint || !apiKey) {
         return {
@@ -103,7 +103,7 @@ function registerAiIpc(options) {
       const apiKey = store.get('settings.aiApiKey', '');
       const requestType = store.get('settings.aiRequestType', 'openai-chat');
       const model = store.get('settings.aiModelId', 'gpt-3.5-turbo');
-      const timeout = (store.get('settings.translationTimeout', 120) || 120) * 1000;
+      const timeout = (store.get('settings.aiTimeout', 120) || 120) * 1000;
 
       if (!endpoint || !apiKey) {
         return {
@@ -205,7 +205,7 @@ function registerAiIpc(options) {
       const endpoint = payload.endpoint || store.get('settings.aiEndpoint', '');
       const apiKey = payload.apiKey || store.get('settings.aiApiKey', '');
       const requestType = payload.requestType || store.get('settings.aiRequestType', 'openai-chat');
-      const timeout = (store.get('settings.translationTimeout', 120) || 120) * 1000;
+      const timeout = (store.get('settings.aiTimeout', 120) || 120) * 1000;
 
       if (!endpoint || !apiKey) {
         return {
