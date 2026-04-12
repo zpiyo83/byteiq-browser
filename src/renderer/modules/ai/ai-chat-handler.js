@@ -65,14 +65,18 @@ function createAiChatHandler(deps) {
       });
 
       if (result.success) {
-        // 保存AI回复到IndexedDB（包含思考内容标记）
+        // 保存AI回复到IndexedDB（分离 thinking 内容到 metadata）
         if (sessionId) {
           const savedContent = result.reasoningContent
             ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
             : result.content;
           await historyStorage.addMessage(sessionId, {
             role: 'assistant',
-            content: savedContent
+            content: savedContent,
+            metadata: {
+              thinkingContent: result.reasoningContent || '',
+              actionContent: result.content || ''
+            }
           });
           // 更新session时间
           await updateSession(sessionId, { updatedAt: Date.now() });
@@ -147,6 +151,7 @@ function createAiChatHandler(deps) {
         t
       });
       // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
+      // 关键：恢复 thinking 内容以保持完整的上下文（防止AI遗忘）
       const formattedHistory = historyMessages
         .filter(m => m.role !== 'system')
         .map(m => {
@@ -158,9 +163,16 @@ function createAiChatHandler(deps) {
             };
           }
           if (m.role === 'assistant' && m.metadata?.toolCalls) {
+            // 💡 修复：恢复 thinking 内容到消息中，防止上下文丢失
+            const thinkingContent = m.metadata?.thinkingContent || '';
+            const actionContent = m.metadata?.actionContent || '';
+            const recoveredContent = thinkingContent
+              ? `<!--think-->${thinkingContent}<!--endthink-->${actionContent}`
+              : actionContent;
+
             return {
               role: 'assistant',
-              content: null,
+              content: recoveredContent || null,
               tool_calls: m.metadata.toolCalls.map(call => ({
                 id: call.id,
                 type: 'function',

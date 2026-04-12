@@ -33,6 +33,101 @@ function createAiAgentRunner(options) {
   let isAgentProcessing = false;
   let agentMessageHistory = [];
 
+  // Todo 管理器
+  class TodoManager {
+    constructor() {
+      this.todos = [];
+      this.nextId = 1;
+    }
+
+    addTodo(title, priority = 'medium') {
+      const id = `todo-${this.nextId++}`;
+      const todo = {
+        id,
+        title,
+        priority,
+        completed: false,
+        createdAt: new Date().toISOString()
+      };
+      this.todos.push(todo);
+      return {
+        success: true,
+        todo,
+        message: `✅ Already added "${title}"`
+      };
+    }
+
+    listTodos(filter = 'pending') {
+      let filtered = this.todos;
+      if (filter === 'pending') {
+        filtered = this.todos.filter(t => !t.completed);
+      } else if (filter === 'completed') {
+        filtered = this.todos.filter(t => t.completed);
+      }
+      const todoList = filtered
+        .map(t => {
+          const status = t.completed ? '✅' : '⭕';
+          const priorityMark = { high: '🔴', medium: '🟡', low: '🟢' };
+          return `${status} [${t.id}] ${t.title} ${priorityMark[t.priority] || ''}`;
+        })
+        .join('\n');
+      return {
+        success: true,
+        todos: filtered,
+        display: todoList || 'No todos',
+        count: filtered.length
+      };
+    }
+
+    completeTodo(todoId) {
+      const todo = this.todos.find(t => t.id === todoId);
+      if (!todo) {
+        return { success: false, error: `Todo with ID "${todoId}" not found` };
+      }
+      todo.completed = true;
+      todo.completedAt = new Date().toISOString();
+      return {
+        success: true,
+        todo,
+        message: `✅ Marked "${todo.title}" as completed`
+      };
+    }
+
+    removeTodo(todoId) {
+      const index = this.todos.findIndex(t => t.id === todoId);
+      if (index === -1) {
+        return { success: false, error: `Todo with ID "${todoId}" not found` };
+      }
+      const removed = this.todos.splice(index, 1)[0];
+      return {
+        success: true,
+        removed,
+        message: `🗑️ Removed "${removed.title}"`
+      };
+    }
+
+    getTodosSummary() {
+      const pending = this.todos.filter(t => !t.completed).length;
+      const completed = this.todos.filter(t => t.completed).length;
+      const total = this.todos.length;
+      if (total === 0) return '';
+      return `📋 To do List: ${pending} pending, ${completed} completed (Total: ${total})`;
+    }
+
+    getAllTodosForPrompt() {
+      if (this.todos.length === 0) return '';
+      const lines = ['📋 Current To do List:'];
+      for (const todo of this.todos) {
+        const status = todo.completed ? '✅' : '⭕';
+        const priorityMark = { high: '🔴', medium: '🟡', low: '🟢' }[todo.priority] || '';
+        lines.push(`  ${status} [${todo.id}] ${todo.title} ${priorityMark}`);
+      }
+      return lines.join('\n');
+    }
+  }
+
+  const todoManager = new TodoManager();
+
   // Agent 流式显示状态
   let agentStreamingElement = null;
   let agentStreamingTaskId = null;
@@ -114,6 +209,14 @@ function createAiAgentRunner(options) {
         return '输入文本';
       case 'search_page':
         return '搜索页面';
+      case 'add_todo':
+        return '添加待办项';
+      case 'list_todos':
+        return '显示待办列表';
+      case 'complete_todo':
+        return '完成待办项';
+      case 'remove_todo':
+        return '删除待办项';
       case 'end_session':
         return '结束会话';
       default:
@@ -186,6 +289,23 @@ function createAiAgentRunner(options) {
         const pageHint = buildPageHintFromArgs(args);
         return `准备输入文本，${selector}，${text}，${pageHint}`;
       }
+      case 'add_todo': {
+        const title = args.title ? truncateText(args.title, 48) : '未提供标题';
+        const priority = args.priority ? `优先级: ${args.priority}` : '';
+        return `准备添加待办项，${title}，${priority}`.trim();
+      }
+      case 'list_todos': {
+        const filter = args.filter ? `${args.filter}` : 'pending';
+        return `准备显示待办列表（${filter}）`;
+      }
+      case 'complete_todo': {
+        const id = args.todo_id ? args.todo_id : '未提供ID';
+        return `准备标记待办项为完成，ID: ${id}`;
+      }
+      case 'remove_todo': {
+        const id = args.todo_id ? args.todo_id : '未提供ID';
+        return `准备删除待办项，ID: ${id}`;
+      }
       case 'end_session':
         return '准备结束当前会话';
       default:
@@ -248,6 +368,35 @@ function createAiAgentRunner(options) {
       return {
         status: 'success',
         text: pageHint ? `已输入文本，${pageHint}` : '已输入文本'
+      };
+    }
+
+    if (toolName === 'add_todo') {
+      return {
+        status: 'success',
+        text: toolResult.message || '待办项已添加'
+      };
+    }
+
+    if (toolName === 'list_todos') {
+      const display = toolResult.display || '暂无待办项';
+      return {
+        status: 'success',
+        text: `待办列表：\n${display}`
+      };
+    }
+
+    if (toolName === 'complete_todo') {
+      return {
+        status: 'success',
+        text: toolResult.message || '待办项已标记为完成'
+      };
+    }
+
+    if (toolName === 'remove_todo') {
+      return {
+        status: 'success',
+        text: toolResult.message || '待办项已删除'
       };
     }
 
@@ -317,9 +466,31 @@ function createAiAgentRunner(options) {
       '\n5. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出"等待X秒"。' +
       '\n6. 每次工具调用后，根据结果决定下一步。任务完成后调用end_session并提供总结。' +
       '\n7. 优先使用search_page查找信息，而非要求用户提供。' +
-      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。';
+      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。' +
+      '\n9. 【限制资源处理】如果用户说"只去X个网站""查前X条""只搜索Y次"，必须：' +
+      '\n   a) 理解这是硬性限制，不能超过' +
+      '\n   b) 从当前打开的标签页统计，不要盲目创建新标签页' +
+      '\n   c) 达到限制后立即调用end_session，不要继续操作' +
+      '\n10. 【搜索结果筛选】get_page_info获取搜索页面后：' +
+      '\n   a) 从controls.links中找"官网入口"（通常是主域名的纯文本链接）' +
+      '\n   b) 优先点击官网而非聚合页或新闻源' +
+      '\n   c) 避免重复点击已访问的网站' +
+      '\n11. 【重复检测与去重】对同一网站或搜索词：' +
+      '\n   a) 记住已搜索和已访问的网站URL' +
+      '\n   b) 如果要访问同一网站第2次，先用get_page_info检查其tab_id是否已存在' +
+      '\n   c) 优先复用已打开的标签页，减少search_page调用' +
+      '\n12. 【进度意识】复杂任务（多步骤/多资源）中：' +
+      '\n   a) 在思考内容中计算进度："已访问 2/3 网站"或"完成 5/10 步骤"' +
+      '\n   b) 主动让用户知道进展，而不是沉默地工作' +
+      '\n   c) 如果工具调用超过8次且无明显进展，重新评估策略' +
+      '\n13. 【任务完成判断】以下情况应立即调用end_session：' +
+      '\n   a) 已达到用户指定的数量限制（网站数、条数、次数等）' +
+      '\n   b) 无法继续获取新内容（如重复的搜索结果）' +
+      '\n   c) 用户明确要求完成' +
+      '\n   d) 工具执行失败超过3次且无法恢复';
 
     // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
+    // 关键：恢复 thinking 内容以保持完整的上下文（防止AI遗忘）
     const rawHistory = await historyStorage.getMessages(session.id, { limit: 50 });
     const formattedHistory = rawHistory
       .filter(m => m.role !== 'system')
@@ -332,9 +503,17 @@ function createAiAgentRunner(options) {
           };
         }
         if (m.role === 'assistant' && m.metadata?.toolCalls) {
+          // 💡 修复：恢复 thinking 内容到消息中，防止上下文丢失
+          // 虽然API格式需要 content=null，但我们通过注入 thinking 标记来保留推理过程
+          const thinkingContent = m.metadata?.thinkingContent || '';
+          const actionContent = m.metadata?.actionContent || '';
+          const recoveredContent = thinkingContent
+            ? `<!--think-->${thinkingContent}<!--endthink-->${actionContent}`
+            : actionContent;
+
           return {
             role: 'assistant',
-            content: null,
+            content: recoveredContent || null,
             tool_calls: m.metadata.toolCalls.map(call => ({
               id: call.id,
               type: 'function',
@@ -390,8 +569,32 @@ function createAiAgentRunner(options) {
       });
     }
 
+    // P1 优化：注入已访问网站清单到系统提示词
+    const pageList = typeof getPageList === 'function' ? getPageList() : [];
+    const validPages = pageList.filter(p => p.url && p.title);
+
+    let enhancedSystemPrompt = systemPrompt;
+    if (validPages.length > 0) {
+      const pagesInfo = validPages
+        .map((p, i) => {
+          try {
+            const hostname = new URL(p.url).hostname;
+            return `${i + 1}. ${p.title} (${hostname})`;
+          } catch {
+            return `${i + 1}. ${p.title}`;
+          }
+        })
+        .join('\n');
+
+      enhancedSystemPrompt +=
+        '\n\n【当前打开的标签页】\n' +
+        pagesInfo +
+        `\n总计：${validPages.length} 个标签页` +
+        '\n💡 提示：访问已打开网站时，优先用 get_page_info(tab_id) 而非重新搜索';
+    }
+
     agentMessageHistory = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: enhancedSystemPrompt },
       ...truncatedHistory,
       { role: 'user', content: userText }
     ];
@@ -571,6 +774,8 @@ function createAiAgentRunner(options) {
           });
 
           // 保存带工具调用的助手消息到历史
+          // 注意：content 包含 thinking 标记只用于UI显示和调试
+          // metadata.thinkingContent 用于重新加载时恢复完整推理过程
           const assistantSavedContent = result.reasoningContent
             ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
             : result.content || '';
@@ -578,6 +783,8 @@ function createAiAgentRunner(options) {
             role: 'assistant',
             content: assistantSavedContent,
             metadata: {
+              thinkingContent: result.reasoningContent || '',
+              actionContent: result.content || '',
               toolCalls: result.toolCalls.map(call => ({
                 id: call.id,
                 name: call.name,

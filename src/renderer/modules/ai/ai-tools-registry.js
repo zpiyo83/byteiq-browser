@@ -169,6 +169,97 @@ function getAiToolDefinitions() {
       }
     },
     {
+      name: 'add_todo',
+      description: '添加一个新的待办项到To do列表',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: '待办项的标题/内容'
+          },
+          priority: {
+            type: 'string',
+            enum: ['low', 'medium', 'high'],
+            description: '优先级：low(低)、medium(中)、high(高)，默认为medium'
+          }
+        },
+        required: ['title']
+      },
+      async execute(context, args) {
+        const title = String(args?.title || '').trim();
+        if (!title) {
+          return { success: false, error: 'Title cannot be empty' };
+        }
+        const priority = args?.priority || 'medium';
+        const result = context.getTodoManager().addTodo(title, priority);
+        return result;
+      }
+    },
+    {
+      name: 'list_todos',
+      description: '显示所有待办项，可选按优先级或完成状态筛选',
+      parameters: {
+        type: 'object',
+        properties: {
+          filter: {
+            type: 'string',
+            enum: ['all', 'pending', 'completed'],
+            description: '筛选条件：all(全部)、pending(未完成)、completed(已完成)，默认为pending'
+          }
+        }
+      },
+      async execute(context, args) {
+        const filter = args?.filter || 'pending';
+        const result = context.getTodoManager().listTodos(filter);
+        return result;
+      }
+    },
+    {
+      name: 'complete_todo',
+      description: '标记待办项为已完成',
+      parameters: {
+        type: 'object',
+        properties: {
+          todo_id: {
+            type: 'string',
+            description: '待办项的ID'
+          }
+        },
+        required: ['todo_id']
+      },
+      async execute(context, args) {
+        const todoId = String(args?.todo_id || '').trim();
+        if (!todoId) {
+          return { success: false, error: 'Todo ID cannot be empty' };
+        }
+        const result = context.getTodoManager().completeTodo(todoId);
+        return result;
+      }
+    },
+    {
+      name: 'remove_todo',
+      description: '从To do列表中删除一个待办项',
+      parameters: {
+        type: 'object',
+        properties: {
+          todo_id: {
+            type: 'string',
+            description: '待办项的ID'
+          }
+        },
+        required: ['todo_id']
+      },
+      async execute(context, args) {
+        const todoId = String(args?.todo_id || '').trim();
+        if (!todoId) {
+          return { success: false, error: 'Todo ID cannot be empty' };
+        }
+        const result = context.getTodoManager().removeTodo(todoId);
+        return result;
+      }
+    },
+    {
       name: 'end_session',
       description: '当任务完成时调用此工具结束会话，必须通过 summary 参数提供最终总结信息',
       parameters: {

@@ -349,14 +349,52 @@ function buildSystemPrompt(options) {
   return systemPrompt;
 }
 
+// P1 优化：对链接进行智能分类，优先返回官网入口
+function classifyAndSortLinks(links) {
+  if (!Array.isArray(links) || links.length === 0) {
+    return { official: [], content: [] };
+  }
+
+  const official = [];
+  const content = [];
+
+  for (const link of links) {
+    try {
+      const url = new URL(link.href || link.selector || '');
+      const pathname = url.pathname;
+
+      // 判断是否为主域名链接（官网入口）
+      // 特征：路径为 / 或很短，没有查询参数
+      if (pathname === '/' && !url.search) {
+        official.push(link);
+      } else {
+        content.push(link);
+      }
+    } catch {
+      content.push(link);
+    }
+  }
+
+  return { official, content };
+}
+
 function buildControlsSummary(controls) {
   if (!controls) return '';
   const limit = 8;
   const lines = [];
+
+  // P1 优化：链接优先级处理
+  let linksToShow = controls.links || [];
+  if (Array.isArray(linksToShow) && linksToShow.length > 0) {
+    const { official, content } = classifyAndSortLinks(linksToShow);
+    // 优先展示官网入口，然后是内容页
+    linksToShow = [...official, ...content];
+  }
+
   const sections = [
     { label: '按钮', items: controls.buttons },
     { label: '输入框', items: controls.inputs },
-    { label: '链接', items: controls.links }
+    { label: '链接（官网优先）', items: linksToShow }
   ];
 
   for (const section of sections) {

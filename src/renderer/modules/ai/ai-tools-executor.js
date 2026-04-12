@@ -13,7 +13,8 @@ function createAiToolsExecutor(options) {
     openTab,
     formatUrl,
     switchTab,
-    bindTabToSession
+    bindTabToSession,
+    getTodoManager
   } = options;
 
   function sleep(ms) {
@@ -114,7 +115,8 @@ function createAiToolsExecutor(options) {
           openTab,
           formatUrl,
           switchTab,
-          bindTabToSession
+          bindTabToSession,
+          getTodoManager
         },
         args
       );
