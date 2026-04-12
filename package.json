@@ -1,6 +1,6 @@
 {
   "name": "byteiq-browser",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A community-driven AI browser powered by Chromium kernel",
   "main": "src/main/main.js",
   "build": {
