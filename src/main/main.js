@@ -29,6 +29,7 @@ const { createDownloadsManager } = require('./modules/ipc/downloads-ipc');
 const { registerTranslationIpc } = require('./modules/ipc/translation-ipc');
 const { registerAiIpc } = require('./modules/ipc/ai-ipc');
 const { registerVersionIpc } = require('./modules/ipc/version-ipc');
+const { registerDialogIpc } = require('./modules/ipc/dialog-ipc');
 
 // 持久化存储实例
 const store = new Store();
@@ -75,6 +76,11 @@ registerAiIpc({
 registerVersionIpc({
   ipcMain,
   app
+});
+registerDialogIpc({
+  ipcMain,
+  dialog,
+  fs
 });
 
 // 设置webview窗口处理器，处理弹窗和新窗口

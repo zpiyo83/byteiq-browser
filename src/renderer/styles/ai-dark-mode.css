@@ -273,3 +273,41 @@
     background: transparent;
     border-top-color: transparent;
 }
+
+/* Dark mode - Export AI dialog */
+.dark-mode .export-ai-dialog {
+    background: var(--ai-surface-alt);
+    border-color: var(--ai-border);
+}
+
+.dark-mode .export-ai-dialog-header {
+    border-bottom-color: var(--ai-border);
+}
+
+.dark-mode .export-ai-dialog-header h3 {
+    color: var(--ai-text);
+}
+
+.dark-mode .export-ai-dialog-select-all {
+    border-bottom-color: var(--ai-border);
+}
+
+.dark-mode .export-ai-dialog-select-all label {
+    color: var(--ai-text);
+}
+
+.dark-mode .export-ai-dialog-item:hover {
+    background: var(--ai-hover);
+}
+
+.dark-mode .export-ai-dialog-item-title {
+    color: var(--ai-text);
+}
+
+.dark-mode .export-ai-dialog-item-meta {
+    color: var(--ai-muted);
+}
+
+.dark-mode .export-ai-dialog-footer {
+    border-top-color: var(--ai-border);
+}

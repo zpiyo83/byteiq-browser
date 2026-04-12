@@ -41,6 +41,7 @@ function getDomReferences(documentRef) {
     zoomLevelText: documentRef.getElementById('zoom-level-text'),
     clearDataBtn: documentRef.getElementById('clear-data-btn'),
     exportDataBtn: documentRef.getElementById('export-data-btn'),
+    exportAiHistoryBtn: documentRef.getElementById('export-ai-history-btn'),
     restoreSessionToggle: documentRef.getElementById('restore-session-toggle'),
     extensionsList: documentRef.getElementById('extensions-list'),
     extensionsAddBtn: documentRef.getElementById('extensions-add-btn'),

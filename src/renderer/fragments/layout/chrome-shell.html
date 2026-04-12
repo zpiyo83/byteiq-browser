@@ -249,6 +249,28 @@
         </div>
     </div>
 
+    <!-- 导出AI对话历史 - 会话选择弹窗 -->
+    <div class="export-ai-dialog" id="export-ai-dialog" role="dialog" aria-label="导出AI对话历史">
+        <div class="export-ai-dialog-header">
+            <h3>选择要导出的对话</h3>
+            <button id="export-ai-dialog-close" class="icon-btn" aria-label="关闭">
+                <svg viewBox="0 0 24 24" width="16" height="16" role="img" aria-hidden="true">
+                    <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="export-ai-dialog-body">
+            <div class="export-ai-dialog-select-all">
+                <label><input type="checkbox" id="export-ai-select-all"> 全选</label>
+            </div>
+            <div class="export-ai-dialog-list" id="export-ai-dialog-list" role="list" aria-label="会话列表"></div>
+        </div>
+        <div class="export-ai-dialog-footer">
+            <button id="export-ai-dialog-cancel" class="setting-action-btn">取消</button>
+            <button id="export-ai-dialog-confirm" class="setting-action-btn primary">导出</button>
+        </div>
+    </div>
+
     <div id="overlay-backdrop" class="overlay-backdrop"></div>
 
     <!-- Template for New Tab Page -->

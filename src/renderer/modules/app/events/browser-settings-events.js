@@ -17,6 +17,7 @@ function bindBrowserSettingsEvents(deps) {
     clearDataBtn,
     darkModeToggle,
     documentRef,
+    exportAiHistoryBtn,
     exportDataBtn,
     historyList,
     historyPanel,
@@ -28,6 +29,7 @@ function bindBrowserSettingsEvents(deps) {
     overlayBackdrop,
     overlayManager,
     restoreSessionToggle,
+    ipcRenderer,
     searchEngineSelect,
     setLocale,
     startupUrlInput,
@@ -211,6 +213,196 @@ function bindBrowserSettingsEvents(deps) {
     a.click();
     URL.revokeObjectURL(url);
   });
+
+  // 导出AI对话历史
+  const exportAiDialog = documentRef.getElementById('export-ai-dialog');
+  const exportAiDialogList = documentRef.getElementById('export-ai-dialog-list');
+  const exportAiSelectAll = documentRef.getElementById('export-ai-select-all');
+  const exportAiDialogClose = documentRef.getElementById('export-ai-dialog-close');
+  const exportAiDialogCancel = documentRef.getElementById('export-ai-dialog-cancel');
+  const exportAiDialogConfirm = documentRef.getElementById('export-ai-dialog-confirm');
+
+  // 获取 AI 历史存储实例
+  let aiHistoryStorage = null;
+  function getAiHistoryStorage() {
+    if (!aiHistoryStorage) {
+      try {
+        const { getAIHistoryStorage } = require('../../storage/ai-history-storage');
+        aiHistoryStorage = getAIHistoryStorage();
+      } catch {
+        return null;
+      }
+    }
+    return aiHistoryStorage;
+  }
+
+  // 格式化日期
+  function formatDate(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return (
+      d.toLocaleDateString() +
+      ' ' +
+      d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    );
+  }
+
+  // 打开会话选择弹窗
+  async function openExportAiDialog() {
+    const storage = getAiHistoryStorage();
+    if (!storage) return;
+
+    await storage.init();
+    const sessions = await storage.getSessions({ includeDeleted: false, limit: 1000 });
+    sessions.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    exportAiDialogList.innerHTML = '';
+    for (const session of sessions) {
+      const item = documentRef.createElement('div');
+      item.className = 'export-ai-dialog-item';
+      item.dataset.sessionId = session.id;
+      item.innerHTML =
+        '<input type="checkbox" data-session-id="' +
+        session.id +
+        '">' +
+        '<div class="export-ai-dialog-item-info">' +
+        '<div class="export-ai-dialog-item-title">' +
+        (session.title || '未命名会话') +
+        '</div>' +
+        '<div class="export-ai-dialog-item-meta">' +
+        (session.messageCount || 0) +
+        ' 条消息 · ' +
+        formatDate(session.updatedAt) +
+        '</div>' +
+        '</div>';
+      // 点击整行切换 checkbox
+      item.addEventListener('click', e => {
+        if (e.target.tagName === 'INPUT') return;
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = !cb.checked;
+      });
+      exportAiDialogList.appendChild(item);
+    }
+
+    exportAiSelectAll.checked = false;
+    exportAiDialog.classList.add('visible');
+  }
+
+  function closeExportAiDialog() {
+    exportAiDialog.classList.remove('visible');
+  }
+
+  // 全选/取消全选
+  if (exportAiSelectAll) {
+    exportAiSelectAll.addEventListener('change', () => {
+      const checked = exportAiSelectAll.checked;
+      exportAiDialogList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = checked;
+      });
+    });
+  }
+
+  // 关闭弹窗
+  if (exportAiDialogClose) exportAiDialogClose.addEventListener('click', closeExportAiDialog);
+  if (exportAiDialogCancel) exportAiDialogCancel.addEventListener('click', closeExportAiDialog);
+
+  // 确认导出
+  if (exportAiDialogConfirm) {
+    exportAiDialogConfirm.addEventListener('click', async () => {
+      const checkedIds = [];
+      exportAiDialogList.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        checkedIds.push(cb.dataset.sessionId);
+      });
+      if (checkedIds.length === 0) return;
+
+      const storage = getAiHistoryStorage();
+      if (!storage) return;
+
+      // 构建导出数据
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        sessions: []
+      };
+
+      for (const sessionId of checkedIds) {
+        const session = await storage.getSession(sessionId);
+        if (!session) continue;
+        const messages = await storage.getMessages(sessionId, { limit: 10000 });
+
+        // 处理消息，解析思考内容和工具调用
+        const processedMessages = messages.map(msg => {
+          const entry = {
+            role: msg.role,
+            createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString() : null
+          };
+
+          if (msg.role === 'user') {
+            entry.content = msg.content;
+          } else if (msg.role === 'assistant') {
+            // 解析 <!--think-->...<!--endthink--> 标记
+            const thinkMatch =
+              typeof msg.content === 'string'
+                ? msg.content.match(/<!--think-->([\s\S]*?)<!--endthink-->/)
+                : null;
+            if (thinkMatch) {
+              entry.thinking = thinkMatch[1].trim();
+              const remaining = msg.content
+                .replace(/<!--think-->[\s\S]*?<!--endthink-->/, '')
+                .trim();
+              entry.content = remaining || null;
+            } else {
+              entry.content = msg.content || null;
+            }
+            // 工具调用信息
+            if (msg.metadata && msg.metadata.toolCalls) {
+              entry.toolCalls = msg.metadata.toolCalls.map(call => ({
+                id: call.id,
+                name: call.name,
+                arguments: call.arguments
+              }));
+            }
+          } else if (msg.role === 'tool') {
+            entry.content = msg.content;
+            if (msg.metadata) {
+              entry.toolCallId = msg.metadata.toolCallId || null;
+              entry.toolName = msg.metadata.toolName || null;
+              entry.toolStatus = msg.metadata.status || null;
+              entry.toolDescription = msg.metadata.description || null;
+            }
+          }
+
+          return entry;
+        });
+
+        exportData.sessions.push({
+          id: session.id,
+          title: session.title,
+          mode: session.mode,
+          createdAt: session.createdAt ? new Date(session.createdAt).toISOString() : null,
+          updatedAt: session.updatedAt ? new Date(session.updatedAt).toISOString() : null,
+          messageCount: session.messageCount || processedMessages.length,
+          messages: processedMessages
+        });
+      }
+
+      // 通过主进程保存文件
+      const defaultName = `byteiq-ai-history-${new Date().toISOString().split('T')[0]}.json`;
+      const result = await ipcRenderer.invoke('show-save-json', {
+        defaultName,
+        content: JSON.stringify(exportData, null, 2)
+      });
+
+      if (result.success) {
+        closeExportAiDialog();
+      }
+    });
+  }
+
+  // 绑定导出按钮
+  if (exportAiHistoryBtn) {
+    exportAiHistoryBtn.addEventListener('click', openExportAiDialog);
+  }
 
   // 关闭覆盖层
   document.querySelectorAll('.close-overlay').forEach(btn => {
