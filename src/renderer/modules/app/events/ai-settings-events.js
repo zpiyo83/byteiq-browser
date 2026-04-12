@@ -169,16 +169,35 @@ function bindAiSettingsEvents(deps) {
     });
   }
 
+  // 上下文大小：input 实时保存，change 校验修正
   if (aiContextSizeInput) {
-    aiContextSizeInput.addEventListener('change', () => {
+    aiContextSizeInput.addEventListener('input', () => {
       const val = parseInt(aiContextSizeInput.value);
       if (val && val >= 1024) {
         store.set('settings.aiContextSize', val);
       }
     });
+    aiContextSizeInput.addEventListener('change', () => {
+      const val = parseInt(aiContextSizeInput.value);
+      if (val && val >= 1024) {
+        aiContextSizeInput.value = val;
+        store.set('settings.aiContextSize', val);
+      } else {
+        // 输入无效时恢复存储值
+        const saved = store.get('settings.aiContextSize', 8192);
+        aiContextSizeInput.value = saved;
+      }
+    });
   }
 
+  // 超时时间：input 实时保存，change 校验修正
   if (aiTimeoutInput) {
+    aiTimeoutInput.addEventListener('input', () => {
+      const value = parseInt(aiTimeoutInput.value);
+      if (value && value >= 30 && value <= 300) {
+        store.set('settings.aiTimeout', value);
+      }
+    });
     aiTimeoutInput.addEventListener('change', () => {
       const value = Math.max(30, Math.min(300, parseInt(aiTimeoutInput.value) || 120));
       aiTimeoutInput.value = value;

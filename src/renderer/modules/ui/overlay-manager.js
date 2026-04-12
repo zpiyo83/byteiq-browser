@@ -11,6 +11,11 @@
   }
 
   function closeAllOverlays() {
+    // 关闭前先让所有输入框失焦，确保 change 事件触发以保存设置值
+    const activeInput = documentRef.activeElement;
+    if (activeInput && (activeInput.tagName === 'INPUT' || activeInput.tagName === 'SELECT')) {
+      activeInput.blur();
+    }
     documentRef.querySelectorAll('.overlay-panel').forEach(panel => {
       panel.classList.remove('active');
     });
