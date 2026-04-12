@@ -314,9 +314,7 @@ function createAiAgentRunner(options) {
       '\n5. 点击工具会默认等待5秒后检查页面状态，最长100秒；不要在回复里输出"等待X秒"。' +
       '\n6. 每次工具调用后，根据结果决定下一步。任务完成后调用end_session并提供总结。' +
       '\n7. 优先使用search_page查找信息，而非要求用户提供。' +
-      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。' +
-      '\n9. 重要：不要重复搜索相同的关键词。如果已经搜索过，不要再次搜索相同的内容。' +
-      '\n10. 记住：每个工具调用都是真实执行，不要多次执行相同的工具调用。';
+      '\n8. 如果搜索结果页面需要进一步操作，使用get_page_info获取controls后再点击。';
 
     // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
     const rawHistory = await historyStorage.getMessages(session.id, { limit: 50 });
@@ -400,8 +398,6 @@ function createAiAgentRunner(options) {
     // 使用Set存储处理后的消息内容，用于快速检测重复
     // 存储的是trim().toLowerCase()处理后的内容，以忽略大小写和前后空格的差异
     const previousMessages = new Set();
-    // 使用Set存储已调用的工具，用于检测重复（避免重复打开网站）
-    const previousToolCalls = new Set();
     const completionKeywords = [
       '任务完成',
       '总结如下',
@@ -409,8 +405,6 @@ function createAiAgentRunner(options) {
       '结束',
       '完毕',
       '完成了',
-      '任务已',
-      '已完',
       'summary',
       'completed',
       'finished',
@@ -522,17 +516,9 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'tool_calls') {
-          // 重置纯文本回复计数器，因为AI调用了工具
+          // 重置纯文本回复计数器和历史消息集合，因为AI调用了工具
           textOnlyCount = 0;
           previousMessages.clear();
-
-          // 记录本次工具调用到历史集合，用于后续检测重复
-          for (const toolCall of result.toolCalls) {
-            if (toolCall.name !== 'end_session') {
-              const toolKey = `${toolCall.name}:${JSON.stringify(toolCall.arguments || {})}`;
-              previousToolCalls.add(toolKey);
-            }
-          }
           // 渲染思考内容（如果有）
           let firstToolTarget = aiMsgElement;
           const fullText = result.reasoningContent
@@ -605,51 +591,6 @@ function createAiAgentRunner(options) {
           });
 
           for (const toolCall of result.toolCalls) {
-            // 检测重复：如果同样的工具和参数已调用过，则记录警告并模拟成功返回
-            const toolKey = `${toolCall.name}:${JSON.stringify(toolCall.arguments || {})}`;
-            const isDuplicateCall =
-              previousToolCalls.has(toolKey) &&
-              toolCall.name !== 'get_page_info' &&
-              toolCall.name !== 'end_session';
-
-            if (isDuplicateCall) {
-              console.warn(
-                `[ai-agent-runner] Detected duplicate tool call in same session: ${toolCall.name}`,
-                toolCall.arguments
-              );
-              const target = toolMessages.get(toolCall.id) || addChatMessage('', 'ai');
-              renderToolCard(target, {
-                title: getToolTitle(toolCall.name),
-                description: '此工具在本会话中已执行过相同操作，已跳过以避免重复',
-                status: 'success'
-              });
-              agentMessageHistory.push({
-                role: 'tool',
-                tool_call_id: toolCall.id,
-                content: JSON.stringify({
-                  success: true,
-                  skipped: true,
-                  message: '检测到重复的工具调用，已跳过执行'
-                })
-              });
-              // 保存工具结果到历史
-              await historyStorage.addMessage(session.id, {
-                role: 'tool',
-                content: JSON.stringify({
-                  success: true,
-                  skipped: true,
-                  message: '检测到重复的工具调用，已跳过执行'
-                }),
-                metadata: {
-                  toolCallId: toolCall.id,
-                  toolName: toolCall.name,
-                  status: 'skipped',
-                  description: '工具调用重复，已跳过'
-                }
-              });
-              continue;
-            }
-
             const toolResult = await toolsExecutor.execute(toolCall);
 
             // 对于 search_page 工具，将新创建的标签页绑定到当前会话
