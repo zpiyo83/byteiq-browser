@@ -519,29 +519,27 @@ function createAiAgentRunner(options) {
           // 重置纯文本回复计数器和历史消息集合，因为AI调用了工具
           textOnlyCount = 0;
           previousMessages.clear();
-          // 渲染思考内容（如果有）
-          let firstToolTarget = aiMsgElement;
+          // 渲染思考内容和正文
           const fullText = result.reasoningContent
             ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
             : result.content || '';
           if (fullText) {
             updateStreamingMessage(aiMsgElement, fullText);
             finishStreamingMessage(aiMsgElement);
-            firstToolTarget = null;
           }
 
           if (typeof autoCollapseThinkingDropdown === 'function') {
             autoCollapseThinkingDropdown(aiMsgElement);
           }
 
-          if (
-            firstToolTarget &&
-            (firstToolTarget.querySelector('.think-dropdown') ||
-              firstToolTarget.querySelector('.message-content') ||
-              String(firstToolTarget.textContent || '').trim().length > 0)
-          ) {
-            firstToolTarget = null;
-          }
+          // 判断流式元素是否已有内容（来自流式监听器渲染的文字）
+          // 如果有内容，工具卡片必须使用新元素，避免 renderToolCard 的 innerHTML='' 清除AI文字
+          const hasRenderedContent =
+            aiMsgElement.querySelector('.think-dropdown') ||
+            aiMsgElement.querySelector('.message-content') ||
+            String(aiMsgElement.textContent || '').trim().length > 0;
+          // 仅当流式元素完全为空时，才复用它作为第一个工具卡片的目标
+          const firstToolTarget = hasRenderedContent ? null : aiMsgElement;
 
           const toolMessages = new Map();
           result.toolCalls.forEach((toolCall, index) => {
