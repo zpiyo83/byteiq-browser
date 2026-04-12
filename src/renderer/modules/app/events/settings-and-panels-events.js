@@ -33,6 +33,7 @@ function bindSettingsAndPanelEvents(options) {
     ipcRenderer,
     store,
     documentRef,
+    t: options.t,
     translationApiEnabledToggle: options.translationApiEnabledToggle,
     translationApiKeyInput: options.translationApiKeyInput,
     translationConcurrencyCountInput: options.translationConcurrencyCountInput,
@@ -161,7 +162,7 @@ function bindSettingsAndPanelEvents(options) {
         if (options.aiModelListSelect) {
           aiSettingsHelpers.syncAiModelSelection();
           if (options.aiModelListSelect.options.length <= 1) {
-            aiSettingsHelpers.setAiModelStatus('等待获取', '');
+            aiSettingsHelpers.setAiModelStatus(options.t('panels.settings.ai.waitingFetch'), '');
           }
         }
         if (options.aiContextSizeInput) {

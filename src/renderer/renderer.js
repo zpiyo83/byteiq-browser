@@ -484,7 +484,8 @@ bindSettingsAndPanelEvents({
   zoomInBtn,
   zoomLevelText,
   zoomOutBtn,
-  zoomResetBtn
+  zoomResetBtn,
+  t
 });
 
 bindNavigationAndDevtoolsEvents({

@@ -33,7 +33,8 @@ function bindAiSettingsEvents(deps) {
     translationRequestTypeSelect,
     translationStreamingToggle,
     translationTargetLanguageSelect,
-    translationTimeoutInput
+    translationTimeoutInput,
+    t
   } = deps;
 
   const document = deps.documentRef;
@@ -53,7 +54,8 @@ function bindAiSettingsEvents(deps) {
 
     const placeholder = document.createElement('option');
     placeholder.value = '';
-    placeholder.textContent = models.length > 0 ? '选择模型' : '暂无模型';
+    placeholder.textContent =
+      models.length > 0 ? t('panels.settings.ai.selectModel') : t('panels.settings.ai.noModels');
     aiModelListSelect.appendChild(placeholder);
 
     models.forEach(modelId => {
@@ -84,12 +86,12 @@ function bindAiSettingsEvents(deps) {
     const requestType = aiRequestTypeSelect.value;
 
     if (!endpoint || !apiKey) {
-      setAiModelStatus('请先配置端点和密钥', 'error');
+      setAiModelStatus(t('panels.settings.ai.configureEndpointKey'), 'error');
       return;
     }
 
     aiModelRefreshBtn.disabled = true;
-    setAiModelStatus('正在获取模型列表...', 'loading');
+    setAiModelStatus(t('panels.settings.ai.fetchingModels'), 'loading');
 
     try {
       const result = await ipcRenderer.invoke('ai-list-models', {
@@ -99,7 +101,7 @@ function bindAiSettingsEvents(deps) {
       });
 
       if (!result?.success) {
-        setAiModelStatus(result?.error || '获取失败', 'error');
+        setAiModelStatus(result?.error || t('panels.settings.ai.fetchFailed'), 'error');
         updateAiModelOptions([]);
         return;
       }
@@ -109,12 +111,15 @@ function bindAiSettingsEvents(deps) {
       syncAiModelSelection();
 
       if (models.length > 0) {
-        setAiModelStatus(`已获取 ${models.length} 个模型`, 'success');
+        setAiModelStatus(
+          t('panels.settings.ai.fetchedModels', { count: models.length }),
+          'success'
+        );
       } else {
-        setAiModelStatus('未获取到模型', 'error');
+        setAiModelStatus(t('panels.settings.ai.noModels'), 'error');
       }
     } catch (error) {
-      setAiModelStatus(error.message || '获取失败', 'error');
+      setAiModelStatus(error.message || t('panels.settings.ai.fetchFailed'), 'error');
     } finally {
       aiModelRefreshBtn.disabled = false;
     }
@@ -125,7 +130,7 @@ function bindAiSettingsEvents(deps) {
     store.set('settings.aiEndpoint', aiEndpointInput.value);
     if (aiModelListSelect) {
       updateAiModelOptions([]);
-      setAiModelStatus('等待获取', '');
+      setAiModelStatus(t('panels.settings.ai.waitingFetch'), '');
     }
   });
 
@@ -133,7 +138,7 @@ function bindAiSettingsEvents(deps) {
     store.set('settings.aiApiKey', aiApiKeyInput.value);
     if (aiModelListSelect) {
       updateAiModelOptions([]);
-      setAiModelStatus('等待获取', '');
+      setAiModelStatus(t('panels.settings.ai.waitingFetch'), '');
     }
   });
 
@@ -141,7 +146,7 @@ function bindAiSettingsEvents(deps) {
     store.set('settings.aiRequestType', aiRequestTypeSelect.value);
     if (aiModelListSelect) {
       updateAiModelOptions([]);
-      setAiModelStatus('等待获取', '');
+      setAiModelStatus(t('panels.settings.ai.waitingFetch'), '');
     }
   });
 
