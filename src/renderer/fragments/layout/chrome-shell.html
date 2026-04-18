@@ -204,13 +204,30 @@
                             </svg>
                         </button>
                     </div>
-                    <div class="ai-input-area">
-                        <input type="text" id="ai-input"
-                            data-i18n-placeholder="ai.placeholder"
-                            role="textbox" aria-label="AI输入框"
-                            placeholder="Ask a question or give a command...">
+                    <div class="ai-toolbar">
+                        <button id="ai-upload-btn" class="ai-toolbar-btn" title="上传附件" aria-label="上传附件">
+                            <svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-hidden="true">
+                                <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/>
+                            </svg>
+                            <span class="btn-label">附件</span>
+                        </button>
+                        
+                        <button id="ai-mode-btn" class="ai-toolbar-btn" title="选择模式" aria-label="选择模式">
+                            <svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-hidden="true">
+                                <path fill="currentColor" d="M3,3H21V7H3V3M3,9H21V13H3V9M3,15H21V19H3V15M3,21H21V21H3V21Z"/>
+                            </svg>
+                            <span class="btn-label" id="ai-mode-label">Ask</span>
+                        </button>
+                        
+                        <button id="ai-model-btn" class="ai-toolbar-btn" title="选择模型" aria-label="选择模型">
+                            <svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-hidden="true">
+                                <path fill="currentColor" d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,7C14.76,7 17,9.24 17,12C17,14.76 14.76,17 12,17C9.24,17 7,14.76 7,12C7,9.24 9.24,7 12,7M12,20C10.08,20 8.35,19.35 7.07,18.25C8.36,17.03 10.02,16.25 12,16.25C13.98,16.25 15.64,17.03 16.93,18.25C15.65,19.35 13.92,20 12,20Z"/>
+                            </svg>
+                            <span class="btn-label">模型</span>
+                        </button>
+                        
                         <div class="ai-context-pie" id="ai-context-pie" aria-label="上下文使用量">
-                            <svg viewBox="0 0 36 36" width="16" height="16">
+                            <svg viewBox="0 0 36 36" width="18" height="18">
                                 <circle class="pie-bg" cx="18" cy="18" r="15.9155" fill="none" stroke="#e0e0e0" stroke-width="5"/>
                                 <circle class="pie-used" id="ai-pie-used" cx="18" cy="18" r="15.9155" fill="none" stroke="#4285f4" stroke-width="5"
                                     stroke-dasharray="0 100" stroke-dashoffset="25" stroke-linecap="round"/>
@@ -223,12 +240,49 @@
                                 <div class="tooltip-row"><span>历史消息</span><span id="tt-history">0</span></div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="ai-input-area">
+                        <input type="text" id="ai-input"
+                            data-i18n-placeholder="ai.placeholder"
+                            role="textbox" aria-label="AI输入框"
+                            placeholder="Ask a question or give a command...">
                         <button id="ai-send-btn" class="icon-btn send-btn" data-i18n-title="ai.send" role="button" aria-label="发送">
-                            <svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="20" height="20" role="img" aria-hidden="true">
                                 <path fill="currentColor" d="M2.01,21L23,12L2.01,3L2,10L17,12L2,14L2.01,21Z"/>
                             </svg>
                         </button>
                     </div>
+
+                    <!-- 模式选择下拉菜单 -->
+                    <div class="ai-dropdown-menu" id="ai-mode-menu" style="display: none;">
+                        <button class="ai-menu-item" data-mode="ask">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <path fill="currentColor" d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C10.08,20 8.35,19.35 7.07,18.25C8.36,17.03 10.02,16.25 12,16.25C13.98,16.25 15.64,17.03 16.93,18.25C15.65,19.35 13.92,20 12,20M12,5C13.66,5 15,6.34 15,8C15,9.66 13.66,11 12,11C10.34,11 9,9.66 9,8C9,6.34 10.34,5 12,5M12,12.5C15.45,12.5 17,14.5 17,16V17H7V16C7,14.5 8.55,12.5 12,12.5Z"/>
+                            </svg>
+                            <span>Ask - 普通对话</span>
+                        </button>
+                        <button class="ai-menu-item" data-mode="agent">
+                            <svg viewBox="0 0 24 24" width="16" height="16">
+                                <path fill="currentColor" d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C10.08,20 8.35,19.35 7.07,18.25C8.36,17.03 10.02,16.25 12,16.25C13.98,16.25 15.64,17.03 16.93,18.25C15.65,19.35 13.92,20 12,20M12,5C13.66,5 15,6.34 15,8C15,9.66 13.66,11 12,11C10.34,11 9,9.66 9,8C9,6.34 10.34,5 12,5M12,12.5C15.45,12.5 17,14.5 17,16V17H7V16C7,14.5 8.55,12.5 12,12.5Z"/>
+                            </svg>
+                            <span>Agent - 自动执行</span>
+                        </button>
+                    </div>
+
+                    <!-- 模型选择下拉菜单 -->
+                    <div class="ai-dropdown-menu" id="ai-model-menu" style="display: none;">
+                        <div class="ai-menu-header">
+                            <button class="ai-menu-settings-btn" title="打开模型设置">⚙️ 模型设置</button>
+                        </div>
+                        <div class="ai-model-list" id="ai-model-list"></div>
+                    </div>
+
+                    <!-- 文件上传输入框（隐藏） -->
+                    <input type="file" id="ai-file-input" style="display: none;" multiple aria-label="上传文件">
+
+                    <!-- 模式选择菜单 -->
+                    <input type="file" id="ai-file-upload" style="display: none;" multiple/>
                 </div>
             </div>
 
