@@ -99,6 +99,20 @@
     background: #2756b5;
 }
 
+/* 中断按钮样式 */
+.icon-btn.stop-btn {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.icon-btn.stop-btn:hover {
+    background: #dc2626;
+}
+
+.icon-btn.stop-btn:active {
+    background: #b91c1c;
+}
+
 /* 过滤器按钮样式 */
 .filter-btn {
     padding: 5px 10px;

@@ -845,11 +845,21 @@ function createAiAgentRunner(options) {
     isAgentProcessing = false;
   }
 
+  function abort() {
+    if (!isAgentProcessing) return;
+    // 通知主进程取消当前 Agent 请求
+    if (agentStreamingTaskId) {
+      ipcRenderer.send('cancel-ai-agent', { taskId: agentStreamingTaskId });
+    }
+    isAgentProcessing = false;
+  }
+
   return {
     runAgentConversation,
     setupAgentStreamingListener,
     isProcessing: () => isAgentProcessing,
-    getMessageHistory: () => agentMessageHistory
+    getMessageHistory: () => agentMessageHistory,
+    abort
   };
 }
 

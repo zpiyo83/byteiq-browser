@@ -89,13 +89,9 @@ function createAiManager(options) {
   // 更新上下文饼图
   function updateContextPie() {
     if (!pieUsed) return;
-    // 优先从输入框读取最新值，再 fallback 到 store
-    const contextSizeInput = documentRef.getElementById('ai-context-size-input');
+    // 优先从 store 读取最新值，确保与设置同步
     let contextSize = 8192;
-    if (contextSizeInput && contextSizeInput.value) {
-      const inputVal = parseInt(contextSizeInput.value);
-      if (inputVal && inputVal >= 1024) contextSize = inputVal;
-    } else if (store) {
+    if (store) {
       contextSize = store.get('settings.aiContextSize', 8192);
     }
     const messages = agentRunner.getMessageHistory();
@@ -145,26 +141,11 @@ function createAiManager(options) {
 
   const historyStorage = getAIHistoryStorage();
 
-  const todoManager = createAiTodoManager({
-    store
-  });
-
   const sessionService = createAiSessionService({
     historyStorage,
     store,
     t,
     getActiveTabId
-  });
-
-  const toolsExecutor = createAiToolsExecutor({
-    documentRef,
-    getActiveTabId,
-    extractPageContent,
-    openTab: tabManager ? tabManager.createTab : null,
-    formatUrl,
-    switchTab: tabManager ? tabManager.switchTab : null,
-    bindTabToSession: sessionService.bindTabToSession,
-    getTodoManager: () => todoManager
   });
 
   const {
@@ -185,6 +166,22 @@ function createAiManager(options) {
     bindTabToSession
   } = sessionService;
 
+  const todoManager = createAiTodoManager({
+    store,
+    getActiveSessionId
+  });
+
+  const toolsExecutor = createAiToolsExecutor({
+    documentRef,
+    getActiveTabId,
+    extractPageContent,
+    openTab: tabManager ? tabManager.createTab : null,
+    formatUrl,
+    switchTab: tabManager ? tabManager.switchTab : null,
+    bindTabToSession: sessionService.bindTabToSession,
+    getTodoManager: () => todoManager
+  });
+
   const messageUI = createAiMessageUI({
     aiChatArea,
     documentRef,
@@ -202,11 +199,34 @@ function createAiManager(options) {
   let renderSessionsList = async () => {};
   let renderSessionChat = async () => {};
 
+  // 发送按钮的 SVG 图标
+  const SEND_ICON =
+    '<svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true"><path fill="currentColor" d="M2.01,21L23,12L2.01,3L2,10L17,12L2,14L2.01,21Z"/></svg>';
+  const STOP_ICON =
+    '<svg viewBox="0 0 24 24" width="24" height="24" role="img" aria-hidden="true"><path fill="currentColor" d="M18,18H6V6H18V18Z"/></svg>';
+
   function setInputEnabled(enabled) {
-    aiSendBtn.disabled = !enabled;
-    aiInput.disabled = !enabled;
     if (enabled) {
+      aiSendBtn.disabled = false;
+      aiInput.disabled = false;
+      aiSendBtn.innerHTML = SEND_ICON;
+      aiSendBtn.classList.remove('stop-btn');
+      aiSendBtn.classList.add('send-btn');
       aiInput.focus();
+    } else {
+      aiInput.disabled = true;
+      // agent 模式下禁用时显示中断图标
+      if (currentMode === 'agent' && agentRunner.isProcessing()) {
+        aiSendBtn.disabled = false;
+        aiSendBtn.innerHTML = STOP_ICON;
+        aiSendBtn.classList.remove('send-btn');
+        aiSendBtn.classList.add('stop-btn');
+      } else {
+        aiSendBtn.disabled = true;
+        aiSendBtn.innerHTML = SEND_ICON;
+        aiSendBtn.classList.remove('stop-btn');
+        aiSendBtn.classList.add('send-btn');
+      }
     }
   }
 
@@ -470,8 +490,13 @@ function createAiManager(options) {
       syncWebviewMargin();
     });
 
-    // 发送按钮
+    // 发送按钮（agent 模式下可切换为中断按钮）
     aiSendBtn.addEventListener('click', async () => {
+      if (currentMode === 'agent' && agentRunner.isProcessing()) {
+        agentRunner.abort();
+        setInputEnabled(true);
+        return;
+      }
       await chatHandler.handleAISend(aiInput, currentMode);
       updateContextPie();
     });

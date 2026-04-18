@@ -264,7 +264,10 @@ function getAiToolDefinitions() {
     },
     {
       name: 'end_session',
-      description: '当任务完成时调用此工具结束会话，必须通过 summary 参数提供最终总结信息',
+      description:
+        '【必须调用】当任务完成、用户问题已解答、或已获取到所需信息时，必须立即调用此工具结束会话。' +
+        '绝对不要在完成目标后继续获取信息或执行多余操作。' +
+        '必须通过 summary 参数提供最终总结信息，将直接展示给用户。',
       parameters: {
         type: 'object',
         properties: {

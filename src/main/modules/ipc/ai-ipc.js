@@ -14,6 +14,7 @@ function registerAiIpc(options) {
   } = options;
 
   const activeChatRequests = new Map(); // taskId -> ClientRequest
+  const activeAgentRequests = new Map(); // taskId -> ClientRequest
 
   ipcMain.handle('ai-chat', async (event, { messages, taskId }) => {
     const resolvedTaskId = taskId || `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -99,6 +100,15 @@ function registerAiIpc(options) {
     const resolvedTaskId = taskId || `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     try {
+      // 注册到活跃请求 Map，以便支持取消
+      let resolveAgentRequest = null;
+      const agentPromise = new Promise(resolve => {
+        resolveAgentRequest = resolve;
+      });
+      activeAgentRequests.set(resolvedTaskId, {
+        promise: agentPromise,
+        resolve: resolveAgentRequest
+      });
       const endpoint = store.get('settings.aiEndpoint', '');
       const apiKey = store.get('settings.aiApiKey', '');
       const requestType = store.get('settings.aiRequestType', 'openai-chat');
@@ -191,12 +201,37 @@ function registerAiIpc(options) {
         taskId: resolvedTaskId
       };
     } catch (error) {
+      if (error && error.message === 'Cancelled') {
+        activeAgentRequests.delete(resolvedTaskId);
+        return {
+          success: false,
+          cancelled: true,
+          taskId: resolvedTaskId
+        };
+      }
       console.error('AI agent error:', error);
       return {
         success: false,
         error: error.message || 'Agent请求失败',
         taskId: resolvedTaskId
       };
+    } finally {
+      activeAgentRequests.delete(resolvedTaskId);
+    }
+  });
+
+  // 取消 Agent 请求
+  ipcMain.on('cancel-ai-agent', (_event, { taskId }) => {
+    if (!taskId) return;
+    const req = activeAgentRequests.get(taskId);
+    if (!req) return;
+    activeAgentRequests.delete(taskId);
+    try {
+      if (req && typeof req.destroy === 'function') {
+        req.destroy(new Error('Cancelled'));
+      }
+    } catch (error) {
+      console.error('Cancel AI agent failed:', error);
     }
   });
 

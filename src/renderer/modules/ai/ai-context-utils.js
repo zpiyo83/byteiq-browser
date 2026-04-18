@@ -195,8 +195,18 @@ async function extractPageContent(webview) {
     return null;
   }
 
+  // 带超时的 Promise 包装，防止 executeJavaScript 永不 resolve 导致 UI 卡死
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms)
+      )
+    ]);
+  }
+
   try {
-    // 等待 webview 挂载到 DOM
+    // 等待 webview 挂载到 DOM（缩短超时避免长时间阻塞）
     if (!webview.isConnected) {
       const start = Date.now();
       await new Promise((resolve, reject) => {
@@ -206,7 +216,7 @@ async function extractPageContent(webview) {
             resolve();
             return;
           }
-          if (Date.now() - start > 100000) {
+          if (Date.now() - start > 5000) {
             clearInterval(timer);
             reject(new Error('Webview attach timeout'));
           }
@@ -216,19 +226,26 @@ async function extractPageContent(webview) {
 
     // 核心策略：不再试图预测 dom-ready，直接尝试 executeJavaScript，
     // 如果报 WebView 未就绪错误则延迟重试
-    const maxAttempts = 5;
-    const delays = [300, 500, 1000, 2000, 3000];
+    const maxAttempts = 3;
+    const delays = [300, 800, 1500];
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        const content = await webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT);
+        const content = await withTimeout(
+          webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT),
+          8000
+        );
         if (webview.dataset) {
           webview.dataset.domReady = 'true';
         }
         return content;
       } catch (error) {
-        if (isWebviewNotReadyError(error) && attempt < maxAttempts - 1) {
+        const msg = error && error.message ? String(error.message) : '';
+        if (
+          (isWebviewNotReadyError(error) || msg.includes('timed out')) &&
+          attempt < maxAttempts - 1
+        ) {
           console.warn(
-            `[ai-context-utils] extractPageContent attempt ${attempt + 1} not ready, ` +
+            `[ai-context-utils] extractPageContent attempt ${attempt + 1} failed, ` +
               `retrying in ${delays[attempt]}ms...`
           );
           await new Promise(r => setTimeout(r, delays[attempt]));
@@ -327,6 +344,16 @@ function buildSystemPrompt(options) {
     if (controlsSummary) {
       systemPrompt += '\n\n可交互元素:\n' + controlsSummary;
     }
+  }
+
+  // Agent 模式核心规则：必须使用 end_session 结束
+  if (mode === 'agent') {
+    systemPrompt +=
+      '\n\n[核心规则 - 必须遵守]\n' +
+      '1. 当用户的目标已达成、问题已解答、或所需信息已获取时，你必须立即调用 end_session 工具结束会话，并提供 summary 总结。\n' +
+      '2. 绝对不要在完成任务后继续获取页面信息或执行多余操作，这会浪费资源并打扰用户。\n' +
+      '3. 每次获取页面信息后，先判断是否已足够回答用户问题，如果足够则立即调用 end_session，而非继续获取更多信息。\n' +
+      '4. end_session 是你最重要的工具之一，忘记调用它是最常见的错误。';
   }
 
   // Agent任务状态追踪

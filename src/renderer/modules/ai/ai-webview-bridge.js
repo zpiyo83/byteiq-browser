@@ -132,7 +132,7 @@ async function waitForWebviewAfterInteraction(webview, options = {}) {
   }
 }
 
-function waitForWebviewAttached(webview, timeout = 100000) {
+function waitForWebviewAttached(webview, timeout = 10000) {
   if (!webview || webview.tagName !== 'WEBVIEW') {
     return Promise.reject(new Error('Invalid webview'));
   }
@@ -156,7 +156,7 @@ function waitForWebviewAttached(webview, timeout = 100000) {
   });
 }
 
-async function ensureWebviewDomReady(webview, timeout = 100000) {
+async function ensureWebviewDomReady(webview, timeout = 10000) {
   if (!webview || webview.tagName !== 'WEBVIEW') {
     throw new Error('Invalid webview');
   }

@@ -1,16 +1,22 @@
 function createAiTodoManager(options) {
-  const { store } = options;
+  const { store, getActiveSessionId } = options;
 
-  const STORE_KEY = 'ai.todoList';
+  const BASE_KEY = 'ai.todoList';
+
+  function getSessionKey() {
+    const sessionId = typeof getActiveSessionId === 'function' ? getActiveSessionId() : '';
+    return sessionId ? `${BASE_KEY}.${sessionId}` : BASE_KEY;
+  }
 
   function readTodos() {
-    const list = store ? store.get(STORE_KEY, []) : [];
+    const key = getSessionKey();
+    const list = store ? store.get(key, []) : [];
     return Array.isArray(list) ? list : [];
   }
 
   function writeTodos(list) {
     if (!store) return;
-    store.set(STORE_KEY, list);
+    store.set(getSessionKey(), list);
   }
 
   function generateId() {

@@ -36,7 +36,7 @@ function createAiToolsExecutor(options) {
     return webview;
   }
 
-  async function ensureTabActive(tabId, timeout = 100000) {
+  async function ensureTabActive(tabId, timeout = 10000) {
     if (!tabId) return { success: true };
     if (typeof switchTab === 'function' && getActiveTabId() !== tabId) {
       switchTab(tabId);
