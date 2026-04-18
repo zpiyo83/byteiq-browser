@@ -338,6 +338,11 @@ function createAiAgentRunner(options) {
   async function runAgentConversation(session, userText) {
     isAgentProcessing = true;
 
+    // 锁定 todoManager 的 session ID，避免 agent 运行期间标签页切换导致 session 变化
+    if (todoManager && typeof todoManager.lockSession === 'function') {
+      todoManager.lockSession(session.id);
+    }
+
     // 初始化任务状态
     if (typeof resetTaskState === 'function') resetTaskState();
     if (typeof updateTaskState === 'function') {
@@ -593,9 +598,9 @@ function createAiAgentRunner(options) {
 
       try {
         const result = await sendAgentRequest(agentMessageHistory, aiMsgElement);
-        finishStreamingMessage(aiMsgElement);
 
         if (!result?.success) {
+          finishStreamingMessage(aiMsgElement);
           throw new Error(result?.error || 'Agent request failed');
         }
 
@@ -649,16 +654,31 @@ function createAiAgentRunner(options) {
           // 重置纯文本回复计数器和历史消息集合，因为AI调用了工具
           textOnlyCount = 0;
           previousMessages.clear();
-          // 渲染思考内容和正文
-          const fullText = result.reasoningContent
-            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
-            : result.content || '';
-          if (fullText) {
+
+          // 流式监听器已经把 AI 的思考+文字渲染到 aiMsgElement
+          // 只需完成流式状态，不再用 updateStreamingMessage 覆盖（会导致 AI 说话内容丢失）
+          // 如果 AI 没有通过流式渲染任何内容（content 为空且无思考），补充渲染
+          const hasStreamedContent =
+            aiMsgElement.querySelector('.message-content') ||
+            aiMsgElement.querySelector('.think-dropdown');
+          if (hasStreamedContent) {
+            // 流式已渲染内容，只需完成流式状态
+            finishStreamingMessage(aiMsgElement);
+          } else if (result.content || result.reasoningContent) {
+            // 无流式内容但有结果内容，补充渲染
+            const fullText = result.reasoningContent
+              ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
+              : result.content || '';
             updateStreamingMessage(aiMsgElement, fullText);
             finishStreamingMessage(aiMsgElement);
+          } else {
+            // 无内容，移除空的消息元素
+            if (aiMsgElement.parentNode) {
+              aiMsgElement.parentNode.removeChild(aiMsgElement);
+            }
           }
 
-          if (typeof autoCollapseThinkingDropdown === 'function') {
+          if (typeof autoCollapseThinkingDropdown === 'function' && hasStreamedContent) {
             autoCollapseThinkingDropdown(aiMsgElement);
           }
 
@@ -843,6 +863,11 @@ function createAiAgentRunner(options) {
     }
 
     isAgentProcessing = false;
+
+    // 解锁 todoManager 的 session ID
+    if (todoManager && typeof todoManager.unlockSession === 'function') {
+      todoManager.unlockSession();
+    }
   }
 
   function abort() {
@@ -852,6 +877,11 @@ function createAiAgentRunner(options) {
       ipcRenderer.send('cancel-ai-agent', { taskId: agentStreamingTaskId });
     }
     isAgentProcessing = false;
+
+    // 解锁 todoManager 的 session ID
+    if (todoManager && typeof todoManager.unlockSession === 'function') {
+      todoManager.unlockSession();
+    }
   }
 
   return {

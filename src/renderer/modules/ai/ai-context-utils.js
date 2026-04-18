@@ -349,6 +349,18 @@ function buildSystemPrompt(options) {
   // Agent 模式核心规则：必须使用 end_session 结束
   if (mode === 'agent') {
     systemPrompt +=
+      '\n\n[待办项管理策略]\n' +
+      '如果用户提到任务、需要做某事或需要跟踪工作进度，使用以下工具策略：\n' +
+      '• 开始任何复杂工作前：调用 list_todos("pending") 查看现有待办\n' +
+      '• 识别到新任务：调用 add_todo(title, priority) 添加待办（low/medium/high）\n' +
+      '• 完成任务步骤：调用 complete_todo(id) 标记完成（必须从 list_todos 提取 ID）\n' +
+      '• 用户取消任务：调用 remove_todo(id) 删除待办（不可恢复，需谨慎）\n' +
+      '• 确认状态：完成任务后调用 list_todos("pending") 再次确认\n' +
+      '【标题规范】使用清晰的行动词，如「阅读XX文档」「完成XX代码」。\n' +
+      '【优先级】high=紧急/有期限，medium=常规任务（默认），low=可选/优化。\n' +
+      '【最佳实践】多步骤任务要逐步添加待办项，每完成一步立即标记，保持列表实时同步。';
+
+    systemPrompt +=
       '\n\n[核心规则 - 必须遵守]\n' +
       '1. 当用户的目标已达成、问题已解答、或所需信息已获取时，你必须立即调用 end_session 工具结束会话，并提供 summary 总结。\n' +
       '2. 绝对不要在完成任务后继续获取页面信息或执行多余操作，这会浪费资源并打扰用户。\n' +

@@ -171,18 +171,23 @@ function getAiToolDefinitions() {
     {
       name: 'add_todo',
       description:
-        '添加一个新的待办项到To do列表。当用户提到任务、计划、要做的事、待办、提醒时必须调用此工具。执行多步骤任务时，应将每个步骤拆分为待办项。',
+        '【核心工具】添加待办项。' +
+        '【触发场景】用户说"要做..."、"需要..."、"记得..."、"有个任务..."；或执行多步骤工作时，拆分每个步骤为独立待办项；' +
+        '【优先级】high=紧急/截止期限/用户强调; medium=常规任务(默认); low=可选/优化项。' +
+        '【最佳实践】复杂任务前先 list_todos → 逐步 add_todo → complete_todo标记完成。' +
+        '【标题规范】使用清晰的行动词：「阅读XX文档」「完成XX代码」而不是「XX相关」。',
       parameters: {
         type: 'object',
         properties: {
           title: {
             type: 'string',
-            description: '待办项的标题/内容'
+            description: '待办项标题（清晰的行动项，≤200字）',
+            maxLength: 200
           },
           priority: {
             type: 'string',
             enum: ['low', 'medium', 'high'],
-            description: '优先级：low(低)、medium(中)、high(高)，默认为medium'
+            description: 'high=紧急/有期限; medium=常规(默认); low=可选'
           }
         },
         required: ['title']
@@ -200,14 +205,18 @@ function getAiToolDefinitions() {
     {
       name: 'list_todos',
       description:
-        '显示所有待办项，可选按优先级或完成状态筛选。当用户询问待办列表、任务进度、还有什么没做时必须调用。每次开始新任务前也应调用此工具查看现有待办。',
+        '【必用工具】显示待办项列表，支持筛选（pending/completed/all）。' +
+        '【何时调用】用户问"还有什么要做"、"任务进度"、"还剩什么"；或执行复杂任务前检查现有待办；或完成待办后确认状态。' +
+        '【默认模式】filter=pending（推荐，仅显示未完成）；定期调用 all 保持全局同步。' +
+        '【ID提取】结果中 {id:xxx} 是后续调用 complete_todo/remove_todo 的唯一参数。' +
+        '【最佳实践】开始任何复杂工作前必须先 list_todos("pending")，完成任务后再确认一次。',
       parameters: {
         type: 'object',
         properties: {
           filter: {
             type: 'string',
             enum: ['all', 'pending', 'completed'],
-            description: '筛选条件：all(全部)、pending(未完成)、completed(已完成)，默认为pending'
+            description: 'pending=未完成(推荐); all=全部; completed=已完成'
           }
         }
       },
@@ -220,13 +229,18 @@ function getAiToolDefinitions() {
     {
       name: 'complete_todo',
       description:
-        '标记待办项为已完成。当某个待办项对应的任务步骤已经执行完毕时，必须调用此工具将其标记为完成。',
+        '【关键工具】标记待办项已完成。' +
+        '【何时调用】任务步骤成功执行完毕且获得明确反馈后立即调用。' +
+        '【获取ID】必须从 list_todos 结果中的 {id:xxx} 准确复制（否则操作失败）。' +
+        '【操作流程】1.执行任务 → 2.验证成功 → 3.complete_todo(id) → 4.list_todos确认。' +
+        '【注意】不要在任务完成前调用；已完成项会自动从 pending 视图消失。',
       parameters: {
         type: 'object',
         properties: {
           todo_id: {
             type: 'string',
-            description: '待办项的ID'
+            description:
+              '待办项的 ID（从 list_todos 结果中的 {id:xxx} 提取，格式如 todo-1234567890-abcdefgh）'
           }
         },
         required: ['todo_id']
@@ -242,13 +256,18 @@ function getAiToolDefinitions() {
     },
     {
       name: 'remove_todo',
-      description: '从To do列表中删除一个待办项。当用户要求删除、取消某个待办项时调用。',
+      description:
+        '【谨慎工具】删除待办项（不可恢复）。' +
+        '【何时调用】仅当用户明确说"删除"、"取消"、"不需要"、"废弃"这个待办时调用。' +
+        '【重要区分】已完成的项应用 complete_todo，不用 remove_todo。' +
+        '【获取ID】从 list_todos 结果中的 {id:xxx} 提取。' +
+        '【建议】删除前建议询问确认（"确定要删除xxx吗？"），以免误删。',
       parameters: {
         type: 'object',
         properties: {
           todo_id: {
             type: 'string',
-            description: '待办项的ID'
+            description: '待办项的 ID（从 list_todos 结果中的 {id:xxx} 提取）'
           }
         },
         required: ['todo_id']
@@ -262,6 +281,7 @@ function getAiToolDefinitions() {
         return result;
       }
     },
+
     {
       name: 'end_session',
       description:
