@@ -1,6 +1,6 @@
 /**
  * AI 历史会话面板
- * 支持：日期分组、搜索、相对时间、消息预览、软删除+恢复
+ * 支持：日期分组、搜索、相对时间、消息预览、永久删除
  */
 
 function createAiHistoryUI(options) {
@@ -183,21 +183,7 @@ function createAiHistoryUI(options) {
         const actions = documentRef.createElement('div');
         actions.className = 'ai-history-item-actions';
 
-        if (session.deleted) {
-          // 已删除：恢复按钮
-          const restoreBtn = documentRef.createElement('button');
-          restoreBtn.className = 'ai-history-item-action restore';
-          restoreBtn.title = t('ai.restoreSession') || '恢复会话';
-          restoreBtn.textContent = '↩';
-          restoreBtn.addEventListener('click', async e => {
-            e.stopPropagation();
-            await historyStorage.restoreSession(session.id);
-            await renderSessionsList();
-          });
-          actions.appendChild(restoreBtn);
-        }
-
-        // 删除按钮
+        // 删除按钮：直接永久删除
         const deleteBtn = documentRef.createElement('button');
         deleteBtn.className = 'ai-history-item-action delete';
         deleteBtn.title = t('ai.deleteSession') || '删除会话';
@@ -209,25 +195,15 @@ function createAiHistoryUI(options) {
           '</svg>';
         deleteBtn.addEventListener('click', async e => {
           e.stopPropagation();
-          if (session.deleted) {
-            // 已删除则永久删除
-            await historyStorage.permanentlyDeleteSession(session.id);
-            unbindSessionFromAllTabs(session.id);
-            const tabId = getActiveTabId();
-            unbindSessionFromTab(tabId, session.id);
-            if (getActiveSessionId() === session.id) {
-              setActiveSessionId('');
-              const next = await getCurrentSession();
-              await renderSessionChat(next);
-            }
-          } else {
-            // 软删除
-            await historyStorage.deleteSession(session.id);
-            if (getActiveSessionId() === session.id) {
-              setActiveSessionId('');
-              const next = await getCurrentSession();
-              await renderSessionChat(next);
-            }
+          // 直接永久删除
+          await historyStorage.permanentlyDeleteSession(session.id);
+          unbindSessionFromAllTabs(session.id);
+          const tabId = getActiveTabId();
+          unbindSessionFromTab(tabId, session.id);
+          if (getActiveSessionId() === session.id) {
+            setActiveSessionId('');
+            const next = await getCurrentSession();
+            await renderSessionChat(next);
           }
           await renderSessionsList();
         });
