@@ -20,6 +20,8 @@ const { createAiPageContext } = require('../ai/ai-page-context');
 const { createAiChatHandler } = require('../ai/ai-chat-handler');
 const { createAiTodoManager } = require('../ai/ai-todo-manager');
 
+const path = require('path');
+
 function createAiManager(options) {
   const {
     aiChatArea,
@@ -182,10 +184,45 @@ function createAiManager(options) {
     getTodoManager: () => todoManager
   });
 
+  const BYTEIQ_LOGO_SRC = `file://${path.join(__dirname, '../../../../assets/img/byteiq.png')}`;
+
+  function pickRandomInviteText() {
+    const locale = store ? store.get('settings.language', 'zh-CN') : 'zh-CN';
+    const lang = (locale || '').toLowerCase();
+    const key = lang.startsWith('zh') ? 'ai.agentInvites.zh' : 'ai.agentInvites.en';
+    const list = t(key);
+    if (!Array.isArray(list) || list.length === 0) {
+      return t('ai.welcome');
+    }
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function renderAgentEmptyState() {
+    const wrapper = documentRef.createElement('div');
+    wrapper.className = 'ai-agent-empty-state';
+
+    const img = documentRef.createElement('img');
+    img.className = 'ai-agent-empty-logo';
+    img.alt = 'ByteIQ';
+    img.src = BYTEIQ_LOGO_SRC;
+
+    const text = documentRef.createElement('div');
+    text.className = 'ai-agent-empty-text';
+    text.textContent = pickRandomInviteText();
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(text);
+    return wrapper;
+  }
+
   const messageUI = createAiMessageUI({
     aiChatArea,
     documentRef,
-    t
+    t,
+    renderEmptyState: () => {
+      // 询问模式和代理模式现在共用同一套 Logo + 随机邀请词的设计
+      return renderAgentEmptyState();
+    }
   });
 
   const {
@@ -395,6 +432,9 @@ function createAiManager(options) {
     closeHistoryBtn,
     historyStorage,
     t,
+    renderEmptyState: () => {
+      return renderAgentEmptyState();
+    },
     getSortedSessions,
     getActiveSessionId,
     getCurrentSession,

@@ -12,6 +12,7 @@ function createAiHistoryUI(options) {
     closeHistoryBtn,
     historyStorage,
     t,
+    renderEmptyState,
     getSortedSessions,
     getActiveSessionId,
     getCurrentSession,
@@ -313,6 +314,13 @@ function createAiHistoryUI(options) {
     const messages = await historyStorage.getMessages(session.id, { limit: 1000 });
 
     if (!messages || messages.length === 0) {
+      if (typeof renderEmptyState === 'function') {
+        const el = renderEmptyState();
+        if (el) {
+          aiChatArea.appendChild(el);
+          return;
+        }
+      }
       const welcomeMsg = documentRef.createElement('div');
       welcomeMsg.className = 'chat-message ai welcome-message';
       welcomeMsg.innerHTML = `<div class="welcome-icon">✨</div><div class="welcome-text">${t('ai.welcome')}</div>`;

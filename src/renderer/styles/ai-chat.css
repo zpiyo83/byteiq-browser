@@ -9,6 +9,7 @@
     gap: 10px;
     min-height: 0;
     scrollbar-gutter: stable;
+    position: relative; /* 增加相对定位 */
 }
 
 /* 滚动条样式（浅色模式） */
@@ -172,6 +173,57 @@
     font-size: 13px;
     color: var(--ai-muted);
     line-height: 1.7;
+}
+
+.ai-agent-empty-state {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    gap: 16px;
+    pointer-events: none; /* 防止遮挡点击 */
+    animation: emptyStateFadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; /* 渐渐出现动画 */
+}
+
+@keyframes emptyStateFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -40%); /* 从略低的位置开始 */
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.ai-agent-empty-logo {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    filter: invert(1) brightness(0.2) drop-shadow(0 2px 4px rgba(0,0,0,0.1)); /* 亮色模式下：反转为黑色并降低亮度，增加阴影 */
+    opacity: 0.85;
+    transition: filter 0.3s ease;
+}
+
+/* 如果有深色模式类名，则恢复原样或增强对比度 */
+body.dark-mode .ai-agent-empty-logo,
+[data-theme="dark"] .ai-agent-empty-logo {
+    filter: invert(0) brightness(1.2) drop-shadow(0 4px 12px rgba(255,255,255,0.1));
+    opacity: 1;
+}
+
+.ai-agent-empty-text {
+    max-width: 92%;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ai-muted);
 }
 
 /* 流式消息样式 - Working 思考动画 */

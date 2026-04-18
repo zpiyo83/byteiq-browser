@@ -6,7 +6,7 @@ const { createStreamingThinkParser } = require('./ai-think-parser');
 const { renderMarkdownToElement } = require('./ai-markdown-renderer');
 
 function createAiMessageUI(options) {
-  const { aiChatArea, documentRef, t } = options;
+  const { aiChatArea, documentRef, t, renderEmptyState } = options;
 
   // 流式思考解析器实例映射
   const streamingParsers = new WeakMap();
@@ -235,6 +235,13 @@ function createAiMessageUI(options) {
    * 添加聊天消息到UI
    */
   function addChatMessage(text, sender, isStreaming = false) {
+    // 如果当前显示的是空状态，则在添加新消息前清空它
+    const emptyState = aiChatArea.querySelector('.ai-agent-empty-state');
+    const welcomeMessage = aiChatArea.querySelector('.welcome-message');
+    if (emptyState || welcomeMessage) {
+      aiChatArea.innerHTML = '';
+    }
+
     const msg = documentRef.createElement('div');
     msg.className = `chat-message ${sender}`;
     if (isStreaming) {
@@ -507,6 +514,13 @@ function createAiMessageUI(options) {
    */
   function clearChatArea() {
     aiChatArea.innerHTML = '';
+    if (typeof renderEmptyState === 'function') {
+      const el = renderEmptyState();
+      if (el) {
+        aiChatArea.appendChild(el);
+        return;
+      }
+    }
     const welcomeMsg = documentRef.createElement('div');
     welcomeMsg.className = 'chat-message ai welcome-message';
     welcomeMsg.innerHTML = `<div class="welcome-icon">✨</div><div class="welcome-text">${t('ai.welcome')}</div>`;

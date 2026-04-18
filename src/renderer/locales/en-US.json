@@ -231,6 +231,15 @@
     "send": "Send",
     "close": "Close",
     "welcome": "Hello! I'm Byteiq AI Assistant. I can help you summarize web pages, answer questions, or assist with browsing.",
+    "agentInvites": {
+      "en": [
+        "Tell me your goal — I'll plan the steps.",
+        "Give me a task. I'll handle the busywork.",
+        "What should we do next?",
+        "Drop your request here and I'll get started.",
+        "Need a summary, comparison, or translation? Pick one."
+      ]
+    },
     "systemPrompt": "You are a helpful AI assistant. You can help users summarize web content, answer questions, and provide information. Please respond in a clear and concise manner.",
     "pageContext": "Current page information",
     "contextLoaded": "Page loaded",
