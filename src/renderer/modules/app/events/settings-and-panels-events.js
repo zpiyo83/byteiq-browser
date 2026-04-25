@@ -27,6 +27,10 @@ function bindSettingsAndPanelEvents(options) {
     aiModelListSelect: options.aiModelListSelect,
     aiModelListStatus: options.aiModelListStatus,
     aiModelRefreshBtn: options.aiModelRefreshBtn,
+    aiModelCandidateInput: options.aiModelCandidateInput,
+    aiModelCandidateAddBtn: options.aiModelCandidateAddBtn,
+    aiModelCandidateAddFromListBtn: options.aiModelCandidateAddFromListBtn,
+    aiModelCandidatesContainer: options.aiModelCandidatesContainer,
     aiRequestTypeSelect: options.aiRequestTypeSelect,
     aiContextSizeInput: options.aiContextSizeInput,
     aiTimeoutInput: options.aiTimeoutInput,
@@ -164,6 +168,11 @@ function bindSettingsAndPanelEvents(options) {
           if (options.aiModelListSelect.options.length <= 1) {
             aiSettingsHelpers.setAiModelStatus(options.t('panels.settings.ai.waitingFetch'), '');
           }
+        }
+        if (options.aiModelCandidatesContainer) {
+          const models = store.get('settings.aiModelCandidates', []);
+          options.aiModelCandidatesContainer.textContent =
+            Array.isArray(models) && models.length > 0 ? models.join(' , ') : '（未添加）';
         }
         if (options.aiContextSizeInput) {
           const ctxSize = store.get('settings.aiContextSize', 8192);

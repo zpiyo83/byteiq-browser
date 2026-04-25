@@ -19,8 +19,10 @@ const { createAiAgentRunner } = require('../ai/ai-agent-runner');
 const { createAiPageContext } = require('../ai/ai-page-context');
 const { createAiChatHandler } = require('../ai/ai-chat-handler');
 const { createAiTodoManager } = require('../ai/ai-todo-manager');
+const { createAiToolbar } = require('../ai/ai-toolbar');
 
 const path = require('path');
+const fs = require('fs');
 
 function createAiManager(options) {
   const {
@@ -271,6 +273,28 @@ function createAiManager(options) {
   const modeSelect = documentRef.getElementById('ai-mode-select');
   let currentMode = 'ask'; // 'ask' 或 'agent'
 
+  let pendingAttachments = [];
+
+  function setCurrentMode(nextMode) {
+    if (!['ask', 'agent'].includes(nextMode)) return;
+    currentMode = nextMode;
+    if (modeSelect) {
+      modeSelect.value = nextMode;
+      modeSelect.style.display = 'none';
+    }
+    if (toolbar && typeof toolbar.closeAllMenus === 'function') {
+      toolbar.closeAllMenus();
+    }
+    if (currentMode === 'agent') {
+      contextBar.style.display = 'none';
+      return;
+    }
+    (async () => {
+      const session = await getCurrentSession();
+      updateContextBar(session?.pageContext);
+    })();
+  }
+
   // Agent任务状态追踪
   let taskState = null;
 
@@ -287,16 +311,22 @@ function createAiManager(options) {
 
   // 模式切换事件监听
   if (modeSelect) {
+    modeSelect.style.display = 'none';
     modeSelect.addEventListener('change', async e => {
-      currentMode = e.target.value;
-      if (currentMode === 'agent') {
-        contextBar.style.display = 'none';
-        return;
-      }
-      const session = await getCurrentSession();
-      updateContextBar(session?.pageContext);
+      setCurrentMode(e.target.value);
     });
   }
+
+  const toolbar = createAiToolbar({
+    documentRef,
+    getCurrentMode: () => currentMode,
+    setCurrentMode,
+    showToast,
+    store,
+    onFilesSelected: files => {
+      pendingAttachments = files || [];
+    }
+  });
 
   function getPageListSnapshot() {
     if (!tabManager || typeof tabManager.getTabsSnapshot !== 'function') {
@@ -537,6 +567,11 @@ function createAiManager(options) {
         setInputEnabled(true);
         return;
       }
+      if (pendingAttachments.length > 0) {
+        const enriched = buildAttachmentPrompt(pendingAttachments, aiInput.value);
+        aiInput.value = enriched;
+        pendingAttachments = [];
+      }
       await chatHandler.handleAISend(aiInput, currentMode);
       updateContextPie();
     });
@@ -546,6 +581,11 @@ function createAiManager(options) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         (async () => {
+          if (pendingAttachments.length > 0) {
+            const enriched = buildAttachmentPrompt(pendingAttachments, aiInput.value);
+            aiInput.value = enriched;
+            pendingAttachments = [];
+          }
           await chatHandler.handleAISend(aiInput, currentMode);
           updateContextPie();
         })();
@@ -569,6 +609,8 @@ function createAiManager(options) {
     }
 
     bindHistoryPanelEvents();
+
+    toolbar.init();
 
     bindAiSidebarResize({
       documentRef,
@@ -608,6 +650,46 @@ function createAiManager(options) {
     onPageChanged: (tabId, url) => pageContext.onPageChanged(tabId, url, currentMode),
     clearTabConversation
   };
+}
+
+function buildAttachmentPrompt(files, userText) {
+  const safeText = (userText || '').trim();
+  const list = Array.isArray(files) ? files : [];
+
+  const lines = [];
+  lines.push('【附件】');
+
+  for (const file of list) {
+    if (!file) continue;
+    const name = file.name || 'unknown';
+    const filePath = file.path || '';
+    const size = typeof file.size === 'number' ? file.size : 0;
+    lines.push(`- ${name}${size ? ` (${Math.round(size / 1024)}KB)` : ''}`);
+
+    const isTextLike =
+      (file.type && file.type.startsWith('text/')) ||
+      /\.(md|txt|json|js|ts|css|html|xml|yaml|yml|csv)$/i.test(name);
+
+    if (filePath && isTextLike && size > 0 && size <= 200 * 1024) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const snippet = content.length > 2000 ? `${content.slice(0, 2000)}\n...` : content;
+        lines.push('```');
+        lines.push(snippet);
+        lines.push('```');
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  if (safeText) {
+    lines.push('');
+    lines.push('【问题】');
+    lines.push(safeText);
+  }
+
+  return lines.join('\n');
 }
 
 module.exports = {

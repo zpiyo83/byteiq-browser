@@ -259,6 +259,22 @@
                         <summary data-i18n="panels.settings.ai.advancedOptions">高级选项</summary>
                         <div class="setting-item">
                             <div class="setting-info">
+                                <label>模型候选列表</label>
+                                <div class="setting-desc">用于聊天面板模型下拉选择</div>
+                            </div>
+                            <div class="setting-controls column">
+                                <div class="model-list-actions">
+                                    <input type="text" id="ai-model-candidate-input" placeholder="例如：gpt-4.1-mini">
+                                    <button id="ai-model-candidate-add-btn" class="setting-action-btn">添加</button>
+                                </div>
+                                <div class="model-list-actions">
+                                    <button id="ai-model-candidate-add-from-list-btn" class="setting-action-btn">从已获取列表添加</button>
+                                </div>
+                                <div id="ai-model-candidates" class="model-list-status"></div>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
                                 <label data-i18n="panels.settings.ai.requestTimeout">请求超时时间（秒）</label>
                                 <div class="setting-desc" data-i18n="panels.settings.ai.requestTimeoutDesc">等待API响应的最大时间</div>
                             </div>

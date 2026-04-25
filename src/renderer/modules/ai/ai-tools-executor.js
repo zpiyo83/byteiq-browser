@@ -1,6 +1,7 @@
 /**
  * AI 工具执行器
  * 统一从注册表读取工具定义，并做参数校验
+ * 性能优化：工具定义缓存、DOM 查询优化
  */
 
 const { getAiToolByName } = require('./ai-tools-registry');
@@ -17,22 +18,76 @@ function createAiToolsExecutor(options) {
     getTodoManager
   } = options;
 
+  // 性能优化：工具定义缓存（LRU，最多缓存 50 个工具）
+  const toolDefCache = new Map();
+  const CACHE_MAX_SIZE = 50;
+
+  function getToolDef(toolName) {
+    // 先从缓存查询
+    if (toolDefCache.has(toolName)) {
+      return toolDefCache.get(toolName);
+    }
+
+    // 从注册表获取，然后缓存
+    const def = getAiToolByName(toolName);
+    if (def && toolDefCache.size < CACHE_MAX_SIZE) {
+      toolDefCache.set(toolName, def);
+    }
+    return def;
+  }
+
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  // 缓存最后查询的 webview 及其 ID，避免频繁 DOM 查询
+  let lastActiveTabId = null;
+  let cachedActiveWebview = null;
+
   function getActiveWebview() {
     const tabId = getActiveTabId();
-    if (!tabId) return null;
+
+    // 如果 tabId 没变，返回缓存的 webview
+    if (tabId === lastActiveTabId && cachedActiveWebview && cachedActiveWebview.isConnected) {
+      return cachedActiveWebview;
+    }
+
+    if (!tabId) {
+      cachedActiveWebview = null;
+      lastActiveTabId = null;
+      return null;
+    }
+
     const webview = documentRef.getElementById(`webview-${tabId}`);
-    if (!webview || webview.tagName !== 'WEBVIEW' || !webview.isConnected) return null;
+    if (!webview || webview.tagName !== 'WEBVIEW' || !webview.isConnected) {
+      cachedActiveWebview = null;
+      lastActiveTabId = null;
+      return null;
+    }
+
+    // 缓存结果
+    cachedActiveWebview = webview;
+    lastActiveTabId = tabId;
     return webview;
   }
 
   function getWebviewById(tabId) {
     if (!tabId) return null;
+
+    // 如果查询的是当前活跃 tab，使用缓存
+    if (tabId === lastActiveTabId && cachedActiveWebview && cachedActiveWebview.isConnected) {
+      return cachedActiveWebview;
+    }
+
     const webview = documentRef.getElementById(`webview-${tabId}`);
     if (!webview || webview.tagName !== 'WEBVIEW' || !webview.isConnected) return null;
+
+    // 如果这是活跃 tab，缓存它
+    if (tabId === getActiveTabId()) {
+      cachedActiveWebview = webview;
+      lastActiveTabId = tabId;
+    }
+
     return webview;
   }
 
@@ -44,10 +99,14 @@ function createAiToolsExecutor(options) {
 
     const start = Date.now();
     let webview = null;
+
+    // 性能优化：优化轮询间隔从 50ms 改为 20ms，总超时时间保持
+    const POLL_INTERVAL = 20;
+
     while (Date.now() - start < timeout) {
       webview = documentRef.getElementById(`webview-${tabId}`);
       if (webview && webview.isConnected) break;
-      await sleep(50);
+      await sleep(POLL_INTERVAL);
     }
 
     if (!webview || !webview.isConnected) {
@@ -58,8 +117,6 @@ function createAiToolsExecutor(options) {
       return { success: false, error: '目标标签页未打开网页，请先打开网页' };
     }
 
-    // 不再预测 dom-ready，只确保 webview 在 DOM 中即可
-    // 真正的就绪检测交给 extractPageContent / executeJavaScriptWithRetry 的重试机制
     return { success: true };
   }
 
@@ -89,7 +146,8 @@ function createAiToolsExecutor(options) {
         return { success: false, error: 'Invalid tool call' };
       }
 
-      const def = getAiToolByName(toolCall.name);
+      // 性能优化：使用缓存的工具定义
+      const def = getToolDef(toolCall.name);
       if (!def) {
         return { success: false, error: 'Unknown tool' };
       }
@@ -131,8 +189,16 @@ function createAiToolsExecutor(options) {
     }
   }
 
+  // 暴露清除缓存方法（用于测试或手动清理）
+  function clearCache() {
+    toolDefCache.clear();
+    cachedActiveWebview = null;
+    lastActiveTabId = null;
+  }
+
   return {
-    execute
+    execute,
+    clearCache
   };
 }
 

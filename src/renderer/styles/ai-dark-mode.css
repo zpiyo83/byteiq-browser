@@ -274,6 +274,38 @@
     border-top-color: transparent;
 }
 
+/* 深色模式 - 输入条 */
+.dark-mode .ai-input-bar {
+    background: var(--ai-surface);
+}
+
+.dark-mode .ai-input-chip {
+    color: var(--ai-muted);
+}
+
+.dark-mode .ai-input-chip:hover {
+    background: var(--ai-surface-soft);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-input-field input {
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-input-field input::placeholder {
+    color: var(--ai-muted);
+}
+
+.dark-mode #ai-send-btn {
+    background: var(--ai-surface-soft);
+    color: var(--ai-muted);
+}
+
+.dark-mode #ai-send-btn:hover:not(:disabled) {
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent);
+}
+
 /* Dark mode - Export AI dialog */
 .dark-mode .export-ai-dialog {
     background: var(--ai-surface-alt);

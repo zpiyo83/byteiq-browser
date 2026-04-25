@@ -16,6 +16,10 @@ function bindAiSettingsEvents(deps) {
     aiModelListSelect,
     aiModelListStatus,
     aiModelRefreshBtn,
+    aiModelCandidateInput,
+    aiModelCandidateAddBtn,
+    aiModelCandidateAddFromListBtn,
+    aiModelCandidatesContainer,
     aiRequestTypeSelect,
     aiContextSizeInput,
     aiTimeoutInput,
@@ -38,6 +42,27 @@ function bindAiSettingsEvents(deps) {
   } = deps;
 
   const document = deps.documentRef;
+
+  function getCandidateModels() {
+    const list = store.get('settings.aiModelCandidates', []);
+    return Array.isArray(list) ? list : [];
+  }
+
+  function setCandidateModels(list) {
+    const next = Array.from(new Set((Array.isArray(list) ? list : []).filter(Boolean)));
+    store.set('settings.aiModelCandidates', next);
+    renderCandidateModels();
+  }
+
+  function renderCandidateModels() {
+    if (!aiModelCandidatesContainer) return;
+    const models = getCandidateModels();
+    if (models.length === 0) {
+      aiModelCandidatesContainer.textContent = '（未添加）';
+      return;
+    }
+    aiModelCandidatesContainer.textContent = models.join(' , ');
+  }
 
   function setAiModelStatus(text, state) {
     if (!aiModelListStatus) return;
@@ -171,6 +196,27 @@ function bindAiSettingsEvents(deps) {
   if (aiModelRefreshBtn) {
     aiModelRefreshBtn.addEventListener('click', () => {
       refreshAiModelList();
+    });
+  }
+
+  if (aiModelCandidateAddBtn && aiModelCandidateInput) {
+    aiModelCandidateAddBtn.addEventListener('click', () => {
+      const value = aiModelCandidateInput.value.trim();
+      if (!value) return;
+      const models = getCandidateModels();
+      models.push(value);
+      setCandidateModels(models);
+      aiModelCandidateInput.value = '';
+    });
+  }
+
+  if (aiModelCandidateAddFromListBtn && aiModelListSelect) {
+    aiModelCandidateAddFromListBtn.addEventListener('click', () => {
+      const value = aiModelListSelect.value;
+      if (!value) return;
+      const models = getCandidateModels();
+      models.push(value);
+      setCandidateModels(models);
     });
   }
 

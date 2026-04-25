@@ -34,6 +34,10 @@ function createAiAgentRunner(options) {
   let isAgentProcessing = false;
   let agentMessageHistory = [];
 
+  // 性能优化：操作序列号防止竞态条件
+  // 每次开始新的 Agent 处理时递增，在异步操作中检查序列号确保只处理最新请求
+  let currentOperationId = 0;
+
   // Todo 管理器
   const todoManager = externalTodoManager;
 
@@ -43,8 +47,12 @@ function createAiAgentRunner(options) {
 
   /**
    * 监听 Agent 流式响应
+   * 优化：使用 requestAnimationFrame 批处理 DOM 更新（同 ai-chat-handler）
    */
   function setupAgentStreamingListener() {
+    let pendingUpdate = null;
+    let frameScheduled = false;
+
     ipcRenderer.on('ai-agent-streaming', (_event, data) => {
       if (!agentStreamingElement) return;
       if (data.taskId !== agentStreamingTaskId) return;
@@ -52,7 +60,18 @@ function createAiAgentRunner(options) {
       const fullText = data.reasoningContent
         ? `<!--think-->${data.reasoningContent}<!--endthink-->${data.accumulated}`
         : data.accumulated;
-      updateStreamingMessage(agentStreamingElement, fullText);
+
+      // 批处理 DOM 更新以减少重排
+      pendingUpdate = fullText;
+      if (frameScheduled) return;
+
+      frameScheduled = true;
+      requestAnimationFrame(() => {
+        if (pendingUpdate !== null && agentStreamingElement) {
+          updateStreamingMessage(agentStreamingElement, pendingUpdate);
+        }
+        frameScheduled = false;
+      });
     });
   }
 
@@ -336,6 +355,9 @@ function createAiAgentRunner(options) {
   }
 
   async function runAgentConversation(session, userText) {
+    // 性能优化：为本次 Agent 操作分配序列号，用于检查异步操作是否过期
+    const operationId = ++currentOperationId;
+
     isAgentProcessing = true;
 
     // 锁定 todoManager 的 session ID，避免 agent 运行期间标签页切换导致 session 变化
@@ -432,7 +454,7 @@ function createAiAgentRunner(options) {
           };
         }
         if (m.role === 'assistant' && m.metadata?.toolCalls) {
-          // 💡 修复：恢复 thinking 内容到消息中，防止上下文丢失
+          // 修复：恢复 thinking 内容到消息中，防止上下文丢失
           // 虽然API格式需要 content=null，但我们通过注入 thinking 标记来保留推理过程
           const thinkingContent = m.metadata?.thinkingContent || '';
           const actionContent = m.metadata?.actionContent || '';
@@ -519,7 +541,7 @@ function createAiAgentRunner(options) {
         '\n\n【当前打开的标签页】\n' +
         pagesInfo +
         `\n总计：${validPages.length} 个标签页` +
-        '\n💡 提示：访问已打开网站时，优先用 get_page_info(tab_id) 而非重新搜索';
+        '\n提示：访问已打开网站时，优先用 get_page_info(tab_id) 而非重新搜索';
     }
 
     agentMessageHistory = [

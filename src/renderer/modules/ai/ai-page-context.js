@@ -4,6 +4,7 @@
  */
 
 const { extractPageContent, extractAndSetPageContext } = require('./ai-context-utils');
+const sidebarEvents = require('./ai-sidebar-events');
 
 /**
  * 创建页面上下文管理器
@@ -28,6 +29,10 @@ function createAiPageContext(deps) {
 
   // 当前页面信息缓存
   let lastKnownPageInfo = null;
+
+  // 内容提取防抖定时器
+  let extractDebounceTimer = null;
+  const EXTRACT_DEBOUNCE_MS = 800;
 
   /**
    * 获取当前页面实时信息（轻量级，不提取完整内容）
@@ -82,25 +87,41 @@ function createAiPageContext(deps) {
       setTimeout(() => pageStatusBar.classList.remove('changed'), 600);
     }
 
-    // Ask模式：自动更新session的pageContext（延迟提取，避免阻塞导航）
+    // Ask模式：防抖提取页面上下文，避免频繁触发阻塞主线程
     if (currentMode !== 'agent') {
-      const webview = documentRef.getElementById(`webview-${tabId}`);
-      let isReady = false;
-      try {
-        isReady = webview && webview.tagName === 'WEBVIEW' && !webview.isLoading();
-      } catch {
-        // webview 尚未 dom-ready
+      // 清除上一次防抖定时器
+      if (extractDebounceTimer) {
+        clearTimeout(extractDebounceTimer);
+        extractDebounceTimer = null;
       }
-      if (isReady) {
-        extractAndSetPageContext({
-          webview,
-          getCurrentSession,
-          updateSession,
-          updateContextBar,
-          renderSessionsList,
-          extractPageContentFn: extractPageContent
-        }).catch(err => console.error('Auto-extract page context failed:', err));
-      }
+
+      extractDebounceTimer = setTimeout(() => {
+        extractDebounceTimer = null;
+
+        // 拖动期间跳过内容提取，避免与拖动动画竞争主线程
+        const isResizing = sidebarEvents._sidebarResizingGetter
+          ? sidebarEvents._sidebarResizingGetter()
+          : false;
+        if (isResizing) return;
+
+        const webview = documentRef.getElementById(`webview-${tabId}`);
+        let isReady = false;
+        try {
+          isReady = webview && webview.tagName === 'WEBVIEW' && !webview.isLoading();
+        } catch {
+          // webview 尚未 dom-ready
+        }
+        if (isReady) {
+          extractAndSetPageContext({
+            webview,
+            getCurrentSession,
+            updateSession,
+            updateContextBar,
+            renderSessionsList,
+            extractPageContentFn: extractPageContent
+          }).catch(err => console.error('Auto-extract page context failed:', err));
+        }
+      }, EXTRACT_DEBOUNCE_MS);
     }
   }
 

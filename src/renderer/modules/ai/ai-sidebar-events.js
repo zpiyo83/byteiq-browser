@@ -9,6 +9,11 @@ function bindAiSidebarResize(options) {
   const webviewsContainer = documentRef.getElementById('webviews-container');
 
   let isResizing = false;
+
+  // 暴露拖动状态查询接口，供外部判断是否正在拖动
+  function getIsResizing() {
+    return isResizing;
+  }
   let startX = 0;
   let startWidth = 0;
   let rafId = null;
@@ -22,6 +27,24 @@ function bindAiSidebarResize(options) {
 
   const MIN_WIDTH = 280;
   const MAX_WIDTH = 900;
+  const DEFAULT_WIDTH = 360;
+  const STORAGE_KEY = 'byteiq.aiSidebarWidth';
+
+  // 恢复用户保存的宽度
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved && !aiSidebar.classList.contains('collapsed')) {
+      const w = parseInt(saved, 10);
+      if (!Number.isNaN(w) && w >= MIN_WIDTH && w <= MAX_WIDTH) {
+        aiSidebar.style.width = `${w}px`;
+        if (webviewsContainer) {
+          webviewsContainer.style.marginRight = `${w}px`;
+        }
+      }
+    }
+  } catch {
+    // localStorage 可能不可用，静默忽略
+  }
 
   const applyWidth = () => {
     if (pendingWidth !== null) {
@@ -49,6 +72,29 @@ function bindAiSidebarResize(options) {
     }
   };
 
+  // 文档级事件处理器（在 startResize 前定义以确保可引用）
+  const onMouseMove = e => {
+    handleMove(e.clientX);
+  };
+
+  const onMouseUp = () => {
+    stopResize();
+  };
+
+  const onMouseLeave = () => {
+    stopResize();
+  };
+
+  const onTouchMove = e => {
+    if (e.touches.length === 1) {
+      handleMove(e.touches[0].clientX);
+    }
+  };
+
+  const onTouchEnd = () => {
+    stopResize();
+  };
+
   const startResize = (clientX, event) => {
     if (event) {
       event.preventDefault();
@@ -71,6 +117,16 @@ function bindAiSidebarResize(options) {
     // 拖动时禁用侧边栏过渡，避免延迟
     if (webviewsContainer) {
       webviewsContainer.style.transition = 'none';
+    }
+
+    // 动态绑定 document 级事件，仅在拖动期间监听
+    documentRef.addEventListener('mousemove', onMouseMove);
+    documentRef.addEventListener('mouseup', onMouseUp);
+    documentRef.addEventListener('touchmove', onTouchMove, { passive: false });
+    documentRef.addEventListener('touchend', onTouchEnd);
+    documentRef.addEventListener('touchcancel', onTouchEnd);
+    if (documentRef.documentElement) {
+      documentRef.documentElement.addEventListener('mouseleave', onMouseLeave);
     }
   };
 
@@ -99,6 +155,24 @@ function bindAiSidebarResize(options) {
     if (webviewsContainer) {
       webviewsContainer.style.transition = '';
     }
+
+    // 解绑 document 级事件
+    documentRef.removeEventListener('mousemove', onMouseMove);
+    documentRef.removeEventListener('mouseup', onMouseUp);
+    documentRef.removeEventListener('touchmove', onTouchMove, { passive: false });
+    documentRef.removeEventListener('touchend', onTouchEnd);
+    documentRef.removeEventListener('touchcancel', onTouchEnd);
+    if (documentRef.documentElement) {
+      documentRef.documentElement.removeEventListener('mouseleave', onMouseLeave);
+    }
+
+    // 持久化最终宽度
+    const finalWidth = aiSidebar.offsetWidth;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, String(finalWidth));
+    } catch {
+      // 静默忽略
+    }
   };
 
   // 鼠标事件
@@ -106,37 +180,35 @@ function bindAiSidebarResize(options) {
     startResize(e.clientX, e);
   });
 
-  const handleMouseMove = e => {
-    handleMove(e.clientX);
-  };
+  // 触摸事件支持（仅 start 绑定在 handle 上，move/end 在 document 上动态绑定）
+  resizeHandle.addEventListener(
+    'touchstart',
+    e => {
+      if (e.touches.length === 1) {
+        startResize(e.touches[0].clientX, e);
+      }
+    },
+    { passive: false }
+  );
 
-  // 触摸事件支持
-  const handleTouchStart = e => {
-    if (e.touches.length === 1) {
-      startResize(e.touches[0].clientX, e);
+  // 双击恢复默认宽度
+  resizeHandle.addEventListener('dblclick', () => {
+    aiSidebar.style.width = `${DEFAULT_WIDTH}px`;
+    if (webviewsContainer && !aiSidebar.classList.contains('collapsed')) {
+      webviewsContainer.style.marginRight = `${DEFAULT_WIDTH}px`;
     }
-  };
-
-  const handleTouchMove = e => {
-    if (e.touches.length === 1) {
-      handleMove(e.touches[0].clientX);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, String(DEFAULT_WIDTH));
+    } catch {
+      // 静默忽略
     }
-  };
-
-  const handleTouchEnd = () => {
-    stopResize();
-  };
-
-  resizeHandle.addEventListener('touchstart', handleTouchStart, { passive: false });
-  resizeHandle.addEventListener('touchmove', handleTouchMove, { passive: false });
-  resizeHandle.addEventListener('touchend', handleTouchEnd);
-  resizeHandle.addEventListener('touchcancel', handleTouchEnd);
-
-  documentRef.addEventListener('mousemove', handleMouseMove);
-  documentRef.addEventListener('mouseup', stopResize);
+  });
 
   // 防止窗口失焦时卡住
   window.addEventListener('blur', stopResize);
+
+  // 注册拖动状态查询接口到模块，供 ai-page-context 使用
+  module.exports._sidebarResizingGetter = getIsResizing;
 }
 
 function bindAskSelectionEvent(options) {
@@ -206,5 +278,7 @@ function bindAskSelectionEvent(options) {
 
 module.exports = {
   bindAiSidebarResize,
-  bindAskSelectionEvent
+  bindAskSelectionEvent,
+  // 全局拖动状态查询（由 bindAiSidebarResize 设置）
+  _sidebarResizingGetter: null
 };

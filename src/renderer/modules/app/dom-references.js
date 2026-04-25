@@ -54,6 +54,12 @@ function getDomReferences(documentRef) {
     aiModelRefreshBtn: documentRef.getElementById('ai-model-refresh-btn'),
     aiModelListSelect: documentRef.getElementById('ai-model-list-select'),
     aiModelListStatus: documentRef.getElementById('ai-model-list-status'),
+    aiModelCandidateInput: documentRef.getElementById('ai-model-candidate-input'),
+    aiModelCandidateAddBtn: documentRef.getElementById('ai-model-candidate-add-btn'),
+    aiModelCandidateAddFromListBtn: documentRef.getElementById(
+      'ai-model-candidate-add-from-list-btn'
+    ),
+    aiModelCandidatesContainer: documentRef.getElementById('ai-model-candidates'),
     aiContextSizeInput: documentRef.getElementById('ai-context-size-input'),
     aiTimeoutInput: documentRef.getElementById('ai-timeout-input'),
     translationApiEnabledToggle: documentRef.getElementById('translation-api-enabled-toggle'),

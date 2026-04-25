@@ -3,9 +3,8 @@
  */
 
 function createAiToolbar(options) {
-  const { documentRef, getCurrentMode, setCurrentMode, showToast, store } = options;
-
-  const currentMode = 'ask';
+  const { documentRef, getCurrentMode, setCurrentMode, showToast, store, onFilesSelected } =
+    options;
 
   // 获取UI元素
   const modeBtn = documentRef.getElementById('ai-mode-btn');
@@ -13,13 +12,21 @@ function createAiToolbar(options) {
   const modeMenu = documentRef.getElementById('ai-mode-menu');
 
   const modelBtn = documentRef.getElementById('ai-model-btn');
+  const modelLabel = documentRef.getElementById('ai-model-label');
   const modelMenu = documentRef.getElementById('ai-model-menu');
   const modelList = documentRef.getElementById('ai-model-list');
 
   const uploadBtn = documentRef.getElementById('ai-upload-btn');
   const fileInput = documentRef.getElementById('ai-file-input');
 
-  let currentModel = store?.get('settings.aiModel') || 'default';
+  function getStoredCandidateModels() {
+    const list = store ? store.get('settings.aiModelCandidates', []) : [];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function getStoredCurrentModel() {
+    return store ? store.get('settings.aiModelId', '') : '';
+  }
 
   /**
    * 初始化模式选择
@@ -72,6 +79,8 @@ function createAiToolbar(options) {
         openModelSettings();
       });
     }
+
+    updateModelButton();
   }
 
   /**
@@ -88,8 +97,9 @@ function createAiToolbar(options) {
       const files = Array.from(e.target.files || []);
       if (files.length === 0) return;
 
-      // TODO: 实现文件上传逻辑
-      console.warn('[ai-toolbar] 选中文件:', files);
+      if (typeof onFilesSelected === 'function') {
+        onFilesSelected(files);
+      }
       if (showToast) {
         showToast(`已选择 ${files.length} 个文件`, 'info');
       }
@@ -139,8 +149,40 @@ function createAiToolbar(options) {
    */
   function updateModeButton() {
     if (!modeLabel) return;
-    const mode = typeof getCurrentMode === 'function' ? getCurrentMode() : currentMode;
+    const mode = typeof getCurrentMode === 'function' ? getCurrentMode() : 'ask';
     modeLabel.textContent = mode === 'ask' ? 'Ask' : 'Agent';
+
+    // 更新菜单项的 active 状态
+    if (modeMenu) {
+      const items = modeMenu.querySelectorAll('.ai-menu-item');
+      items.forEach(item => {
+        if (item.dataset.mode === mode) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    // 更新图标：ask=聊天气泡，agent=机器人
+    if (modeBtn) {
+      const svgEl = modeBtn.querySelector('svg');
+      if (svgEl) {
+        if (mode === 'ask') {
+          svgEl.innerHTML =
+            '<path fill="currentColor" d="M20,2H4A2,2 0 0,0 2,4V22L6,18H20A2,2 0 0,0 22,16V4A2,2 0 0,0 20,2M20,16H5.17L4,17.17V4H20V16Z"/>';
+        } else {
+          svgEl.innerHTML =
+            '<path fill="currentColor" d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H14A7,7 0 0,1 21,14H22A1,1 0 0,1 23,15V18A1,1 0 0,1 22,19H21V20A2,2 0 0,1 19,22H5A2,2 0 0,1 3,20V19H2A1,1 0 0,1 1,18V15A1,1 0 0,1 2,14H3A7,7 0 0,1 10,7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M7.5,13A1.5,1.5 0 0,0 6,14.5A1.5,1.5 0 0,0 7.5,16A1.5,1.5 0 0,0 9,14.5A1.5,1.5 0 0,0 7.5,13M16.5,13A1.5,1.5 0 0,0 15,14.5A1.5,1.5 0 0,0 16.5,16A1.5,1.5 0 0,0 18,14.5A1.5,1.5 0 0,0 16.5,13Z"/>';
+        }
+      }
+    }
+  }
+
+  function updateModelButton() {
+    if (!modelLabel) return;
+    const model = getStoredCurrentModel();
+    modelLabel.textContent = model || 'Model';
   }
 
   /**
@@ -151,25 +193,21 @@ function createAiToolbar(options) {
 
     modelList.innerHTML = '';
 
-    // 从store获取模型列表
-    const models = store.get('settings.aiModelList') || [
-      { id: 'gpt-4', name: 'GPT-4' },
-      { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
-      { id: 'default', name: '默认模型' }
-    ];
+    const models = getStoredCandidateModels();
+    const currentModel = getStoredCurrentModel();
 
-    models.forEach(model => {
+    models.forEach(modelId => {
       const btn = documentRef.createElement('button');
       btn.className = 'ai-model-item';
-      btn.textContent = model.name;
+      btn.textContent = modelId;
 
-      if (model.id === currentModel) {
+      if (modelId === currentModel) {
         btn.classList.add('active');
       }
 
       btn.addEventListener('click', e => {
         e.stopPropagation();
-        selectModel(model.id);
+        selectModel(modelId);
         closeAllMenus();
       });
 
@@ -181,26 +219,25 @@ function createAiToolbar(options) {
    * 选择模型
    */
   function selectModel(modelId) {
-    currentModel = modelId;
     if (store) {
-      store.set('settings.aiModel', modelId);
-    }
-
-    if (showToast) {
-      showToast(`已选择模型: ${modelId}`, 'info');
+      store.set('settings.aiModelId', modelId);
     }
 
     loadModelList();
+    updateModelButton();
   }
 
   /**
    * 打开模型设置
    */
   function openModelSettings() {
-    // TODO: 打开模型设置对话框或面板
-    console.warn('[ai-toolbar] 打开模型设置');
+    const settingsBtn = documentRef.getElementById('settings-btn');
+    if (settingsBtn && typeof settingsBtn.click === 'function') {
+      settingsBtn.click();
+      return;
+    }
     if (showToast) {
-      showToast('打开模型设置 (功能开发中)', 'info');
+      showToast('请在设置中配置模型候选列表', 'info');
     }
   }
 
@@ -229,13 +266,15 @@ function createAiToolbar(options) {
     initModelSelector();
     initFileUpload();
     bindGlobalEvents();
+    updateModeButton();
+    updateModelButton();
   }
 
   return {
     init,
     switchMode,
     selectModel,
-    getCurrentMode: () => currentModel
+    closeAllMenus
   };
 }
 

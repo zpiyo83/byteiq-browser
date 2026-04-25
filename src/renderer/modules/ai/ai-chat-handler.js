@@ -32,8 +32,30 @@ function createAiChatHandler(deps) {
   let currentTaskId = null;
   let isStreaming = false;
 
+  // DOM 批处理优化：缓冲区和帧调度
+  let pendingUpdate = null;
+  let frameScheduled = false;
+
+  /**
+   * 在 requestAnimationFrame 中批处理 DOM 更新（性能优化）
+   * 每帧最多更新一次，避免频繁的 DOM 操作和重排
+   */
+  function scheduleStreamingUpdate(fullText) {
+    pendingUpdate = fullText;
+    if (frameScheduled) return; // 已经调度了，不需要重复调度
+
+    frameScheduled = true;
+    requestAnimationFrame(() => {
+      if (pendingUpdate !== null && currentStreamingElement && isStreaming) {
+        updateStreamingMessage(currentStreamingElement, pendingUpdate);
+      }
+      frameScheduled = false;
+    });
+  }
+
   /**
    * 监听流式响应
+   * 优化：使用 requestAnimationFrame 批处理 DOM 更新，避免频繁的重排
    */
   function setupStreamingListener() {
     ipcRenderer.on('ai-chat-streaming', (_event, data) => {
@@ -44,7 +66,9 @@ function createAiChatHandler(deps) {
       const fullText = data.reasoningContent
         ? `<!--think-->${data.reasoningContent}<!--endthink-->${data.accumulated}`
         : data.accumulated;
-      updateStreamingMessage(currentStreamingElement, fullText);
+
+      // 使用批处理来减少 DOM 操作频率
+      scheduleStreamingUpdate(fullText);
     });
   }
 
@@ -168,7 +192,7 @@ function createAiChatHandler(deps) {
             };
           }
           if (m.role === 'assistant' && m.metadata?.toolCalls) {
-            // 💡 修复：恢复 thinking 内容到消息中，防止上下文丢失
+            // 修复：恢复 thinking 内容到消息中，防止上下文丢失
             const thinkingContent = m.metadata?.thinkingContent || '';
             const actionContent = m.metadata?.actionContent || '';
             const recoveredContent = thinkingContent

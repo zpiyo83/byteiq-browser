@@ -165,6 +165,26 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
       toolCallsByIndex: new Map()
     };
 
+    // 性能优化：IPC 节流缓冲（每 50ms 发送一次）
+    let lastFlushText = '';
+    let lastFlushReasoningContent = '';
+    let throttleTimer = null;
+    const THROTTLE_INTERVAL = 50; // ms
+
+    function flushPendingText() {
+      if (onTextChunk && (state.text || state.reasoningContent)) {
+        onTextChunk(state.text, state.reasoningContent);
+        lastFlushText = state.text;
+        lastFlushReasoningContent = state.reasoningContent;
+      }
+      throttleTimer = null;
+    }
+
+    function scheduleTextFlush() {
+      if (throttleTimer) return;
+      throttleTimer = setTimeout(flushPendingText, THROTTLE_INTERVAL);
+    }
+
     const req = httpModule.request(options, res => {
       res.setEncoding('utf8');
       let buffer = '';
@@ -191,8 +211,13 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
               : trimmed.slice(5).trim();
             const payload = JSON.parse(jsonStr);
             parseChatCompletionsStreamEvent(payload, state);
-            if (onTextChunk && (state.text || state.reasoningContent)) {
-              onTextChunk(state.text, state.reasoningContent);
+
+            // 优化：收集新数据，定期批量发送 IPC 消息
+            if (
+              state.text !== lastFlushText ||
+              state.reasoningContent !== lastFlushReasoningContent
+            ) {
+              scheduleTextFlush();
             }
           } catch {
             continue;
@@ -201,6 +226,13 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
       });
 
       res.on('end', () => {
+        // 清理定时器并发送剩余的数据
+        if (throttleTimer) {
+          clearTimeout(throttleTimer);
+          throttleTimer = null;
+        }
+        flushPendingText(); // 确保发送最后的数据
+
         if (res.statusCode >= 200 && res.statusCode < 300) {
           if (buffer) {
             const trimmed = buffer.trim();
@@ -211,6 +243,7 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
                   : trimmed.slice(5).trim();
                 const payload = JSON.parse(jsonStr);
                 parseChatCompletionsStreamEvent(payload, state);
+                // 最后一块数据，直接发送
                 if (onTextChunk && (state.text || state.reasoningContent)) {
                   onTextChunk(state.text, state.reasoningContent);
                 }
@@ -229,8 +262,18 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
       });
     });
 
-    req.on('error', reject);
+    req.on('error', err => {
+      if (throttleTimer) {
+        clearTimeout(throttleTimer);
+        throttleTimer = null;
+      }
+      reject(err);
+    });
     req.on('timeout', () => {
+      if (throttleTimer) {
+        clearTimeout(throttleTimer);
+        throttleTimer = null;
+      }
       req.destroy();
       reject(new Error('Request timeout'));
     });
@@ -285,6 +328,36 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
       timeout: timeout || 120000
     };
 
+    // 性能优化：IPC 节流缓冲（每 50ms 发送一次，而不是每条数据块发送一次）
+    let pendingChunks = [];
+    let throttleTimer = null;
+    const THROTTLE_INTERVAL = 50; // ms
+
+    function flushPendingChunks() {
+      if (pendingChunks.length > 0 && onChunk) {
+        // 合并所有待发送的数据块
+        let combinedContent = '';
+        let lastFullContent = '';
+        let lastReasoningContent = '';
+
+        for (const { content, fullContent, reasoningContent } of pendingChunks) {
+          combinedContent += content;
+          lastFullContent = fullContent;
+          lastReasoningContent = reasoningContent;
+        }
+
+        // 一次性发送合并后的数据
+        onChunk(combinedContent, lastFullContent, lastReasoningContent);
+        pendingChunks = [];
+      }
+      throttleTimer = null;
+    }
+
+    function scheduleChunkFlush() {
+      if (throttleTimer) return;
+      throttleTimer = setTimeout(flushPendingChunks, THROTTLE_INTERVAL);
+    }
+
     const req = httpModule.request(options, res => {
       res.setEncoding('utf8');
       let buffer = '';
@@ -313,14 +386,28 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
             if (parsed.reasoningContent) {
               fullReasoningContent += parsed.reasoningContent;
             }
-            if (onChunk) {
-              onChunk(parsed.content, fullContent, fullReasoningContent);
+
+            // 优化：收集数据块，定期批量发送 IPC 消息
+            if (parsed.content || parsed.reasoningContent) {
+              pendingChunks.push({
+                content: parsed.content,
+                fullContent,
+                reasoningContent: fullReasoningContent
+              });
+              scheduleChunkFlush();
             }
           }
         }
       });
 
       res.on('end', () => {
+        // 清理定时器并发送剩余的数据
+        if (throttleTimer) {
+          clearTimeout(throttleTimer);
+          throttleTimer = null;
+        }
+        flushPendingChunks(); // 确保发送最后的数据块
+
         if (res.statusCode >= 200 && res.statusCode < 300) {
           // 处理最后的缓冲区
           if (buffer) {
@@ -332,7 +419,8 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
               if (parsed.reasoningContent) {
                 fullReasoningContent += parsed.reasoningContent;
               }
-              if (onChunk) {
+              // 最后一块数据，直接发送而不缓冲
+              if (onChunk && (parsed.content || parsed.reasoningContent)) {
                 onChunk(parsed.content, fullContent, fullReasoningContent);
               }
             }
@@ -349,8 +437,18 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
       registerRequest(req);
     }
 
-    req.on('error', reject);
+    req.on('error', err => {
+      if (throttleTimer) {
+        clearTimeout(throttleTimer);
+        throttleTimer = null;
+      }
+      reject(err);
+    });
     req.on('timeout', () => {
+      if (throttleTimer) {
+        clearTimeout(throttleTimer);
+        throttleTimer = null;
+      }
       req.destroy();
       reject(new Error('Request timeout'));
     });

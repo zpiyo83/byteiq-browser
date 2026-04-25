@@ -97,6 +97,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    position: relative;
     min-width: 0;
     min-height: 0;
     background: linear-gradient(180deg, var(--ai-surface-alt), var(--ai-surface) 220px);
