@@ -28,7 +28,8 @@ function createAiAgentRunner(options) {
     resetTaskState,
     getTaskState,
     bindTabToSession,
-    externalTodoManager
+    externalTodoManager,
+    contextIsolation
   } = options;
 
   let isAgentProcessing = false;
@@ -37,6 +38,9 @@ function createAiAgentRunner(options) {
   // 性能优化：操作序列号防止竞态条件
   // 每次开始新的 Agent 处理时递增，在异步操作中检查序列号确保只处理最新请求
   let currentOperationId = 0;
+
+  // 当前 Agent 操作的守卫（用于会话隔离）
+  let currentOperationGuard = null;
 
   // Todo 管理器
   const todoManager = externalTodoManager;
@@ -338,10 +342,18 @@ function createAiAgentRunner(options) {
   }
 
   async function sendAgentRequest(messages, streamingElement) {
+    // 注册请求操作守卫，用于会话隔离
+    const operationGuard = contextIsolation?.registerOperation?.('agent-request');
+
     agentStreamingTaskId = `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     agentStreamingElement = streamingElement;
     setInputEnabled(false);
     try {
+      // 检查会话是否仍然活跃
+      if (operationGuard && !operationGuard.guard()) {
+        throw new Error('Session no longer active');
+      }
+
       const tools = getAiToolsSchema();
       const result = await ipcRenderer.invoke('ai-agent', {
         messages,
@@ -349,17 +361,29 @@ function createAiAgentRunner(options) {
         taskId: agentStreamingTaskId
       });
 
+      // 返回前再次检查守卫
+      if (operationGuard && !operationGuard.guard()) {
+        throw new Error('Session no longer active');
+      }
+
       return result;
     } finally {
       agentStreamingElement = null;
       agentStreamingTaskId = null;
       setInputEnabled(true);
+      // 清理操作守卫
+      if (operationGuard && typeof operationGuard.dispose === 'function') {
+        operationGuard.dispose();
+      }
     }
   }
 
   async function runAgentConversation(session, userText) {
     // 性能优化：为本次 Agent 操作分配序列号，用于检查异步操作是否过期
     const operationId = ++currentOperationId;
+
+    // 注册操作守卫，用于会话隔离
+    currentOperationGuard = contextIsolation?.registerOperation?.('agent-loop');
 
     isAgentProcessing = true;
 
@@ -594,97 +618,106 @@ function createAiAgentRunner(options) {
       'finished',
       'end'
     ];
-    while (isAgentProcessing && maxIterations > 0) {
-      maxIterations--;
+    let aiMsgElement = null;
+    try {
+      while (isAgentProcessing && maxIterations > 0) {
+        maxIterations--;
 
-      // 动态刷新系统提示词中的 todo 部分，确保 AI 始终看到最新的 todo 状态
-      // 解决：add_todo 后系统提示词仍显示空列表，导致 AI 认为 todo 不存在
-      if (agentMessageHistory.length > 0 && agentMessageHistory[0].role === 'system') {
-        const freshTodoPrompt =
-          todoManager && typeof todoManager.buildTodoPrompt === 'function'
-            ? todoManager.buildTodoPrompt()
-            : '';
-        const currentSystemContent = agentMessageHistory[0].content;
-        // 替换 [To Do List - Highest Priority] 到下一个主要段落之间的内容
-        const todoSectionRegex =
-          /\n\n\[To Do List - Highest Priority\][\s\S]*?(?=\n\n你是Agent模式|\n\n【当前打开的标签页】|$)/;
-        if (todoSectionRegex.test(currentSystemContent)) {
-          agentMessageHistory[0].content = currentSystemContent.replace(
-            todoSectionRegex,
-            freshTodoPrompt
+        // 会话隔离守卫检查：如果会话已变更，立即退出循环
+        if (currentOperationGuard && !currentOperationGuard.guard()) {
+          console.log('[ai-agent-runner] Session changed, breaking agent loop');
+          break;
+        }
+
+        // 动态刷新系统提示词中的 todo 部分，确保 AI 始终看到最新的 todo 状态
+        // 解决：add_todo 后系统提示词仍显示空列表，导致 AI 认为 todo 不存在
+        if (agentMessageHistory.length > 0 && agentMessageHistory[0].role === 'system') {
+          const freshTodoPrompt =
+            todoManager && typeof todoManager.buildTodoPrompt === 'function'
+              ? todoManager.buildTodoPrompt()
+              : '';
+          const currentSystemContent = agentMessageHistory[0].content;
+          // 替换 [To Do List - Highest Priority] 到下一个主要段落之间的内容
+          const todoSectionRegex =
+            /\n\n\[To Do List - Highest Priority\][\s\S]*?(?=\n\n你是Agent模式|\n\n【当前打开的标签页】|$)/;
+          if (todoSectionRegex.test(currentSystemContent)) {
+            agentMessageHistory[0].content = currentSystemContent.replace(
+              todoSectionRegex,
+              freshTodoPrompt
+            );
+          }
+        }
+
+        // 智能动态截断：优先保留 todo 工具消息、系统消息和最近消息，防止 token 超限
+        const maxLiveMessages = Math.max(12, Math.floor((contextSize * 0.8) / 500));
+        if (agentMessageHistory.length > maxLiveMessages) {
+          const systemMsg = agentMessageHistory[0];
+          const todoToolNames = new Set(['add_todo', 'list_todos', 'complete_todo', 'remove_todo']);
+          const todoMessages = [];
+          const otherToolMessages = [];
+
+          // 分离工具消息：todo 工具 vs 其他工具
+          for (let i = 1; i < agentMessageHistory.length; i++) {
+            const msg = agentMessageHistory[i];
+            if (msg.role === 'tool') {
+              const content = typeof msg.content === 'string' ? msg.content : '';
+              if (content.includes('todo-') || content.includes('待办')) {
+                todoMessages.push(msg);
+              } else {
+                otherToolMessages.push(msg);
+              }
+            } else if (msg.role === 'assistant' && msg.tool_calls) {
+              const hasTodoCall = msg.tool_calls.some(call =>
+                todoToolNames.has(call.function?.name)
+              );
+              if (hasTodoCall) {
+                todoMessages.push(msg);
+              } else {
+                otherToolMessages.push(msg);
+              }
+            }
+          }
+
+          // 保留最近的非工具消息
+          const recentMessages = [];
+          for (let i = agentMessageHistory.length - 1; i >= 1; i--) {
+            const msg = agentMessageHistory[i];
+            if ((msg.role === 'user' || msg.role === 'assistant') && !msg.tool_calls) {
+              recentMessages.unshift(msg);
+              if (recentMessages.length >= Math.ceil(maxLiveMessages * 0.3)) break;
+            }
+          }
+
+          // 保留策略：todo 消息全部保留 + 最近的工具消息 + 最近的其他消息
+          const keepOtherToolCount = Math.min(
+            otherToolMessages.length,
+            Math.max(2, Math.ceil(maxLiveMessages * 0.3))
           );
-        }
-      }
+          const recentOtherToolMessages = otherToolMessages.slice(-keepOtherToolCount);
 
-      // 智能动态截断：优先保留 todo 工具消息、系统消息和最近消息，防止 token 超限
-      const maxLiveMessages = Math.max(12, Math.floor((contextSize * 0.8) / 500));
-      if (agentMessageHistory.length > maxLiveMessages) {
-        const systemMsg = agentMessageHistory[0];
-        const todoToolNames = new Set(['add_todo', 'list_todos', 'complete_todo', 'remove_todo']);
-        const todoMessages = [];
-        const otherToolMessages = [];
-
-        // 分离工具消息：todo 工具 vs 其他工具
-        for (let i = 1; i < agentMessageHistory.length; i++) {
-          const msg = agentMessageHistory[i];
-          if (msg.role === 'tool') {
-            const content = typeof msg.content === 'string' ? msg.content : '';
-            if (content.includes('todo-') || content.includes('待办')) {
-              todoMessages.push(msg);
-            } else {
-              otherToolMessages.push(msg);
-            }
-          } else if (msg.role === 'assistant' && msg.tool_calls) {
-            const hasTodoCall = msg.tool_calls.some(call => todoToolNames.has(call.function?.name));
-            if (hasTodoCall) {
-              todoMessages.push(msg);
-            } else {
-              otherToolMessages.push(msg);
+          // 去重合并
+          const combined = [...todoMessages, ...recentOtherToolMessages, ...recentMessages];
+          const unique = [];
+          const seen = new Set();
+          for (const msg of combined) {
+            const key = JSON.stringify([
+              msg.role,
+              msg.tool_calls?.map(t => `${t.function.name}:${t.function.arguments}`) ||
+                msg.content?.substring(0, 100)
+            ]);
+            if (!seen.has(key)) {
+              seen.add(key);
+              unique.push(msg);
             }
           }
+
+          // 最终截断，保留至少5条消息
+          const finalMessages = unique.slice(-Math.max(5, maxLiveMessages - 2));
+          agentMessageHistory = [systemMsg, ...finalMessages];
         }
 
-        // 保留最近的非工具消息
-        const recentMessages = [];
-        for (let i = agentMessageHistory.length - 1; i >= 1; i--) {
-          const msg = agentMessageHistory[i];
-          if ((msg.role === 'user' || msg.role === 'assistant') && !msg.tool_calls) {
-            recentMessages.unshift(msg);
-            if (recentMessages.length >= Math.ceil(maxLiveMessages * 0.3)) break;
-          }
-        }
+        aiMsgElement = addChatMessage('', 'ai', true);
 
-        // 保留策略：todo 消息全部保留 + 最近的工具消息 + 最近的其他消息
-        const keepOtherToolCount = Math.min(
-          otherToolMessages.length,
-          Math.max(2, Math.ceil(maxLiveMessages * 0.3))
-        );
-        const recentOtherToolMessages = otherToolMessages.slice(-keepOtherToolCount);
-
-        // 去重合并
-        const combined = [...todoMessages, ...recentOtherToolMessages, ...recentMessages];
-        const unique = [];
-        const seen = new Set();
-        for (const msg of combined) {
-          const key = JSON.stringify([
-            msg.role,
-            msg.tool_calls?.map(t => `${t.function.name}:${t.function.arguments}`) ||
-              msg.content?.substring(0, 100)
-          ]);
-          if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(msg);
-          }
-        }
-
-        // 最终截断，保留至少5条消息
-        const finalMessages = unique.slice(-Math.max(5, maxLiveMessages - 2));
-        agentMessageHistory = [systemMsg, ...finalMessages];
-      }
-
-      const aiMsgElement = addChatMessage('', 'ai', true);
-
-      try {
         const result = await sendAgentRequest(agentMessageHistory, aiMsgElement);
 
         if (!result?.success) {
@@ -704,10 +737,13 @@ function createAiAgentRunner(options) {
           const savedContent = result.reasoningContent
             ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
             : result.content;
-          await historyStorage.addMessage(session.id, {
-            role: 'assistant',
-            content: savedContent
-          });
+          // 仅在会话活跃时保存
+          if (contextIsolation?.isSessionActive?.(session.id)) {
+            await historyStorage.addMessage(session.id, {
+              role: 'assistant',
+              content: savedContent
+            });
+          }
           // 纯文本回复不自动结束，继续循环等待AI决定是否调用end_session
           // 但如果AI连续返回纯文本且满足以下条件之一，则视为任务完成：
           // 1. 内容为空
@@ -811,19 +847,22 @@ function createAiAgentRunner(options) {
           const assistantSavedContent = result.reasoningContent
             ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content || ''}`
             : result.content || '';
-          await historyStorage.addMessage(session.id, {
-            role: 'assistant',
-            content: assistantSavedContent,
-            metadata: {
-              thinkingContent: result.reasoningContent || '',
-              actionContent: result.content || '',
-              toolCalls: result.toolCalls.map(call => ({
-                id: call.id,
-                name: call.name,
-                arguments: call.arguments
-              }))
-            }
-          });
+          // 仅在会话活跃时保存
+          if (contextIsolation?.isSessionActive?.(session.id)) {
+            await historyStorage.addMessage(session.id, {
+              role: 'assistant',
+              content: assistantSavedContent,
+              metadata: {
+                thinkingContent: result.reasoningContent || '',
+                actionContent: result.content || '',
+                toolCalls: result.toolCalls.map(call => ({
+                  id: call.id,
+                  name: call.name,
+                  arguments: call.arguments
+                }))
+              }
+            });
+          }
 
           for (const toolCall of result.toolCalls) {
             const toolResult = await toolsExecutor.execute(toolCall);
@@ -855,17 +894,19 @@ function createAiAgentRunner(options) {
                 renderMarkdownToElement(contentDiv, summaryText, documentRef);
                 summaryMsg.appendChild(contentDiv);
               }
-              // 保存结束会话工具结果到历史
-              await historyStorage.addMessage(session.id, {
-                role: 'tool',
-                content: JSON.stringify(toolResult),
-                metadata: {
-                  toolCallId: toolCall.id,
-                  toolName: toolCall.name,
-                  status: 'success',
-                  description: summaryText || '会话已结束'
-                }
-              });
+              // 保存结束会话工具结果到历史（仅在会话活跃时）
+              if (contextIsolation?.isSessionActive?.(session.id)) {
+                await historyStorage.addMessage(session.id, {
+                  role: 'tool',
+                  content: JSON.stringify(toolResult),
+                  metadata: {
+                    toolCallId: toolCall.id,
+                    toolName: toolCall.name,
+                    status: 'success',
+                    description: summaryText || '会话已结束'
+                  }
+                });
+              }
               isAgentProcessing = false;
               break;
             }
@@ -899,17 +940,19 @@ function createAiAgentRunner(options) {
                 lastAction: summary.text
               });
             }
-            // 保存工具结果到历史
-            await historyStorage.addMessage(session.id, {
-              role: 'tool',
-              content: JSON.stringify(toolResult),
-              metadata: {
-                toolCallId: toolCall.id,
-                toolName: toolCall.name,
-                status: summary.status,
-                description: summary.text
-              }
-            });
+            // 保存工具结果到历史（仅在会话活跃时）
+            if (contextIsolation?.isSessionActive?.(session.id)) {
+              await historyStorage.addMessage(session.id, {
+                role: 'tool',
+                content: JSON.stringify(toolResult),
+                metadata: {
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.name,
+                  status: summary.status,
+                  description: summary.text
+                }
+              });
+            }
           }
 
           if (!isAgentProcessing) break;
@@ -918,36 +961,47 @@ function createAiAgentRunner(options) {
         await updateSession(session.id, { updatedAt: Date.now() });
         renderSessionsList();
         if (typeof onIteration === 'function') onIteration();
-      } catch (error) {
-        console.error('Agent error:', error);
-        const errMsg = error && error.message ? String(error.message) : '';
-
-        // token 超限错误：自动截断历史重试一次
-        if (
-          (errMsg.includes('context_length') ||
-            errMsg.includes('max_tokens') ||
-            errMsg.includes('token limit') ||
-            errMsg.includes('too many tokens') ||
-            errMsg.includes('maximum context') ||
-            errMsg.includes('context window')) &&
-          agentMessageHistory.length > 6
-        ) {
-          console.warn('[agent] Token limit exceeded, truncating history and retrying...');
-          const systemMsg = agentMessageHistory[0];
-          const minKeep = Math.max(4, Math.floor((contextSize * 0.3) / 500));
-          const recentMessages = agentMessageHistory.slice(-minKeep);
-          agentMessageHistory = [systemMsg, ...recentMessages];
-          // 移除失败的空消息元素
-          if (aiMsgElement && aiMsgElement.parentNode) {
-            aiMsgElement.parentNode.removeChild(aiMsgElement);
-          }
-          continue;
-        }
-
-        aiMsgElement.innerText = `${t('ai.error') || '发生错误'}: ${errMsg}`;
-        finishStreamingMessage(aiMsgElement);
-        isAgentProcessing = false;
       }
+    } catch (error) {
+      console.error('Agent error:', error);
+      const errMsg = error && error.message ? String(error.message) : '';
+
+      // token 超限错误：自动截断历史重试一次
+      if (
+        (errMsg.includes('context_length') ||
+          errMsg.includes('max_tokens') ||
+          errMsg.includes('token limit') ||
+          errMsg.includes('too many tokens') ||
+          errMsg.includes('maximum context') ||
+          errMsg.includes('context window')) &&
+        agentMessageHistory.length > 6
+      ) {
+        console.warn('[agent] Token limit exceeded, truncating history and retrying...');
+        const systemMsg = agentMessageHistory[0];
+        const minKeep = Math.max(4, Math.floor((contextSize * 0.3) / 500));
+        const recentMessages = agentMessageHistory.slice(-minKeep);
+        agentMessageHistory = [systemMsg, ...recentMessages];
+        // 移除失败的空消息元素
+        if (aiMsgElement && aiMsgElement.parentNode) {
+          aiMsgElement.parentNode.removeChild(aiMsgElement);
+        }
+        // 注意：外层 try-catch 中不能 continue while 循环
+        // token 超限时直接重试需要重新进入 runAgentConversation
+      } else {
+        // 非token超限错误：显示错误信息
+        if (aiMsgElement) {
+          aiMsgElement.innerText = `${t('ai.error') || '发生错误'}: ${errMsg}`;
+          finishStreamingMessage(aiMsgElement);
+        }
+      }
+
+      isAgentProcessing = false;
+    } finally {
+      // 清理操作守卫
+      if (currentOperationGuard && typeof currentOperationGuard.dispose === 'function') {
+        currentOperationGuard.dispose();
+      }
+      currentOperationGuard = null;
     }
 
     isAgentProcessing = false;
@@ -966,10 +1020,28 @@ function createAiAgentRunner(options) {
     }
     isAgentProcessing = false;
 
+    // 清理操作守卫
+    if (currentOperationGuard && typeof currentOperationGuard.dispose === 'function') {
+      currentOperationGuard.dispose();
+      currentOperationGuard = null;
+    }
+
     // 解锁 todoManager 的 session ID
     if (todoManager && typeof todoManager.unlockSession === 'function') {
       todoManager.unlockSession();
     }
+  }
+
+  function resetState() {
+    // 中止当前处理
+    abort();
+    // 重置消息历史
+    agentMessageHistory = [];
+    // 重置操作守卫
+    if (currentOperationGuard && typeof currentOperationGuard.dispose === 'function') {
+      currentOperationGuard.dispose();
+    }
+    currentOperationGuard = null;
   }
 
   return {
@@ -977,7 +1049,8 @@ function createAiAgentRunner(options) {
     setupAgentStreamingListener,
     isProcessing: () => isAgentProcessing,
     getMessageHistory: () => agentMessageHistory,
-    abort
+    abort,
+    resetState
   };
 }
 

@@ -3,7 +3,7 @@
  */
 
 function createAiSessionService(options) {
-  const { historyStorage, store, t, getActiveTabId } = options;
+  const { historyStorage, store, t, getActiveTabId, contextIsolation } = options;
 
   let storageInitialized = false;
 
@@ -38,6 +38,10 @@ function createAiSessionService(options) {
   function setActiveSessionId(sessionId) {
     if (!store) return;
     store.set(STORE_KEYS.activeSessionId, sessionId);
+    // 同步到上下文隔离管理器
+    if (contextIsolation && typeof contextIsolation.setActiveSession === 'function') {
+      contextIsolation.setActiveSession(sessionId);
+    }
   }
 
   async function ensureSessionExists(sessionId) {
@@ -87,25 +91,63 @@ function createAiSessionService(options) {
     const session = await createSession({ title: t('ai.sessionForTab') || '当前标签页' });
     tabToSession[tabId] = session.id;
     writeTabToSessionToStore(tabToSession);
+    // 触发上下文隔离生命周期
+    if (contextIsolation && typeof contextIsolation.switchSession === 'function') {
+      contextIsolation.switchSession(session.id);
+    }
     return session.id;
   }
 
   async function getCurrentSession() {
     const tabId = getActiveTabId();
+    let sessionId;
+
     if (!tabId) {
       const activeId = getActiveSessionId();
       if (activeId) {
         await ensureSessionExists(activeId);
-        return getSessionById(activeId);
+        sessionId = activeId;
+      } else {
+        const session = await createSession();
+        setActiveSessionId(session.id);
+        sessionId = session.id;
       }
-      const session = await createSession();
-      setActiveSessionId(session.id);
-      return session;
+    } else {
+      sessionId = await getOrCreateSessionIdForTab(tabId);
+      setActiveSessionId(sessionId);
     }
 
-    const sessionId = await getOrCreateSessionIdForTab(tabId);
-    setActiveSessionId(sessionId);
+    // 检测会话是否变更，触发上下文隔离切换
+    const currentContextSessionId =
+      contextIsolation && typeof contextIsolation.getActiveSessionId === 'function'
+        ? contextIsolation.getActiveSessionId()
+        : null;
+    if (currentContextSessionId !== sessionId) {
+      if (contextIsolation && typeof contextIsolation.switchSession === 'function') {
+        contextIsolation.switchSession(sessionId);
+      }
+    }
+
     return getSessionById(sessionId);
+  }
+
+  /**
+   * 切换到指定会话（手动切换）
+   * 同时更新存储和上下文隔离状态
+   */
+  async function switchToSession(sessionId) {
+    if (!sessionId) return;
+    await ensureSessionExists(sessionId);
+    setActiveSessionId(sessionId);
+    // 绑定到当前标签页（如果存在）
+    const tabId = getActiveTabId();
+    if (tabId) {
+      bindTabToSession(tabId, sessionId);
+    }
+    // 触发上下文隔离切换
+    if (contextIsolation && typeof contextIsolation.switchSession === 'function') {
+      contextIsolation.switchSession(sessionId);
+    }
   }
 
   async function getSortedSessions() {
@@ -187,6 +229,7 @@ function createAiSessionService(options) {
     updateSession,
     getOrCreateSessionIdForTab,
     getCurrentSession,
+    switchToSession,
     getSortedSessions,
     unbindSessionFromTab,
     bindSessionToCurrentTab,

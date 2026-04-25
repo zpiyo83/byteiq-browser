@@ -18,6 +18,7 @@ const {
 const { createAiAgentRunner } = require('../ai/ai-agent-runner');
 const { createAiPageContext } = require('../ai/ai-page-context');
 const { createAiChatHandler } = require('../ai/ai-chat-handler');
+const { createAiContextIsolation } = require('../ai/ai-context-isolation');
 const { createAiTodoManager } = require('../ai/ai-todo-manager');
 const { createAiToolbar } = require('../ai/ai-toolbar');
 
@@ -145,11 +146,15 @@ function createAiManager(options) {
 
   const historyStorage = getAIHistoryStorage();
 
+  // 创建上下文隔离管理器
+  const contextIsolation = createAiContextIsolation();
+
   const sessionService = createAiSessionService({
     historyStorage,
     store,
     t,
-    getActiveTabId
+    getActiveTabId,
+    contextIsolation
   });
 
   const {
@@ -392,7 +397,8 @@ function createAiManager(options) {
     resetTaskState,
     getTaskState: () => taskState,
     bindTabToSession: sessionService.bindTabToSession,
-    externalTodoManager: todoManager
+    externalTodoManager: todoManager,
+    contextIsolation
   });
 
   // 创建聊天处理器
@@ -414,11 +420,37 @@ function createAiManager(options) {
     getActiveTabId,
     documentRef,
     updateContextBar: ctx => updateContextBar(ctx),
-    todoManager
+    todoManager,
+    contextIsolation
+  });
+
+  // 注册上下文隔离生命周期钩子：会话切换前中止进行中的操作
+  contextIsolation.onBeforeSwitch(async (_fromId, _toId) => {
+    if (agentRunner && typeof agentRunner.abort === 'function') {
+      agentRunner.abort();
+    }
+    if (chatHandler && typeof chatHandler.cancelStreaming === 'function') {
+      chatHandler.cancelStreaming();
+    }
+  });
+
+  // 注册上下文隔离生命周期钩子：会话切换后重置模块状态
+  contextIsolation.onAfterSwitch(async (_toId, _fromId) => {
+    if (agentRunner && typeof agentRunner.resetState === 'function') {
+      agentRunner.resetState();
+    }
+    if (chatHandler && typeof chatHandler.resetState === 'function') {
+      chatHandler.resetState();
+    }
   });
 
   async function switchToSession(sessionId) {
     if (!sessionId) return;
+    // 触发上下文隔离切换（会中止旧会话的操作、清理缓存、触发钩子）
+    const currentContextId = contextIsolation.getActiveSessionId();
+    if (currentContextId !== sessionId) {
+      await contextIsolation.switchSession(sessionId);
+    }
     await ensureSessionExists(sessionId);
     setActiveSessionId(sessionId);
     bindSessionToCurrentTab(sessionId);

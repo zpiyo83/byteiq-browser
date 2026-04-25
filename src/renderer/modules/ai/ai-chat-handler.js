@@ -24,7 +24,8 @@ function createAiChatHandler(deps) {
     getCurrentPageInfo,
     t,
     agentRunner,
-    todoManager
+    todoManager,
+    contextIsolation
   } = deps;
 
   // 当前流式响应状态
@@ -76,6 +77,9 @@ function createAiChatHandler(deps) {
    * 发送对话请求
    */
   async function sendChatRequest(messages, sessionId, streamingElement = null) {
+    // 注册操作守卫，用于会话隔离
+    const operationGuard = contextIsolation?.registerOperation?.('chat-request');
+
     currentTaskId = `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     isStreaming = true;
     currentStreamingElement = streamingElement;
@@ -84,14 +88,25 @@ function createAiChatHandler(deps) {
     setInputEnabled(false);
 
     try {
+      // 检查会话是否仍然活跃
+      if (operationGuard && !operationGuard.guard()) {
+        throw new Error('Session no longer active');
+      }
+
       const result = await ipcRenderer.invoke('ai-chat', {
         messages,
         taskId: currentTaskId
       });
 
+      // 返回前再次检查守卫
+      if (operationGuard && !operationGuard.guard()) {
+        throw new Error('Session no longer active');
+      }
+
       if (result.success) {
         // 保存AI回复到IndexedDB（分离 thinking 内容到 metadata）
-        if (sessionId) {
+        // 仅在会话活跃时保存
+        if (sessionId && contextIsolation?.isSessionActive?.(sessionId)) {
           const savedContent = result.reasoningContent
             ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
             : result.content;
@@ -129,6 +144,11 @@ function createAiChatHandler(deps) {
 
       // 恢复发送按钮
       setInputEnabled(true);
+
+      // 清理操作守卫
+      if (operationGuard && typeof operationGuard.dispose === 'function') {
+        operationGuard.dispose();
+      }
     }
   }
 
@@ -275,12 +295,36 @@ function createAiChatHandler(deps) {
     }
   }
 
+  /**
+   * 取消当前流式响应
+   */
+  function cancelStreaming() {
+    if (!isStreaming) return;
+    // 通知主进程取消当前 Chat 请求
+    if (currentTaskId) {
+      ipcRenderer.send('cancel-ai-chat', { taskId: currentTaskId });
+    }
+    isStreaming = false;
+    currentStreamingElement = null;
+    currentTaskId = null;
+    setInputEnabled(true);
+  }
+
+  /**
+   * 重置状态（会话切换时调用）
+   */
+  function resetState() {
+    cancelStreaming();
+  }
+
   return {
     setupStreamingListener,
     sendChatRequest,
     handleAskMode,
     handleAgentMode,
     handleAISend,
+    cancelStreaming,
+    resetState,
     get isStreaming() {
       return isStreaming;
     }
