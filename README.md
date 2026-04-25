@@ -19,10 +19,12 @@ Byteiq Browser 是一款由社区驱动的 AI 浏览器，基于 Chromium 内核
 ### ✨ 特性
 
 - **Chromium 内核**：使用成熟的 Chromium 渲染引擎，提供出色的网页兼容性
-- **Electron 框架**：跨平台支持，可在 Windows、macOS、Linux 上运行
+- **Electron 28 框架**：现代化跨平台支持
 - **社区驱动**：由开源社区共同开发和维护
-- **AI 集成**：计划集成 AI 功能，提供智能浏览体验
-- **开源透明**：完全开源，代码透明，欢迎社区贡献
+- **AI 智能助手**：集成 AI 对话功能，提供智能浏览体验
+- **多语言支持**：支持中文、繁体中文等多语言界面
+- **模块化架构**：主进程与渲染进程分离，代码结构清晰
+- **开源透明**：MIT 许可证，代码完全开放
 
 ### 🎯 项目目标
 
@@ -35,8 +37,9 @@ Byteiq Browser 是一款由社区驱动的 AI 浏览器，基于 Chromium 内核
 
 ### 环境要求
 
-- Node.js >= 16.0.0
-- npm >= 7.0.0
+- Node.js >= 18.0.0
+- npm >= 9.0.0
+- Windows 10/11（当前主要支持平台）
 
 ### 安装依赖
 
@@ -56,25 +59,42 @@ npm run dev
 npm run build
 ```
 
+### 其他常用命令
+
+```bash
+npm run lint          # 代码检查
+npm run lint:fix      # 自动修复代码问题
+npm run format        # 代码格式化
+npm run test          # 运行测试
+npm run test:coverage # 生成测试覆盖率报告
+```
+
 ## 📁 项目结构
 
 ```
 byteiq-browser/
-├── main.js              # Electron 主进程
-├── index.html           # 主界面
-├── package.json         # 项目配置
+├── src/                 # 源代码目录
+│   ├── main/           # Electron 主进程
+│   └── renderer/       # 渲染进程（UI）
+├── tests/              # 测试文件
+├── assets/             # 静态资源
+├── docs/               # 重构汇报文档（被git忽略）
+├── .github/            # GitHub 配置
 ├── CONTRIBUTING.md     # 贡献指南
+├── 开源教程.md          # 开源入门教程
+├── CODE_OF_CONDUCT.md  # 行为准则
 ├── README.md           # 项目说明（本文件）
 ├── LICENSE             # 开源许可证
-├── CODE_OF_CONDUCT.md  # 行为准则
-├── .gitignore          # Git 忽略文件
-└── docs/               # 文档目录
-    └── 开源教程.md
+└── package.json        # 项目配置
 ```
 
-## 🤝 贡献
+## 📚 学习资源
 
-我们欢迎任何形式的贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何参与贡献。
+- **[开源教程.md](开源教程.md)** - 开源入门完整教程，适合新手上路
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - 贡献指南，了解如何参与项目
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - 社区行为准则
+
+## 🤝 贡献
 
 ### 贡献方式
 
