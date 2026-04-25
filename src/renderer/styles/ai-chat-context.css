@@ -1,0 +1,215 @@
+/* AI 上下文状态栏、饼图、压缩弹窗样式 */
+
+/* 上下文状态栏 */
+.ai-context-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin: 0 16px 12px;
+    background: var(--ai-surface-soft);
+    border: 1px solid var(--ai-border);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--ai-muted);
+}
+
+.ai-context-bar .context-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ai-context-bar .context-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--ai-muted);
+    transition: all 0.2s ease;
+}
+
+.ai-context-bar .context-clear-btn:hover {
+    background: var(--ai-surface);
+    color: var(--ai-text);
+}
+
+/* 上下文使用量饼图 */
+.ai-context-pie {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ai-context-pie svg {
+    transform: rotate(-90deg);
+}
+
+.ai-context-pie .pie-bg {
+    opacity: 0.3;
+}
+
+.ai-context-pie .pie-used {
+    transition: stroke-dasharray 0.5s ease;
+}
+
+/* 饼图 tooltip */
+.ai-context-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    right: -4px;
+    background: var(--ai-surface);
+    border: 1px solid var(--ai-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.6;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    white-space: nowrap;
+    min-width: 160px;
+    margin-bottom: 4px;
+}
+
+.ai-context-tooltip .tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--ai-text);
+}
+
+.ai-context-tooltip .tooltip-row span:first-child {
+    color: var(--ai-muted);
+}
+
+.ai-context-tooltip .tooltip-row span:last-child {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+}
+
+/* 压缩上下文按钮 */
+.tooltip-action-row {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ai-border);
+}
+
+.tooltip-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--ai-border);
+    border-radius: 6px;
+    background: var(--ai-surface);
+    color: var(--ai-text);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tooltip-action-btn:hover {
+    background: var(--ai-accent, #4285f4);
+    color: #fff;
+    border-color: var(--ai-accent, #4285f4);
+}
+
+.tooltip-action-btn svg {
+    flex-shrink: 0;
+}
+
+/* 压缩上下文进度弹窗 */
+.ai-compress-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+}
+
+.ai-compress-dialog {
+    background: var(--ai-surface, #fff);
+    border: 1px solid var(--ai-border, #e0e0e0);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 340px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.ai-compress-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--ai-border, #e0e0e0);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ai-text);
+}
+
+.ai-compress-header svg {
+    color: var(--ai-accent, #4285f4);
+    flex-shrink: 0;
+}
+
+.ai-compress-content {
+    padding: 12px 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ai-text);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ai-compress-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid var(--ai-border, #e0e0e0);
+    font-size: 12px;
+    color: var(--ai-muted);
+}
+
+.ai-compress-status.completed {
+    color: #22c55e;
+    font-weight: 500;
+}
+
+.ai-compress-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--ai-border, #e0e0e0);
+    border-top-color: var(--ai-accent, #4285f4);
+    border-radius: 50%;
+    animation: compress-spin 0.8s linear infinite;
+}
+
+.ai-compress-status.completed .ai-compress-spinner {
+    display: none;
+}
+
+@keyframes compress-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

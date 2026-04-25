@@ -1,187 +1,26 @@
+/**
+ * AI 待办项管理器
+ * 负责待办项的 CRUD 业务逻辑
+ */
+
+const { createTodoStorage } = require('./ai-todo-storage');
+
 function createAiTodoManager(options) {
   const { store, getActiveSessionId } = options;
 
-  const BASE_KEY = 'ai.todoList';
-  const GLOBAL_KEY = 'ai.todoList.global'; // 全局 fallback 键
-  const DEBUG = false; // 设置为 true 时启用调试日志
-
-  // 锁定的 session ID，agent 运行期间使用固定值避免标签页切换导致 session 变化
-  let lockedSessionId = null;
-
-  // 内存缓存：当前 session 的待办项，减少存储读写频率
-  let inMemoryCache = null;
-  let inMemoryCacheKey = null;
-
-  function lockSession(sessionId) {
-    lockedSessionId = sessionId;
-    // 锁定时同步清空缓存，确保使用新 session 的数据
-    inMemoryCache = null;
-    inMemoryCacheKey = null;
-    if (DEBUG) {
-      console.log('[ai-todo-manager] Session locked:', sessionId);
-    }
-  }
-
-  function unlockSession() {
-    if (DEBUG) {
-      console.log('[ai-todo-manager] Session unlocked, was:', lockedSessionId);
-    }
-    lockedSessionId = null;
-    inMemoryCache = null;
-    inMemoryCacheKey = null;
-  }
-
-  function getSessionKey() {
-    // 优先使用锁定的 session ID（agent 运行期间固定）
-    let sessionId = lockedSessionId;
-
-    // 如果没有锁定，则获取当前活跃 session
-    if (!sessionId && typeof getActiveSessionId === 'function') {
-      sessionId = getActiveSessionId();
-    }
-
-    // 如果仍无 session ID，使用全局键作为 fallback
-    const key = sessionId ? `${BASE_KEY}.${sessionId}` : GLOBAL_KEY;
-
-    if (DEBUG) {
-      console.log('[ai-todo-manager] getSessionKey:', {
-        lockedSessionId,
-        activeSessionId: sessionId,
-        key,
-        isGlobal: key === GLOBAL_KEY
-      });
-    }
-
-    return key;
-  }
-
-  function readTodos() {
-    const key = getSessionKey();
-
-    // 检查内存缓存：如果键相同且缓存存在，深拷贝后返回
-    if (inMemoryCacheKey === key && inMemoryCache !== null) {
-      if (DEBUG) {
-        console.log('[ai-todo-manager] readTodos (from cache):', {
-          key,
-          count: inMemoryCache.length
-        });
-      }
-      // 返回深拷贝，防止调用者修改缓存
-      return JSON.parse(JSON.stringify(inMemoryCache));
-    }
-
-    // 从 store 读取
-    if (!store) {
-      if (DEBUG) console.warn('[ai-todo-manager] readTodos: store not available');
-      return [];
-    }
-
-    let list = store.get(key);
-
-    if (DEBUG) {
-      console.log('[ai-todo-manager] readTodos (from store):', {
-        key,
-        found: list !== undefined,
-        count: Array.isArray(list) ? list.length : 0
-      });
-    }
-
-    // 确保返回数组（不存在的键返回 undefined）
-    list = Array.isArray(list) ? list : [];
-
-    // 缓存到内存（存储原始数据用于后续缓存命中）
-    inMemoryCache = JSON.parse(JSON.stringify(list));
-    inMemoryCacheKey = key;
-
-    // 返回深拷贝，防止调用者修改缓存
-    return JSON.parse(JSON.stringify(inMemoryCache));
-  }
-
-  function writeTodos(list) {
-    if (!store) {
-      if (DEBUG) console.warn('[ai-todo-manager] writeTodos: store not available');
-      return;
-    }
-
-    const key = getSessionKey();
-    if (DEBUG) {
-      console.log('[ai-todo-manager] writeTodos:', { key, count: list.length });
-    }
-
-    // 验证list是数组
-    const dataToWrite = Array.isArray(list) ? list : [];
-
-    // 深拷贝数据，防止调用者和缓存共享引用
-    const dataCopy = JSON.parse(JSON.stringify(dataToWrite));
-
-    // 写入主键（仅写 session key，实现 session 间的完全隔离）
-    // 存储深拷贝，防止 store 存储对缓存的引用
-    store.set(key, dataCopy);
-
-    // 更新内存缓存为深拷贝
-    inMemoryCache = dataCopy;
-    inMemoryCacheKey = key;
-
-    // 注意：不再维护全局 GLOBAL_KEY，因为这会导致 session 间数据污染
-    // 如果需要保持兼容性（例如从旧版本升级），可以在迁移时特殊处理
-  }
-
-  // 短序号 ID 生成器，对 AI 更友好（如 todo-1, todo-2）
-  // 基于 session 内已有 todo 的最大序号递增，避免长随机 ID 导致 AI 记忆困难
-  function generateId() {
-    const todos = readTodos();
-    let maxSeq = 0;
-    for (const t of todos) {
-      const match = t.id && t.id.match(/^todo-(\d+)$/);
-      if (match) {
-        const seq = parseInt(match[1], 10);
-        if (seq > maxSeq) maxSeq = seq;
-      }
-    }
-    return `todo-${maxSeq + 1}`;
-  }
-
-  // 查找待办项：支持多种格式
-  // - 精确ID: "todo-1" 或旧版长ID
-  // - 序号: "1" → 自动转换为 "todo-1"
-  function findTodoById(todoId) {
-    const id = String(todoId || '').trim();
-    const todos = readTodos();
-
-    // 1. 精确匹配完整 ID（支持新旧格式）
-    let found = todos.find(t => t.id === id);
-    if (found) return found;
-
-    // 2. 序号匹配：用户/AI 传入 "1" 或 "todo-1" 时匹配 "todo-1"
-    const seqMatch = id.match(/^(?:todo-)?(\d+)$/);
-    if (seqMatch) {
-      found = todos.find(t => t.id === `todo-${seqMatch[1]}`);
-      if (found) return found;
-    }
-
-    // 3. 旧版长 ID 前缀匹配（兼容历史数据）
-    found = todos.find(t => t.id && t.id.startsWith(id));
-    if (found) return found;
-
-    return null;
-  }
-
-  function normalizePriority(priority) {
-    const p = String(priority || 'medium').toLowerCase();
-    if (p === 'low' || p === 'high') return p;
-    return 'medium';
-  }
+  // 创建存储层实例
+  const storage = createTodoStorage({ store, getActiveSessionId });
 
   function addTodos(items) {
     if (!Array.isArray(items) || items.length === 0) {
       return {
         success: false,
         error: 'Items must be a non-empty array',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    const todos = readTodos();
+    const todos = storage.readTodos();
     const added = [];
 
     // 计算当前最大序号（一次性，避免重复调用 readTodos）
@@ -203,7 +42,7 @@ function createAiTodoManager(options) {
       const todo = {
         id: `todo-${maxSeq}`,
         title: text,
-        priority: normalizePriority(item.priority),
+        priority: storage.normalizePriority(item.priority),
         completed: false,
         createdAt: Date.now(),
         completedAt: null
@@ -216,12 +55,12 @@ function createAiTodoManager(options) {
       return {
         success: false,
         error: 'All titles are empty',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    writeTodos(todos);
-    const updatedTodos = readTodos();
+    storage.writeTodos(todos);
+    const updatedTodos = storage.readTodos();
     return {
       success: true,
       added,
@@ -236,15 +75,15 @@ function createAiTodoManager(options) {
       return {
         success: false,
         error: 'Title cannot be empty',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    const todos = readTodos();
+    const todos = storage.readTodos();
     const todo = {
-      id: generateId(),
+      id: storage.generateId(),
       title: text,
-      priority: normalizePriority(priority),
+      priority: storage.normalizePriority(priority),
       completed: false,
       createdAt: Date.now(),
       completedAt: null
@@ -252,10 +91,10 @@ function createAiTodoManager(options) {
 
     // 新的 todo 添加到列表前面
     todos.unshift(todo);
-    writeTodos(todos);
+    storage.writeTodos(todos);
 
     // 返回最新的完整列表（基于内存缓存，确保一致）
-    const updatedTodos = readTodos();
+    const updatedTodos = storage.readTodos();
     return {
       success: true,
       todo,
@@ -267,7 +106,7 @@ function createAiTodoManager(options) {
 
   function listTodos(filter) {
     const mode = String(filter || 'pending').toLowerCase();
-    const todos = readTodos();
+    const todos = storage.readTodos();
 
     let filtered = todos;
     if (mode === 'pending') {
@@ -300,18 +139,18 @@ function createAiTodoManager(options) {
       return {
         success: false,
         error: 'todoIds must be a non-empty array',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    const todos = readTodos();
+    const todos = storage.readTodos();
     const completed = [];
     const notFound = [];
 
     for (const rawId of todoIds) {
       const id = String(rawId || '').trim();
       if (!id) continue;
-      const todo = findTodoById(id);
+      const todo = storage.findTodoById(id);
       if (!todo) {
         notFound.push(id);
         continue;
@@ -327,8 +166,8 @@ function createAiTodoManager(options) {
       }
     }
 
-    writeTodos(todos);
-    const updatedTodos = readTodos();
+    storage.writeTodos(todos);
+    const updatedTodos = storage.readTodos();
 
     if (completed.length === 0) {
       return {
@@ -353,12 +192,12 @@ function createAiTodoManager(options) {
       return {
         success: false,
         error: 'Todo ID cannot be empty',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    const todos = readTodos();
-    const todo = findTodoById(id);
+    const todos = storage.readTodos();
+    const todo = storage.findTodoById(id);
 
     if (!todo) {
       return {
@@ -374,10 +213,9 @@ function createAiTodoManager(options) {
       completed: true,
       completedAt: Date.now()
     };
-    writeTodos(todos);
+    storage.writeTodos(todos);
 
-    // 返回最新的完整列表
-    const updatedTodos = readTodos();
+    const updatedTodos = storage.readTodos();
     return {
       success: true,
       todo: todos[idx],
@@ -392,12 +230,12 @@ function createAiTodoManager(options) {
       return {
         success: false,
         error: 'Todo ID cannot be empty',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    const todos = readTodos();
-    const todo = findTodoById(id);
+    const todos = storage.readTodos();
+    const todo = storage.findTodoById(id);
 
     if (!todo) {
       return {
@@ -408,10 +246,9 @@ function createAiTodoManager(options) {
     }
 
     const next = todos.filter(t => t.id !== todo.id);
-    writeTodos(next);
+    storage.writeTodos(next);
 
-    // 返回最新的完整列表
-    const updatedTodos = readTodos();
+    const updatedTodos = storage.readTodos();
     return {
       success: true,
       todo,
@@ -426,12 +263,12 @@ function createAiTodoManager(options) {
       return {
         success: false,
         error: 'Todo ID cannot be empty',
-        allTodos: readTodos()
+        allTodos: storage.readTodos()
       };
     }
 
-    const todos = readTodos();
-    const todo = findTodoById(id);
+    const todos = storage.readTodos();
+    const todo = storage.findTodoById(id);
 
     if (!todo) {
       return {
@@ -460,7 +297,7 @@ function createAiTodoManager(options) {
 
     // 更新优先级
     if (updates.priority !== undefined) {
-      changes.priority = normalizePriority(updates.priority);
+      changes.priority = storage.normalizePriority(updates.priority);
     }
 
     // 更新完成状态
@@ -485,13 +322,13 @@ function createAiTodoManager(options) {
     }
 
     todos[idx] = { ...existingTodo, ...changes };
-    writeTodos(todos);
+    storage.writeTodos(todos);
 
     return {
       success: true,
       todo: todos[idx],
       message: `已更新待办项（ID: ${existingTodo.id}）`,
-      allTodos: readTodos()
+      allTodos: storage.readTodos()
     };
   }
 
@@ -504,7 +341,7 @@ function createAiTodoManager(options) {
       };
     }
 
-    const todo = findTodoById(id);
+    const todo = storage.findTodoById(id);
     if (!todo) {
       return {
         success: false,
@@ -531,7 +368,7 @@ function createAiTodoManager(options) {
   }
 
   function buildTodoPrompt() {
-    const todos = readTodos();
+    const todos = storage.readTodos();
     const pending = todos.filter(t => !t.completed);
     const completed = todos.filter(t => t.completed);
 
@@ -559,63 +396,6 @@ function createAiTodoManager(options) {
     );
   }
 
-  /**
-   * 诊断函数：显示所有存储的待办项（用于调试存储问题）
-   */
-  function diagnoseTodos() {
-    if (!store) {
-      return {
-        success: false,
-        error: 'Store not available'
-      };
-    }
-
-    const diagnosis = {
-      currentKey: getSessionKey(),
-      lockedSessionId,
-      globalKey: GLOBAL_KEY,
-      cacheStatus: {
-        key: inMemoryCacheKey,
-        size: inMemoryCache ? inMemoryCache.length : 0,
-        valid: inMemoryCache !== null
-      },
-      allTodoKeys: [],
-      allTodos: {},
-      currentTodos: {
-        key: getSessionKey(),
-        count: 0,
-        items: []
-      }
-    };
-
-    // 读取当前键的待办项
-    const currentTodos = readTodos();
-    diagnosis.currentTodos.count = currentTodos.length;
-    diagnosis.currentTodos.items = currentTodos;
-
-    // 扫描所有以 BASE_KEY 开头的键
-    const storeData = store.store || {};
-    for (const key in storeData) {
-      if (key.startsWith(BASE_KEY)) {
-        const value = storeData[key];
-        diagnosis.allTodoKeys.push(key);
-        diagnosis.allTodos[key] = {
-          count: Array.isArray(value) ? value.length : 0,
-          items: Array.isArray(value) ? value : []
-        };
-      }
-    }
-
-    if (DEBUG) {
-      console.log('[ai-todo-manager] Diagnosis:', diagnosis);
-    }
-
-    return {
-      success: true,
-      diagnosis
-    };
-  }
-
   return {
     addTodo,
     addTodos,
@@ -626,11 +406,11 @@ function createAiTodoManager(options) {
     editTodo,
     getTodoDetails,
     buildTodoPrompt,
-    diagnoseTodos,
-    lockSession,
-    unlockSession,
-    readTodos,
-    writeTodos
+    diagnoseTodos: storage.diagnoseTodos,
+    lockSession: storage.lockSession,
+    unlockSession: storage.unlockSession,
+    readTodos: storage.readTodos,
+    writeTodos: storage.writeTodos
   };
 }
 
