@@ -199,6 +199,19 @@ function getAiToolDefinitions() {
         }
         const priority = args?.priority || 'medium';
         const result = context.getTodoManager().addTodo(title, priority);
+        // 添加后自动附带当前待办列表，让用户直观看到更新结果
+        // 使用 addTodo 返回的 allTodos 避免再次读取时的存储键不一致问题
+        if (result.success && result.allTodos) {
+          const display = result.allTodos
+            .map((t, idx) => {
+              const mark = t.completed ? '[x]' : '[ ]';
+              const pri = t.priority ? `(${t.priority})` : '';
+              const num = idx + 1;
+              return `${num}. ${mark} ${pri} ${t.title}  (id: ${t.id})`;
+            })
+            .join('\n');
+          result.currentList = display || '暂无待办项';
+        }
         return result;
       }
     },
@@ -240,7 +253,7 @@ function getAiToolDefinitions() {
           todo_id: {
             type: 'string',
             description:
-              '待办项的 ID（从 list_todos 结果中的 {id:xxx} 提取，格式如 todo-1234567890-abcdefgh）'
+              '待办项的 ID（从 list_todos 结果中的 (id: xxx) 提取，格式如 todo-1、todo-2；也可直接传入序号如 "1"）'
           }
         },
         required: ['todo_id']
@@ -251,6 +264,19 @@ function getAiToolDefinitions() {
           return { success: false, error: 'Todo ID cannot be empty' };
         }
         const result = context.getTodoManager().completeTodo(todoId);
+        // 完成后自动附带当前待办列表
+        // 使用 completeTodo 返回的 allTodos 避免再次读取时的存储键不一致问题
+        if (result.success && result.allTodos) {
+          const display = result.allTodos
+            .map((t, idx) => {
+              const mark = t.completed ? '[x]' : '[ ]';
+              const pri = t.priority ? `(${t.priority})` : '';
+              const num = idx + 1;
+              return `${num}. ${mark} ${pri} ${t.title}  (id: ${t.id})`;
+            })
+            .join('\n');
+          result.currentList = display || '暂无待办项';
+        }
         return result;
       }
     },
@@ -267,7 +293,8 @@ function getAiToolDefinitions() {
         properties: {
           todo_id: {
             type: 'string',
-            description: '待办项的 ID（从 list_todos 结果中的 {id:xxx} 提取）'
+            description:
+              '待办项的 ID（从 list_todos 结果中的 (id: xxx) 提取，格式如 todo-1；也可直接传入序号如 "1"）'
           }
         },
         required: ['todo_id']
@@ -278,6 +305,19 @@ function getAiToolDefinitions() {
           return { success: false, error: 'Todo ID cannot be empty' };
         }
         const result = context.getTodoManager().removeTodo(todoId);
+        // 删除后自动附带当前待办列表
+        // 使用 removeTodo 返回的 allTodos 避免再次读取时的存储键不一致问题
+        if (result.success && result.allTodos) {
+          const display = result.allTodos
+            .map((t, idx) => {
+              const mark = t.completed ? '[x]' : '[ ]';
+              const pri = t.priority ? `(${t.priority})` : '';
+              const num = idx + 1;
+              return `${num}. ${mark} ${pri} ${t.title}  (id: ${t.id})`;
+            })
+            .join('\n');
+          result.currentList = display || '暂无待办项';
+        }
         return result;
       }
     },

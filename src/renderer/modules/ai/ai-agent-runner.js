@@ -300,9 +300,10 @@ function createAiAgentRunner(options) {
     }
 
     if (toolName === 'add_todo') {
+      const listText = toolResult.currentList ? `\n当前待办列表：\n${toolResult.currentList}` : '';
       return {
         status: 'success',
-        text: toolResult.message || '待办项已添加'
+        text: `${toolResult.message || '待办项已添加'}${listText}`
       };
     }
 
@@ -315,16 +316,18 @@ function createAiAgentRunner(options) {
     }
 
     if (toolName === 'complete_todo') {
+      const listText = toolResult.currentList ? `\n当前待办列表：\n${toolResult.currentList}` : '';
       return {
         status: 'success',
-        text: toolResult.message || '待办项已标记为完成'
+        text: `${toolResult.message || '待办项已标记为完成'}${listText}`
       };
     }
 
     if (toolName === 'remove_todo') {
+      const listText = toolResult.currentList ? `\n当前待办列表：\n${toolResult.currentList}` : '';
       return {
         status: 'success',
-        text: toolResult.message || '待办项已删除'
+        text: `${toolResult.message || '待办项已删除'}${listText}`
       };
     }
 
@@ -488,31 +491,55 @@ function createAiAgentRunner(options) {
     const contextSize = store ? store.get('settings.aiContextSize', 8192) : 8192;
     const maxHistoryMessages = Math.max(8, Math.floor((contextSize * 0.6) / 500));
 
-    // 智能截断：优先保留工具调用和最近的用户/助手消息
+    // 智能截断：优先保留 todo 工具消息和最近的用户/助手消息
     // 这样 AI 不会忘记已调用的工具（如已搜索过的关键词），避免重复
+    // 同时确保 todo ID 信息不丢失，避免 complete_todo 失败
     let truncatedHistory = formattedHistory;
     if (formattedHistory.length > maxHistoryMessages) {
-      const toolMessages = [];
+      const todoToolNames = new Set(['add_todo', 'list_todos', 'complete_todo', 'remove_todo']);
+      const todoMessages = [];
+      const otherToolMessages = [];
       const otherMessages = [];
 
-      // 分离工具相关消息和其他消息
+      // 分离消息：todo 工具、其他工具、普通消息
       for (const msg of formattedHistory) {
-        if (msg.role === 'tool' || (msg.role === 'assistant' && msg.tool_calls)) {
-          toolMessages.push(msg);
+        if (msg.role === 'tool') {
+          // 工具结果消息无法直接判断工具名，放入 otherToolMessages
+          // 但 todo 工具结果的 content 中包含 todo- 短 ID，可启发式识别
+          const content = typeof msg.content === 'string' ? msg.content : '';
+          if (content.includes('todo-') || content.includes('待办')) {
+            todoMessages.push(msg);
+          } else {
+            otherToolMessages.push(msg);
+          }
+        } else if (msg.role === 'assistant' && msg.tool_calls) {
+          // 检查 assistant 消息中是否包含 todo 工具调用
+          const hasTodoCall = msg.tool_calls.some(call => todoToolNames.has(call.function?.name));
+          if (hasTodoCall) {
+            todoMessages.push(msg);
+          } else {
+            otherToolMessages.push(msg);
+          }
         } else {
           otherMessages.push(msg);
         }
       }
 
-      // 保留：最近的工具消息 + 最近的其他消息
-      const keepToolCount = Math.min(toolMessages.length, Math.ceil(maxHistoryMessages * 0.5));
-      const keepOtherCount = maxHistoryMessages - keepToolCount;
+      // 保留策略：todo 消息全部保留 + 最近的工具消息 + 最近的其他消息
+      const keepOtherToolCount = Math.min(
+        otherToolMessages.length,
+        Math.max(2, Math.ceil(maxHistoryMessages * 0.3))
+      );
+      const keepOtherCount = Math.max(
+        2,
+        maxHistoryMessages - todoMessages.length - keepOtherToolCount
+      );
 
-      const recentToolMessages = toolMessages.slice(-keepToolCount);
+      const recentOtherToolMessages = otherToolMessages.slice(-keepOtherToolCount);
       const recentOtherMessages = otherMessages.slice(-keepOtherCount);
 
       // 合并并排序（保持时间顺序）
-      const allKept = [...recentToolMessages, ...recentOtherMessages];
+      const allKept = [...todoMessages, ...recentOtherToolMessages, ...recentOtherMessages];
       truncatedHistory = allKept.sort((a, b) => {
         const aIdx = formattedHistory.indexOf(a);
         const bIdx = formattedHistory.indexOf(b);
@@ -570,22 +597,54 @@ function createAiAgentRunner(options) {
     while (isAgentProcessing && maxIterations > 0) {
       maxIterations--;
 
-      // 智能动态截断：保留系统消息、工具调用历史和最近消息，防止 token 超限
+      // 动态刷新系统提示词中的 todo 部分，确保 AI 始终看到最新的 todo 状态
+      // 解决：add_todo 后系统提示词仍显示空列表，导致 AI 认为 todo 不存在
+      if (agentMessageHistory.length > 0 && agentMessageHistory[0].role === 'system') {
+        const freshTodoPrompt =
+          todoManager && typeof todoManager.buildTodoPrompt === 'function'
+            ? todoManager.buildTodoPrompt()
+            : '';
+        const currentSystemContent = agentMessageHistory[0].content;
+        // 替换 [To Do List - Highest Priority] 到下一个主要段落之间的内容
+        const todoSectionRegex =
+          /\n\n\[To Do List - Highest Priority\][\s\S]*?(?=\n\n你是Agent模式|\n\n【当前打开的标签页】|$)/;
+        if (todoSectionRegex.test(currentSystemContent)) {
+          agentMessageHistory[0].content = currentSystemContent.replace(
+            todoSectionRegex,
+            freshTodoPrompt
+          );
+        }
+      }
+
+      // 智能动态截断：优先保留 todo 工具消息、系统消息和最近消息，防止 token 超限
       const maxLiveMessages = Math.max(12, Math.floor((contextSize * 0.8) / 500));
       if (agentMessageHistory.length > maxLiveMessages) {
         const systemMsg = agentMessageHistory[0];
-        const toolAndRecentMessages = [];
+        const todoToolNames = new Set(['add_todo', 'list_todos', 'complete_todo', 'remove_todo']);
+        const todoMessages = [];
+        const otherToolMessages = [];
 
-        // 将工具调用和结果全部保留，再保留最近的消息
+        // 分离工具消息：todo 工具 vs 其他工具
         for (let i = 1; i < agentMessageHistory.length; i++) {
           const msg = agentMessageHistory[i];
-          // 保留所有工具相关消息，防止 AI 忘记已执行的工具
-          if (msg.role === 'tool' || (msg.role === 'assistant' && msg.tool_calls)) {
-            toolAndRecentMessages.push(msg);
+          if (msg.role === 'tool') {
+            const content = typeof msg.content === 'string' ? msg.content : '';
+            if (content.includes('todo-') || content.includes('待办')) {
+              todoMessages.push(msg);
+            } else {
+              otherToolMessages.push(msg);
+            }
+          } else if (msg.role === 'assistant' && msg.tool_calls) {
+            const hasTodoCall = msg.tool_calls.some(call => todoToolNames.has(call.function?.name));
+            if (hasTodoCall) {
+              todoMessages.push(msg);
+            } else {
+              otherToolMessages.push(msg);
+            }
           }
         }
 
-        // 保留最近的用户消息和助手消息
+        // 保留最近的非工具消息
         const recentMessages = [];
         for (let i = agentMessageHistory.length - 1; i >= 1; i--) {
           const msg = agentMessageHistory[i];
@@ -595,8 +654,15 @@ function createAiAgentRunner(options) {
           }
         }
 
-        // 去重合并：先保留工具消息，再加最近的其他消息
-        const combined = [...toolAndRecentMessages, ...recentMessages];
+        // 保留策略：todo 消息全部保留 + 最近的工具消息 + 最近的其他消息
+        const keepOtherToolCount = Math.min(
+          otherToolMessages.length,
+          Math.max(2, Math.ceil(maxLiveMessages * 0.3))
+        );
+        const recentOtherToolMessages = otherToolMessages.slice(-keepOtherToolCount);
+
+        // 去重合并
+        const combined = [...todoMessages, ...recentOtherToolMessages, ...recentMessages];
         const unique = [];
         const seen = new Set();
         for (const msg of combined) {
@@ -611,7 +677,7 @@ function createAiAgentRunner(options) {
           }
         }
 
-        // 最终截断到 maxLiveMessages，保留至少5条消息
+        // 最终截断，保留至少5条消息
         const finalMessages = unique.slice(-Math.max(5, maxLiveMessages - 2));
         agentMessageHistory = [systemMsg, ...finalMessages];
       }

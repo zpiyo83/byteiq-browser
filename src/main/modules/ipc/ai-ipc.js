@@ -43,12 +43,17 @@ function registerAiIpc(options) {
           timeout
         },
         (chunk, accumulated, reasoningContent) => {
-          event.sender.send('ai-chat-streaming', {
-            taskId: resolvedTaskId,
-            chunk,
-            accumulated,
-            reasoningContent
-          });
+          if (event.sender.isDestroyed()) return;
+          try {
+            event.sender.send('ai-chat-streaming', {
+              taskId: resolvedTaskId,
+              chunk,
+              accumulated,
+              reasoningContent
+            });
+          } catch (err) {
+            console.warn('[ai-ipc] Failed to send chat streaming chunk:', err.message);
+          }
         },
         req => {
           activeChatRequests.set(resolvedTaskId, req);
@@ -124,11 +129,20 @@ function registerAiIpc(options) {
 
       // 流式回调：向渲染进程发送增量文本
       const onTextChunk = (accumulated, reasoningContent) => {
-        event.sender.send('ai-agent-streaming', {
-          taskId: resolvedTaskId,
-          accumulated,
-          reasoningContent
-        });
+        // 检查 webContents 是否已销毁，避免向已关闭的窗口发送 IPC 消息
+        if (event.sender.isDestroyed()) return;
+        try {
+          event.sender.send('ai-agent-streaming', {
+            taskId: resolvedTaskId,
+            accumulated,
+            reasoningContent
+          });
+        } catch (err) {
+          console.warn(
+            '[ai-ipc] Failed to send streaming chunk, webContents may be destroyed:',
+            err.message
+          );
+        }
       };
 
       let result;
