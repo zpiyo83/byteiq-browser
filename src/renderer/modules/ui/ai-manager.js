@@ -50,6 +50,8 @@ function createAiManager(options) {
 
   // 上下文饼图元素
   const pieUsed = documentRef.getElementById('ai-pie-used');
+  const contextPie = documentRef.getElementById('ai-context-pie');
+  const contextTooltip = documentRef.getElementById('ai-context-tooltip');
   const ttUsed = documentRef.getElementById('tt-used');
   const ttUsedK = documentRef.getElementById('tt-used-k');
   const ttRemainK = documentRef.getElementById('tt-remain-k');
@@ -116,12 +118,169 @@ function createAiManager(options) {
     }
 
     // 更新 tooltip
+    const ttTotalK = documentRef.getElementById('tt-total-k');
     if (ttUsed) ttUsed.textContent = `${pct}%`;
     if (ttUsedK) ttUsedK.textContent = `${(total / 1000).toFixed(1)}K`;
+    if (ttTotalK) ttTotalK.textContent = `${(contextSize / 1000).toFixed(1)}K`;
     if (ttRemainK)
       ttRemainK.textContent = `${(Math.max(0, contextSize - total) / 1000).toFixed(1)}K`;
     if (ttSystem) ttSystem.textContent = `${system}`;
     if (ttHistory) ttHistory.textContent = `${history}`;
+  }
+
+  // 从 IndexedDB 加载会话消息并同步到 agentRunner
+  async function syncSessionMessagesToAgent(sessionId) {
+    if (!sessionId) return;
+    const dbMessages = await historyStorage.getMessages(sessionId, { limit: 1000 });
+    if (dbMessages && dbMessages.length > 0) {
+      const syncMessages = dbMessages.map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content || ''),
+        ...(m.tool_calls ? { tool_calls: m.tool_calls } : {}),
+        ...(m.tool_call_id ? { tool_call_id: m.tool_call_id } : {})
+      }));
+      agentRunner.setMessageHistory(syncMessages);
+    } else {
+      agentRunner.setMessageHistory([]);
+    }
+  }
+
+  // 压缩上下文：将当前对话历史发送给 AI 进行摘要压缩
+  async function compressContext() {
+    const overlay = documentRef.getElementById('ai-compress-overlay');
+    const content = documentRef.getElementById('ai-compress-content');
+    const status = documentRef.getElementById('ai-compress-status');
+    if (!overlay || !content || !status) return;
+
+    // 获取当前消息历史
+    const messages = agentRunner.getMessageHistory();
+    if (!messages || messages.length <= 1) {
+      showToast('没有足够的对话历史可以压缩', 'warning');
+      return;
+    }
+
+    // 计算压缩前的 token 数
+    const { total: beforeTokens } = estimateHistoryTokens(messages);
+
+    // 显示弹窗
+    overlay.style.display = 'flex';
+    content.textContent = '';
+    status.className = 'ai-compress-status';
+    status.innerHTML = '<div class="ai-compress-spinner"></div><span>正在压缩...</span>';
+
+    // 构造压缩 prompt
+    const compressMessages = [
+      {
+        role: 'system',
+        content:
+          '你是一个对话压缩助手。请将以下对话历史压缩为简洁的摘要，保留所有关键信息、决策和结论。' +
+          '直接输出压缩后的摘要文本，不要添加额外说明。' +
+          '摘要应该足够详细，使得 AI 在后续对话中能够理解之前的上下文。'
+      },
+      {
+        role: 'user',
+        content:
+          '请压缩以下对话历史：\n\n' +
+          messages
+            .filter(m => m.role !== 'system')
+            .map(m => {
+              const role = m.role === 'user' ? '用户' : m.role === 'assistant' ? 'AI' : '工具';
+              const text =
+                typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '');
+              return `[${role}]: ${text}`;
+            })
+            .join('\n\n')
+      }
+    ];
+
+    // 使用独立的 taskId 跟踪压缩请求
+    const compressTaskId = `compress-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    let accumulated = '';
+
+    // 临时监听压缩流式响应
+    const onStreaming = (_event, data) => {
+      if (data.taskId !== compressTaskId) return;
+      accumulated = data.accumulated || accumulated + (data.chunk || '');
+      // 使用 requestAnimationFrame 确保 DOM 更新立即渲染
+      requestAnimationFrame(() => {
+        content.textContent = accumulated;
+        content.scrollTop = content.scrollHeight;
+      });
+    };
+    ipcRenderer.on('ai-chat-streaming', onStreaming);
+
+    try {
+      const result = await ipcRenderer.invoke('ai-chat', {
+        messages: compressMessages,
+        taskId: compressTaskId
+      });
+
+      // 移除临时监听
+      ipcRenderer.removeListener('ai-chat-streaming', onStreaming);
+
+      if (result.success) {
+        const compressedContent = result.content || accumulated;
+
+        // 确保弹窗中显示最终的压缩结果（流式可能未触发或未收到）
+        if (compressedContent && content.textContent !== compressedContent) {
+          content.textContent = compressedContent;
+          content.scrollTop = content.scrollHeight;
+        }
+
+        // 计算压缩后的 token 数
+        const compressedMessages = [
+          messages[0], // 保留 system prompt
+          { role: 'user', content: '[上下文摘要]' },
+          { role: 'assistant', content: compressedContent }
+        ];
+        const { total: afterTokens } = estimateHistoryTokens(compressedMessages);
+        const saved = beforeTokens - afterTokens;
+
+        // 更新 agentRunner 的消息历史
+        agentRunner.setMessageHistory(compressedMessages);
+
+        // 更新 IndexedDB 中的消息
+        const session = await getCurrentSession();
+        if (session) {
+          // 清除旧消息
+          await historyStorage.clearMessages(session.id);
+          // 保存压缩后的消息
+          for (const msg of compressedMessages) {
+            await historyStorage.addMessage(session.id, {
+              role: msg.role,
+              content: msg.content,
+              metadata: msg.role === 'assistant' ? { compressed: true } : {}
+            });
+          }
+        }
+
+        // 重新渲染聊天区域
+        await renderSessionChat(session);
+
+        // 更新饼图
+        updateContextPie();
+
+        // 显示完成状态
+        status.className = 'ai-compress-status completed';
+        const savedK = (saved / 1000).toFixed(1);
+        status.innerHTML = `<span>✓ 已完成压缩，节省 ${savedK}K tokens</span>`;
+
+        // 2秒后自动关闭弹窗
+        setTimeout(() => {
+          overlay.style.display = 'none';
+        }, 2000);
+      } else {
+        throw new Error(result.error || '压缩失败');
+      }
+    } catch (err) {
+      ipcRenderer.removeListener('ai-chat-streaming', onStreaming);
+      status.className = 'ai-compress-status';
+      status.innerHTML = `<span style="color: #ef4444">压缩失败: ${err.message}</span>`;
+      // 3秒后关闭
+      setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 3000);
+    }
   }
 
   // 工具栏与历史面板
@@ -171,8 +330,7 @@ function createAiManager(options) {
     setActiveSessionId,
     readTabToSessionFromStore,
     createSession,
-    clearTabConversation,
-    bindTabToSession
+    clearTabConversation
   } = sessionService;
 
   const todoManager = createAiTodoManager({
@@ -188,7 +346,8 @@ function createAiManager(options) {
     formatUrl,
     switchTab: tabManager ? tabManager.switchTab : null,
     bindTabToSession: sessionService.bindTabToSession,
-    getTodoManager: () => todoManager
+    getTodoManager: () => todoManager,
+    store
   });
 
   const BYTEIQ_LOGO_SRC = `file://${path.join(__dirname, '../../../../assets/img/byteiq.png')}`;
@@ -372,7 +531,8 @@ function createAiManager(options) {
     getOrCreateSessionIdForTab,
     setActiveSessionId,
     readTabToSessionFromStore,
-    renderSessionChat: (...args) => renderSessionChat(...args)
+    renderSessionChat: (...args) => renderSessionChat(...args),
+    syncSessionMessagesToAgent
   });
 
   const agentRunner = createAiAgentRunner({
@@ -457,7 +617,10 @@ function createAiManager(options) {
     const session = await getSessionById(sessionId);
     await renderSessionsList();
     await renderSessionChat(session);
+    // 从 IndexedDB 加载消息并同步到 agentRunner，确保上下文正确
+    await syncSessionMessagesToAgent(sessionId);
     updateContextBar(session?.pageContext);
+    updateContextPie();
     if (currentMode === 'agent') {
       contextBar.style.display = 'none';
     }
@@ -640,6 +803,33 @@ function createAiManager(options) {
       contextClearBtn.addEventListener('click', clearCurrentContext);
     }
 
+    // 饼图 tooltip 显示/隐藏（JS 控制，避免鼠标移入 tooltip 时消失）
+    let tooltipTimer = null;
+    if (contextPie && contextTooltip) {
+      const showTooltip = () => {
+        clearTimeout(tooltipTimer);
+        contextTooltip.style.display = 'block';
+      };
+      const hideTooltip = () => {
+        tooltipTimer = setTimeout(() => {
+          contextTooltip.style.display = 'none';
+        }, 150);
+      };
+      contextPie.addEventListener('mouseenter', showTooltip);
+      contextPie.addEventListener('mouseleave', hideTooltip);
+      contextTooltip.addEventListener('mouseenter', showTooltip);
+      contextTooltip.addEventListener('mouseleave', hideTooltip);
+    }
+
+    // 压缩上下文按钮
+    const compressBtn = documentRef.getElementById('ai-compress-context-btn');
+    if (compressBtn) {
+      compressBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        compressContext();
+      });
+    }
+
     bindHistoryPanelEvents();
 
     toolbar.init();
@@ -674,6 +864,11 @@ function createAiManager(options) {
     const session = await getCurrentSession();
     await renderSessionsList();
     await renderSessionChat(session);
+    // 初始化时同步消息到 agentRunner
+    if (session) {
+      await syncSessionMessagesToAgent(session.id);
+    }
+    updateContextPie();
   }
 
   return {

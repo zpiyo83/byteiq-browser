@@ -196,6 +196,15 @@ function bindBrowserSettingsEvents(deps) {
     }
   });
 
+  // 实验功能：批量待办开关
+  const batchTodoToggle = document.getElementById('experimental-batch-todo-toggle');
+  if (batchTodoToggle) {
+    batchTodoToggle.checked = store.get('settings.experimentalBatchTodo', false);
+    batchTodoToggle.addEventListener('change', () => {
+      store.set('settings.experimentalBatchTodo', batchTodoToggle.checked);
+    });
+  }
+
   // 导出数据
   exportDataBtn.addEventListener('click', () => {
     const data = {

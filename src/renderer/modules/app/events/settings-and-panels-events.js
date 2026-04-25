@@ -246,6 +246,11 @@ function bindSettingsAndPanelEvents(options) {
         if (options.translationTimeoutInput) {
           options.translationTimeoutInput.value = store.get('settings.translationTimeout', 120);
         }
+        // 加载实验功能设置
+        const batchTodoToggle = document.getElementById('experimental-batch-todo-toggle');
+        if (batchTodoToggle) {
+          batchTodoToggle.checked = store.get('settings.experimentalBatchTodo', false);
+        }
         // 获取版本信息
         ipcRenderer.invoke('get-version-info').then(versions => {
           const appVersionEl = document.getElementById('about-app-version');

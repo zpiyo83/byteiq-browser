@@ -125,7 +125,13 @@
         "ai": "AI",
         "translation": "翻译",
         "extensions": "扩展",
+        "experimental": "实验功能",
         "about": "关于"
+      },
+      "experimental": {
+        "title": "实验功能",
+        "batchTodo": "批量待办操作",
+        "batchTodoDesc": "启用AI工具中的批量添加(add_todos)和批量完成(complete_todos)功能"
       },
       "ai": {
         "title": "AI设置",

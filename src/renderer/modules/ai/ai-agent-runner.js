@@ -5,6 +5,120 @@
 const { getAiToolsSchema } = require('./ai-tools-registry');
 const { renderMarkdownToElement } = require('./ai-markdown-renderer');
 
+// 已注册的工具名集合，用于文本解析时校验
+const KNOWN_TOOL_NAMES = new Set([
+  'get_page_info',
+  'click_element',
+  'input_text',
+  'search_page',
+  'add_todo',
+  'add_todos',
+  'list_todos',
+  'complete_todo',
+  'complete_todos',
+  'remove_todo',
+  'end_session'
+]);
+
+/**
+ * 从模型文本输出中解析工具调用（兼容不支持 tools API 的模型）
+ * 支持的格式：
+ * 1. Qwen/Hermes 格式: <tool_call>\n{"name":"xxx","arguments":{...}}\n</tool_call>
+ * 2. 函数调用格式: ```json\n{"name":"xxx","arguments":{...}}\n```
+ * 3. 简单 JSON 行: {"name":"xxx","arguments":{...}}
+ */
+function parseToolCallsFromText(text) {
+  if (!text || typeof text !== 'string') return [];
+  const calls = [];
+  let callIdCounter = 0;
+
+  // 格式1: <tool_call>...</tool_call> (Qwen/Hermes)
+  const hermesRegex = /<tool_call>\s*\n?([\s\S]*?)\n?\s*<\/tool_call>/g;
+  let match;
+  while ((match = hermesRegex.exec(text)) !== null) {
+    const jsonStr = match[1].trim();
+    const parsed = tryParseToolCallJson(jsonStr);
+    if (parsed) {
+      parsed.id = `parsed_${++callIdCounter}_${Date.now()}`;
+      calls.push(parsed);
+    }
+  }
+  if (calls.length > 0) return calls;
+
+  // 格式2: ```json ... ``` 包含工具调用
+  const codeBlockRegex = /```(?:json)?\s*\n([\s\S]*?)\n```/g;
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    const jsonStr = match[1].trim();
+    const parsed = tryParseToolCallJson(jsonStr);
+    if (parsed) {
+      parsed.id = `parsed_${++callIdCounter}_${Date.now()}`;
+      calls.push(parsed);
+    }
+  }
+  if (calls.length > 0) return calls;
+
+  // 格式3: 独立 JSON 行（name + arguments）
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      const parsed = tryParseToolCallJson(trimmed);
+      if (parsed) {
+        parsed.id = `parsed_${++callIdCounter}_${Date.now()}`;
+        calls.push(parsed);
+      }
+    }
+  }
+
+  return calls;
+}
+
+/**
+ * 尝试将 JSON 字符串解析为工具调用
+ */
+function tryParseToolCallJson(jsonStr) {
+  try {
+    const obj = JSON.parse(jsonStr);
+    // 支持多种字段名
+    const name = obj.name || obj.function_name || obj.tool_name || '';
+    const args = obj.arguments || obj.args || obj.parameters || obj.params || {};
+    if (name && KNOWN_TOOL_NAMES.has(name)) {
+      return { name, arguments: typeof args === 'object' ? args : {} };
+    }
+  } catch {
+    // 忽略解析失败
+  }
+  return null;
+}
+
+/**
+ * 从文本内容中移除工具调用标记，只保留正文
+ */
+function removeToolCallTextFromContent(text) {
+  if (!text) return text;
+  // 移除 <tool_call>...</tool_call> 块
+  let cleaned = text.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '');
+  // 移除包含工具调用的 ```json ... ``` 块
+  cleaned = cleaned.replace(/```json\s*\n\s*\{[\s\S]*?"name"\s*:[\s\S]*?\}\s*\n```/g, '');
+  // 移除独立的工具调用 JSON 行
+  cleaned = cleaned
+    .split('\n')
+    .filter(line => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const obj = JSON.parse(trimmed);
+          if (obj.name && KNOWN_TOOL_NAMES.has(obj.name)) return false;
+        } catch {
+          /* 保留 */
+        }
+      }
+      return true;
+    })
+    .join('\n');
+  return cleaned.trim();
+}
+
 function createAiAgentRunner(options) {
   const {
     ipcRenderer,
@@ -34,10 +148,6 @@ function createAiAgentRunner(options) {
 
   let isAgentProcessing = false;
   let agentMessageHistory = [];
-
-  // 性能优化：操作序列号防止竞态条件
-  // 每次开始新的 Agent 处理时递增，在异步操作中检查序列号确保只处理最新请求
-  let currentOperationId = 0;
 
   // 当前 Agent 操作的守卫（用于会话隔离）
   let currentOperationGuard = null;
@@ -143,10 +253,14 @@ function createAiAgentRunner(options) {
         return '搜索页面';
       case 'add_todo':
         return '添加待办项';
+      case 'add_todos':
+        return '批量添加待办项';
       case 'list_todos':
         return '显示待办列表';
       case 'complete_todo':
         return '完成待办项';
+      case 'complete_todos':
+        return '批量完成待办项';
       case 'remove_todo':
         return '删除待办项';
       case 'end_session':
@@ -226,6 +340,10 @@ function createAiAgentRunner(options) {
         const priority = args.priority ? `优先级: ${args.priority}` : '';
         return `准备添加待办项，${title}，${priority}`.trim();
       }
+      case 'add_todos': {
+        const count = args.items ? args.items.length : 0;
+        return `准备批量添加 ${count} 个待办项`;
+      }
       case 'list_todos': {
         const filter = args.filter ? `${args.filter}` : 'pending';
         return `准备显示待办列表（${filter}）`;
@@ -233,6 +351,10 @@ function createAiAgentRunner(options) {
       case 'complete_todo': {
         const id = args.todo_id ? args.todo_id : '未提供ID';
         return `准备标记待办项为完成，ID: ${id}`;
+      }
+      case 'complete_todos': {
+        const ids = args.todo_ids ? args.todo_ids.join(', ') : '未提供ID';
+        return `准备批量完成待办项，ID: ${ids}`;
       }
       case 'remove_todo': {
         const id = args.todo_id ? args.todo_id : '未提供ID';
@@ -311,6 +433,14 @@ function createAiAgentRunner(options) {
       };
     }
 
+    if (toolName === 'add_todos') {
+      const listText = toolResult.currentList ? `\n当前待办列表：\n${toolResult.currentList}` : '';
+      return {
+        status: 'success',
+        text: `${toolResult.message || '待办项已批量添加'}${listText}`
+      };
+    }
+
     if (toolName === 'list_todos') {
       const display = toolResult.display || '暂无待办项';
       return {
@@ -324,6 +454,14 @@ function createAiAgentRunner(options) {
       return {
         status: 'success',
         text: `${toolResult.message || '待办项已标记为完成'}${listText}`
+      };
+    }
+
+    if (toolName === 'complete_todos') {
+      const listText = toolResult.currentList ? `\n当前待办列表：\n${toolResult.currentList}` : '';
+      return {
+        status: 'success',
+        text: `${toolResult.message || '待办项已批量完成'}${listText}`
       };
     }
 
@@ -354,7 +492,7 @@ function createAiAgentRunner(options) {
         throw new Error('Session no longer active');
       }
 
-      const tools = getAiToolsSchema();
+      const tools = getAiToolsSchema(store);
       const result = await ipcRenderer.invoke('ai-agent', {
         messages,
         tools,
@@ -370,7 +508,9 @@ function createAiAgentRunner(options) {
     } finally {
       agentStreamingElement = null;
       agentStreamingTaskId = null;
-      setInputEnabled(true);
+      // 注意：此处不调用 setInputEnabled(true)
+      // agent 模式下 while 循环会多次调用 sendAgentRequest，
+      // 输入框应在 runAgentConversation 整体结束时才启用
       // 清理操作守卫
       if (operationGuard && typeof operationGuard.dispose === 'function') {
         operationGuard.dispose();
@@ -379,9 +519,6 @@ function createAiAgentRunner(options) {
   }
 
   async function runAgentConversation(session, userText) {
-    // 性能优化：为本次 Agent 操作分配序列号，用于检查异步操作是否过期
-    const operationId = ++currentOperationId;
-
     // 注册操作守卫，用于会话隔离
     currentOperationGuard = contextIsolation?.registerOperation?.('agent-loop');
 
@@ -426,14 +563,16 @@ function createAiAgentRunner(options) {
       '\n- click_element(selector, tab_id?): 点击页面元素。selector必须来自get_page_info返回的controls。' +
       '\n- input_text(selector, text, tab_id?): 在输入框中输入文本。selector必须来自get_page_info返回的controls。' +
       '\n- add_todo(title, priority?): 添加待办项。priority可选：low/medium/high。' +
+      '\n- add_todos(items): 批量添加待办项。items为[{title, priority?}]数组，一次添加多个。' +
       '\n- list_todos(filter?): 显示待办列表。filter可选：all/pending/completed。' +
       '\n- complete_todo(todo_id): 完成指定ID的待办项。' +
+      '\n- complete_todos(todo_ids): 批量完成待办项。todo_ids为ID数组，一次完成多个。' +
       '\n- remove_todo(todo_id): 删除指定ID的待办项。' +
       '\n- end_session(summary): 结束会话，summary为最终总结（支持Markdown），将直接展示给用户。' +
       '\n\n操作规范：' +
       '\n0. 【To Do 工具使用规则 - 最高优先级】' +
-      '\n   a) 收到用户任务时，必须先调用add_todo将任务步骤拆分为待办项' +
-      '\n   b) 每完成一个步骤，必须调用complete_todo标记完成' +
+      '\n   a) 收到用户任务时，必须先调用add_todo或add_todos将任务步骤拆分为待办项' +
+      '\n   b) 每完成一个步骤，必须调用complete_todo或complete_todos标记完成' +
       '\n   c) 用户提到"待办""任务""计划""要做的事""提醒"时，必须使用todo工具' +
       '\n   d) 用户询问"还有什么没做""任务进度"时，必须调用list_todos' +
       '\n   e) 不要用文字描述待办列表，必须调用list_todos工具来展示' +
@@ -480,7 +619,7 @@ function createAiAgentRunner(options) {
             content: m.content || ''
           };
         }
-        if (m.role === 'assistant' && m.metadata?.toolCalls) {
+        if (m.role === 'assistant' && m.metadata?.toolCalls && m.metadata.toolCalls.length > 0) {
           // 修复：恢复 thinking 内容到消息中，防止上下文丢失
           // 虽然API格式需要 content=null，但我们通过注入 thinking 标记来保留推理过程
           const thinkingContent = m.metadata?.thinkingContent || '';
@@ -520,7 +659,14 @@ function createAiAgentRunner(options) {
     // 同时确保 todo ID 信息不丢失，避免 complete_todo 失败
     let truncatedHistory = formattedHistory;
     if (formattedHistory.length > maxHistoryMessages) {
-      const todoToolNames = new Set(['add_todo', 'list_todos', 'complete_todo', 'remove_todo']);
+      const todoToolNames = new Set([
+        'add_todo',
+        'add_todos',
+        'list_todos',
+        'complete_todo',
+        'complete_todos',
+        'remove_todo'
+      ]);
       const todoMessages = [];
       const otherToolMessages = [];
       const otherMessages = [];
@@ -625,7 +771,7 @@ function createAiAgentRunner(options) {
 
         // 会话隔离守卫检查：如果会话已变更，立即退出循环
         if (currentOperationGuard && !currentOperationGuard.guard()) {
-          console.log('[ai-agent-runner] Session changed, breaking agent loop');
+          console.warn('[ai-agent-runner] Session changed, breaking agent loop');
           break;
         }
 
@@ -652,7 +798,14 @@ function createAiAgentRunner(options) {
         const maxLiveMessages = Math.max(12, Math.floor((contextSize * 0.8) / 500));
         if (agentMessageHistory.length > maxLiveMessages) {
           const systemMsg = agentMessageHistory[0];
-          const todoToolNames = new Set(['add_todo', 'list_todos', 'complete_todo', 'remove_todo']);
+          const todoToolNames = new Set([
+            'add_todo',
+            'add_todos',
+            'list_todos',
+            'complete_todo',
+            'complete_todos',
+            'remove_todo'
+          ]);
           const todoMessages = [];
           const otherToolMessages = [];
 
@@ -718,7 +871,7 @@ function createAiAgentRunner(options) {
 
         aiMsgElement = addChatMessage('', 'ai', true);
 
-        const result = await sendAgentRequest(agentMessageHistory, aiMsgElement);
+        let result = await sendAgentRequest(agentMessageHistory, aiMsgElement);
 
         if (!result?.success) {
           finishStreamingMessage(aiMsgElement);
@@ -726,52 +879,70 @@ function createAiAgentRunner(options) {
         }
 
         if (result.type === 'message') {
-          // 渲染思考内容和正文
-          const fullText = result.reasoningContent
-            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
-            : result.content;
-          updateStreamingMessage(aiMsgElement, fullText);
-          finishStreamingMessage(aiMsgElement);
-          agentMessageHistory.push({ role: 'assistant', content: result.content });
-          // 保存思考内容到历史（使用标记以便还原时渲染思考下拉框）
-          const savedContent = result.reasoningContent
-            ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
-            : result.content;
-          // 仅在会话活跃时保存
-          if (contextIsolation?.isSessionActive?.(session.id)) {
-            await historyStorage.addMessage(session.id, {
-              role: 'assistant',
-              content: savedContent
-            });
-          }
-          // 纯文本回复不自动结束，继续循环等待AI决定是否调用end_session
-          // 但如果AI连续返回纯文本且满足以下条件之一，则视为任务完成：
-          // 1. 内容为空
-          // 2. 内容与之前的回复重复
-          // 3. 内容包含完成关键词
-          // 4. 连续5次返回纯文本
-          if (!result.content || result.content.trim().length === 0) {
-            break;
+          // 当模型不支持 tools API 时（usedToolsFallback），尝试从文本中解析工具调用
+          if (result.usedToolsFallback && result.content) {
+            const parsedToolCalls = parseToolCallsFromText(result.content);
+            if (parsedToolCalls && parsedToolCalls.length > 0) {
+              // 将解析出的工具调用转换为与 API 返回相同的格式
+              result = {
+                success: true,
+                type: 'tool_calls',
+                toolCalls: parsedToolCalls,
+                reasoningContent: result.reasoningContent || '',
+                content: removeToolCallTextFromContent(result.content),
+                taskId: result.taskId
+              };
+            }
           }
 
-          const content = result.content.trim().toLowerCase();
+          // 如果经过上面的解析后仍然是 message 类型，正常渲染
+          if (result.type === 'message') {
+            const fullText = result.reasoningContent
+              ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
+              : result.content;
+            updateStreamingMessage(aiMsgElement, fullText);
+            finishStreamingMessage(aiMsgElement);
+            agentMessageHistory.push({ role: 'assistant', content: result.content });
+            // 保存思考内容到历史（使用标记以便还原时渲染思考下拉框）
+            const savedContent = result.reasoningContent
+              ? `<!--think-->${result.reasoningContent}<!--endthink-->${result.content}`
+              : result.content;
+            // 仅在会话活跃时保存
+            if (contextIsolation?.isSessionActive?.(session.id)) {
+              await historyStorage.addMessage(session.id, {
+                role: 'assistant',
+                content: savedContent
+              });
+            }
+            // 纯文本回复不自动结束，继续循环等待AI决定是否调用end_session
+            // 但如果AI连续返回纯文本且满足以下条件之一，则视为任务完成：
+            // 1. 内容为空
+            // 2. 内容与之前的回复重复
+            // 3. 内容包含完成关键词
+            // 4. 连续5次返回纯文本
+            if (!result.content || result.content.trim().length === 0) {
+              break;
+            }
 
-          // 检查内容是否与历史消息重复
-          const isDuplicate = previousMessages.has(content);
-          previousMessages.add(content);
+            const content = result.content.trim().toLowerCase();
 
-          // 检查内容是否包含完成关键词
-          const containsCompletionKeyword = completionKeywords.some(keyword =>
-            content.includes(keyword.toLowerCase())
-          );
+            // 检查内容是否与历史消息重复
+            const isDuplicate = previousMessages.has(content);
+            previousMessages.add(content);
 
-          textOnlyCount++;
+            // 检查内容是否包含完成关键词
+            const containsCompletionKeyword = completionKeywords.some(keyword =>
+              content.includes(keyword.toLowerCase())
+            );
 
-          // 智能终止策略
-          if (isDuplicate || containsCompletionKeyword || textOnlyCount >= 5) {
-            break;
+            textOnlyCount++;
+
+            // 智能终止策略
+            if (isDuplicate || containsCompletionKeyword || textOnlyCount >= 5) {
+              break;
+            }
+            continue;
           }
-          continue;
         }
 
         if (result.type === 'tool_calls') {
@@ -1002,6 +1173,8 @@ function createAiAgentRunner(options) {
         currentOperationGuard.dispose();
       }
       currentOperationGuard = null;
+      // agent 循环整体结束后才启用输入框
+      setInputEnabled(true);
     }
 
     isAgentProcessing = false;
@@ -1035,9 +1208,7 @@ function createAiAgentRunner(options) {
   function resetState() {
     // 中止当前处理
     abort();
-    // 重置消息历史
-    agentMessageHistory = [];
-    // 重置操作守卫
+    // 重置操作守卫（abort 中也会清理，这里确保双重保险）
     if (currentOperationGuard && typeof currentOperationGuard.dispose === 'function') {
       currentOperationGuard.dispose();
     }
@@ -1049,6 +1220,9 @@ function createAiAgentRunner(options) {
     setupAgentStreamingListener,
     isProcessing: () => isAgentProcessing,
     getMessageHistory: () => agentMessageHistory,
+    setMessageHistory: msgs => {
+      agentMessageHistory = msgs;
+    },
     abort,
     resetState
   };

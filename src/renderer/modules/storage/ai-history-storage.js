@@ -121,6 +121,39 @@ class AIHistoryStorage {
       tx.onerror = () => reject(tx.error);
     });
   }
+
+  // 清除指定会话的所有消息和搜索索引（保留会话本身）
+  async clearMessages(sessionId) {
+    await this.init();
+    const tx = this.getTransaction([STORES.messages, STORES.searchIndex], 'readwrite');
+
+    const msgStore = tx.objectStore(STORES.messages);
+    const msgIndex = msgStore.index('sessionId');
+    const msgRequest = msgIndex.openCursor(sessionId);
+    msgRequest.onsuccess = event => {
+      const cursor = event.target.result;
+      if (cursor) {
+        msgStore.delete(cursor.value.id);
+        cursor.continue();
+      }
+    };
+
+    const searchStore = tx.objectStore(STORES.searchIndex);
+    const searchIndex = searchStore.index('sessionId');
+    const searchRequest = searchIndex.openCursor(sessionId);
+    searchRequest.onsuccess = event => {
+      const cursor = event.target.result;
+      if (cursor) {
+        searchStore.delete(cursor.value.id);
+        cursor.continue();
+      }
+    };
+
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
 }
 
 let storageInstance = null;

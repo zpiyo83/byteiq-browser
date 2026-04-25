@@ -19,7 +19,8 @@ const {
   buildChatLikeResponseFromResponsesStream,
   parseChatCompletionsStreamEvent,
   buildChatLikeResponseFromChatStream,
-  normalizeToolsForResponses
+  normalizeToolsForResponses,
+  normalizeToolsForChatCompletions
 } = require('./stream-parsers');
 
 function sendResponsesStreamForAgent(messages, config, onTextChunk) {
@@ -142,7 +143,7 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
 
     const requestBody = buildOpenAIChatRequest(messages, model, true);
     if (tools && tools.length > 0) {
-      requestBody.tools = tools;
+      requestBody.tools = normalizeToolsForChatCompletions(tools);
       requestBody.tool_choice = 'auto';
     }
 
@@ -511,9 +512,9 @@ function sendChatRequest(messages, config) {
         break;
     }
 
-    // 如果有工具定义，添加到请求体
+    // 如果有工具定义，添加到请求体（清理非标准属性）
     if (tools && tools.length > 0) {
-      requestBody.tools = tools;
+      requestBody.tools = normalizeToolsForChatCompletions(tools);
       requestBody.tool_choice = 'auto';
     }
 

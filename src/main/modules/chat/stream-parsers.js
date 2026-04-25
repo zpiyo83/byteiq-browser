@@ -273,21 +273,83 @@ function buildChatLikeResponseFromChatStream(state) {
   };
 }
 
+// OpenAI Tool API 支持的标准 JSON Schema 属性
+const ALLOWED_SCHEMA_PROPS = new Set([
+  'type',
+  'properties',
+  'required',
+  'items',
+  'enum',
+  'description',
+  'anyOf',
+  'oneOf',
+  'allOf',
+  'const'
+]);
+
+function sanitizeParameters(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+  if (Array.isArray(schema)) return schema;
+
+  const cleaned = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === 'properties' && value && typeof value === 'object' && !Array.isArray(value)) {
+      // properties 的子键是属性名（如 tab_id、selector），必须全部保留
+      // 只递归清理每个属性的值（子 schema）
+      const sanitizedProps = {};
+      for (const [propName, propSchema] of Object.entries(value)) {
+        sanitizedProps[propName] = sanitizeParameters(propSchema);
+      }
+      cleaned[key] = sanitizedProps;
+    } else if (ALLOWED_SCHEMA_PROPS.has(key)) {
+      cleaned[key] = sanitizeParameters(value);
+    }
+    // else: 非标准 key（如 maxLength），跳过
+  }
+  return cleaned;
+}
+
 function normalizeToolsForResponses(tools) {
   if (!Array.isArray(tools)) return [];
   return tools.map(tool => {
     if (tool && tool.type === 'function') {
       if (tool.name && tool.parameters) {
-        return tool;
+        return {
+          ...tool,
+          parameters: sanitizeParameters(tool.parameters)
+        };
       }
       if (tool.function && tool.function.name) {
         return {
           type: 'function',
           name: tool.function.name,
           description: tool.function.description || '',
-          parameters: tool.function.parameters || { type: 'object', properties: {} }
+          parameters: sanitizeParameters(tool.function.parameters) || {
+            type: 'object',
+            properties: {}
+          }
         };
       }
+    }
+    return tool;
+  });
+}
+
+function normalizeToolsForChatCompletions(tools) {
+  if (!Array.isArray(tools)) return [];
+  return tools.map(tool => {
+    if (tool && tool.type === 'function' && tool.function) {
+      return {
+        type: 'function',
+        function: {
+          name: tool.function.name,
+          description: tool.function.description || '',
+          parameters: sanitizeParameters(tool.function.parameters) || {
+            type: 'object',
+            properties: {}
+          }
+        }
+      };
     }
     return tool;
   });
@@ -299,5 +361,6 @@ module.exports = {
   buildChatLikeResponseFromResponsesStream,
   parseChatCompletionsStreamEvent,
   buildChatLikeResponseFromChatStream,
-  normalizeToolsForResponses
+  normalizeToolsForResponses,
+  normalizeToolsForChatCompletions
 };

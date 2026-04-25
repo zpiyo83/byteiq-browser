@@ -15,7 +15,8 @@ function createAiToolsExecutor(options) {
     formatUrl,
     switchTab,
     bindTabToSession,
-    getTodoManager
+    getTodoManager,
+    store
   } = options;
 
   // 性能优化：工具定义缓存（LRU，最多缓存 50 个工具）
@@ -29,7 +30,7 @@ function createAiToolsExecutor(options) {
     }
 
     // 从注册表获取，然后缓存
-    const def = getAiToolByName(toolName);
+    const def = getAiToolByName(toolName, store);
     if (def && toolDefCache.size < CACHE_MAX_SIZE) {
       toolDefCache.set(toolName, def);
     }

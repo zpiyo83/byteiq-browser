@@ -5,8 +5,12 @@
 
 const { clickElement, inputText } = require('./ai-webview-bridge');
 
-function getAiToolDefinitions() {
-  return [
+// 实验性工具名列表：需要通过设置开关启用
+const EXPERIMENTAL_TOOLS = new Set(['add_todos', 'complete_todos']);
+
+function getAiToolDefinitions(store) {
+  const batchTodoEnabled = store ? store.get('settings.experimentalBatchTodo', false) : false;
+  const allDefs = [
     {
       name: 'get_page_info',
       description: '获取当前页面的URL、标题、内容摘要和可交互元素列表',
@@ -216,6 +220,59 @@ function getAiToolDefinitions() {
       }
     },
     {
+      name: 'add_todos',
+      description:
+        '【批量添加工具】一次性添加多个待办项。' +
+        '【触发场景】用户一次提出多个任务（如"帮我做A、B、C三件事"）；或拆分复杂任务为多个步骤时；' +
+        '【优势】比多次调用 add_todo 更高效，减少工具调用次数。' +
+        '【优先级】high=紧急/截止期限/用户强调; medium=常规任务(默认); low=可选/优化项。',
+      parameters: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            description: '待办项数组，每项包含 title（必填）和 priority（可选）',
+            items: {
+              type: 'object',
+              properties: {
+                title: {
+                  type: 'string',
+                  description: '待办项标题（清晰的行动项，≤200字）',
+                  maxLength: 200
+                },
+                priority: {
+                  type: 'string',
+                  enum: ['low', 'medium', 'high'],
+                  description: 'high=紧急; medium=常规(默认); low=可选'
+                }
+              },
+              required: ['title']
+            }
+          }
+        },
+        required: ['items']
+      },
+      async execute(context, args) {
+        const items = args?.items;
+        if (!Array.isArray(items) || items.length === 0) {
+          return { success: false, error: 'Items must be a non-empty array' };
+        }
+        const result = context.getTodoManager().addTodos(items);
+        if (result.success && result.allTodos) {
+          const display = result.allTodos
+            .map((t, idx) => {
+              const mark = t.completed ? '[x]' : '[ ]';
+              const pri = t.priority ? `(${t.priority})` : '';
+              const num = idx + 1;
+              return `${num}. ${mark} ${pri} ${t.title}  (id: ${t.id})`;
+            })
+            .join('\n');
+          result.currentList = display || '暂无待办项';
+        }
+        return result;
+      }
+    },
+    {
       name: 'list_todos',
       description:
         '【必用工具】显示待办项列表，支持筛选（pending/completed/all）。' +
@@ -266,6 +323,48 @@ function getAiToolDefinitions() {
         const result = context.getTodoManager().completeTodo(todoId);
         // 完成后自动附带当前待办列表
         // 使用 completeTodo 返回的 allTodos 避免再次读取时的存储键不一致问题
+        if (result.success && result.allTodos) {
+          const display = result.allTodos
+            .map((t, idx) => {
+              const mark = t.completed ? '[x]' : '[ ]';
+              const pri = t.priority ? `(${t.priority})` : '';
+              const num = idx + 1;
+              return `${num}. ${mark} ${pri} ${t.title}  (id: ${t.id})`;
+            })
+            .join('\n');
+          result.currentList = display || '暂无待办项';
+        }
+        return result;
+      }
+    },
+    {
+      name: 'complete_todos',
+      description:
+        '【批量完成工具】一次性标记多个待办项为已完成。' +
+        '【触发场景】多个任务步骤同时完成时（如"把A、B、C都标记完成"）；或批量收尾时；' +
+        '【优势】比多次调用 complete_todo 更高效，减少工具调用次数。' +
+        '【获取ID】从 list_todos 结果中的 (id: xxx) 提取，支持序号如 "1" 或完整ID如 "todo-1"。' +
+        '【注意】未找到的ID会被跳过并在返回中提示。',
+      parameters: {
+        type: 'object',
+        properties: {
+          todo_ids: {
+            type: 'array',
+            description: '待办项ID数组（从 list_todos 结果中提取）',
+            items: {
+              type: 'string',
+              description: '待办项ID，如 "todo-1" 或序号 "1"'
+            }
+          }
+        },
+        required: ['todo_ids']
+      },
+      async execute(context, args) {
+        const todoIds = args?.todo_ids;
+        if (!Array.isArray(todoIds) || todoIds.length === 0) {
+          return { success: false, error: 'todo_ids must be a non-empty array' };
+        }
+        const result = context.getTodoManager().completeTodos(todoIds);
         if (result.success && result.allTodos) {
           const display = result.allTodos
             .map((t, idx) => {
@@ -343,6 +442,55 @@ function getAiToolDefinitions() {
       }
     }
   ];
+
+  // 根据设置过滤实验性工具
+  if (!batchTodoEnabled) {
+    return allDefs.filter(def => !EXPERIMENTAL_TOOLS.has(def.name));
+  }
+  return allDefs;
+}
+
+// OpenAI Tool API 支持的标准 JSON Schema 属性
+const ALLOWED_SCHEMA_PROPS = new Set([
+  'type',
+  'properties',
+  'required',
+  'items',
+  'enum',
+  'description',
+  'anyOf',
+  'oneOf',
+  'allOf',
+  'const'
+]);
+
+/**
+ * 递归清理参数 schema，移除非 OpenAI 标准属性（如 maxLength）
+ * 部分模型服务端（如 vLLM）的 Jinja2 模板引擎无法处理这些属性，导致 500 错误
+ *
+ * 关键：properties 对象的子键是属性名（如 tab_id、selector），必须全部保留；
+ * 只有属性值（子 schema）才需要递归清理非标准字段。
+ */
+function sanitizeParameters(schema) {
+  if (!schema || typeof schema !== 'object') return schema;
+  if (Array.isArray(schema)) return schema;
+
+  const cleaned = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (key === 'properties' && value && typeof value === 'object' && !Array.isArray(value)) {
+      // properties 的子键是属性名（如 tab_id、selector），必须全部保留
+      // 只递归清理每个属性的值（子 schema）
+      const sanitizedProps = {};
+      for (const [propName, propSchema] of Object.entries(value)) {
+        sanitizedProps[propName] = sanitizeParameters(propSchema);
+      }
+      cleaned[key] = sanitizedProps;
+    } else if (ALLOWED_SCHEMA_PROPS.has(key)) {
+      cleaned[key] = sanitizeParameters(value);
+    }
+    // else: 非标准 key（如 maxLength），跳过
+  }
+  return cleaned;
 }
 
 function buildToolSchema(def) {
@@ -351,17 +499,17 @@ function buildToolSchema(def) {
     function: {
       name: def.name,
       description: def.description,
-      parameters: def.parameters
+      parameters: sanitizeParameters(def.parameters)
     }
   };
 }
 
-function getAiToolsSchema() {
-  return getAiToolDefinitions().map(buildToolSchema);
+function getAiToolsSchema(store) {
+  return getAiToolDefinitions(store).map(buildToolSchema);
 }
 
-function getAiToolByName(name) {
-  return getAiToolDefinitions().find(def => def.name === name) || null;
+function getAiToolByName(name, store) {
+  return getAiToolDefinitions(store).find(def => def.name === name) || null;
 }
 
 module.exports = {

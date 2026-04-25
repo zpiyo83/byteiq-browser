@@ -145,29 +145,74 @@ function registerAiIpc(options) {
         }
       };
 
+      // 尝试带 tools 参数发送请求；如果模型 chat template 不支持 tools，自动降级重试
+      const isTemplateError = err =>
+        err &&
+        err.message &&
+        (err.message.includes('Failed to apply prompt template') ||
+          err.message.includes('object is not callable') ||
+          err.message.includes('tool_call') ||
+          err.message.includes('tool_use'));
+
       let result;
-      if (requestType === 'openai-response' && sendResponsesStreamForAgent) {
-        result = await sendResponsesStreamForAgent(
-          messages,
-          { endpoint, apiKey, model, timeout, tools },
-          onTextChunk
-        );
-      } else if (requestType === 'openai-chat' && sendChatCompletionsStreamForAgent) {
-        result = await sendChatCompletionsStreamForAgent(
-          messages,
-          { endpoint, apiKey, model, timeout, tools },
-          onTextChunk
-        );
-      } else {
-        // Anthropic 或其他类型：降级为非流式
-        result = await sendChatRequest(messages, {
-          endpoint,
-          apiKey,
-          requestType,
-          model,
-          timeout,
-          tools
-        });
+      let usedToolsFallback = false;
+      try {
+        if (requestType === 'openai-response' && sendResponsesStreamForAgent) {
+          result = await sendResponsesStreamForAgent(
+            messages,
+            { endpoint, apiKey, model, timeout, tools },
+            onTextChunk
+          );
+        } else if (requestType === 'openai-chat' && sendChatCompletionsStreamForAgent) {
+          result = await sendChatCompletionsStreamForAgent(
+            messages,
+            { endpoint, apiKey, model, timeout, tools },
+            onTextChunk
+          );
+        } else {
+          // Anthropic 或其他类型：降级为非流式
+          result = await sendChatRequest(messages, {
+            endpoint,
+            apiKey,
+            requestType,
+            model,
+            timeout,
+            tools
+          });
+        }
+      } catch (primaryError) {
+        // 如果是 chat template 不兼容错误，尝试不带 tools 重试
+        if (tools && tools.length > 0 && isTemplateError(primaryError)) {
+          console.warn(
+            '[ai-ipc] Chat template error with tools, retrying without tools API parameter:',
+            primaryError.message
+          );
+          if (requestType === 'openai-response' && sendResponsesStreamForAgent) {
+            result = await sendResponsesStreamForAgent(
+              messages,
+              { endpoint, apiKey, model, timeout, tools: null },
+              onTextChunk
+            );
+          } else if (requestType === 'openai-chat' && sendChatCompletionsStreamForAgent) {
+            result = await sendChatCompletionsStreamForAgent(
+              messages,
+              { endpoint, apiKey, model, timeout, tools: null },
+              onTextChunk
+            );
+          } else {
+            result = await sendChatRequest(messages, {
+              endpoint,
+              apiKey,
+              requestType,
+              model,
+              timeout,
+              tools: null
+            });
+          }
+          usedToolsFallback = true;
+        } else {
+          throw primaryError;
+        }
       }
 
       let responseData;
@@ -212,6 +257,7 @@ function registerAiIpc(options) {
         type: 'message',
         content: message?.content || result,
         reasoningContent,
+        usedToolsFallback,
         taskId: resolvedTaskId
       };
     } catch (error) {

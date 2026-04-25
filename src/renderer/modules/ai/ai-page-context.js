@@ -15,7 +15,6 @@ function createAiPageContext(deps) {
   const {
     documentRef,
     getActiveTabId,
-    t,
     getCurrentSession,
     updateSession,
     updateContextBar,
@@ -155,14 +154,20 @@ function createAiPageContext(deps) {
       getOrCreateSessionIdForTab,
       setActiveSessionId,
       readTabToSessionFromStore,
-      renderSessionChat
+      renderSessionChat,
+      syncSessionMessagesToAgent
     } = deps;
 
     await getOrCreateSessionIdForTab(tabId);
-    setActiveSessionId(readTabToSessionFromStore()[tabId]);
+    const activeSessionId = readTabToSessionFromStore()[tabId];
+    setActiveSessionId(activeSessionId);
     await renderSessionsList();
     const session = await getCurrentSession();
     await renderSessionChat(session);
+    // 同步消息到 agentRunner
+    if (syncSessionMessagesToAgent && activeSessionId) {
+      await syncSessionMessagesToAgent(activeSessionId);
+    }
 
     // 提取页面内容
     if (currentMode !== 'agent') {

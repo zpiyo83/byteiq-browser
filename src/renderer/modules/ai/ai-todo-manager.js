@@ -58,7 +58,7 @@ function createAiTodoManager(options) {
   function readTodos() {
     const key = getSessionKey();
 
-    // 检查内存缓存：如果键相同且缓存存在，直接返回
+    // 检查内存缓存：如果键相同且缓存存在，深拷贝后返回
     if (inMemoryCacheKey === key && inMemoryCache !== null) {
       if (DEBUG) {
         console.log('[ai-todo-manager] readTodos (from cache):', {
@@ -66,7 +66,8 @@ function createAiTodoManager(options) {
           count: inMemoryCache.length
         });
       }
-      return inMemoryCache;
+      // 返回深拷贝，防止调用者修改缓存
+      return JSON.parse(JSON.stringify(inMemoryCache));
     }
 
     // 从 store 读取
@@ -88,11 +89,12 @@ function createAiTodoManager(options) {
     // 确保返回数组（不存在的键返回 undefined）
     list = Array.isArray(list) ? list : [];
 
-    // 缓存到内存
-    inMemoryCache = list;
+    // 缓存到内存（存储原始数据用于后续缓存命中）
+    inMemoryCache = JSON.parse(JSON.stringify(list));
     inMemoryCacheKey = key;
 
-    return list;
+    // 返回深拷贝，防止调用者修改缓存
+    return JSON.parse(JSON.stringify(inMemoryCache));
   }
 
   function writeTodos(list) {
@@ -109,11 +111,15 @@ function createAiTodoManager(options) {
     // 验证list是数组
     const dataToWrite = Array.isArray(list) ? list : [];
 
-    // 写入主键（仅写 session key，实现 session 间的完全隔离）
-    store.set(key, dataToWrite);
+    // 深拷贝数据，防止调用者和缓存共享引用
+    const dataCopy = JSON.parse(JSON.stringify(dataToWrite));
 
-    // 更新内存缓存
-    inMemoryCache = dataToWrite;
+    // 写入主键（仅写 session key，实现 session 间的完全隔离）
+    // 存储深拷贝，防止 store 存储对缓存的引用
+    store.set(key, dataCopy);
+
+    // 更新内存缓存为深拷贝
+    inMemoryCache = dataCopy;
     inMemoryCacheKey = key;
 
     // 注意：不再维护全局 GLOBAL_KEY，因为这会导致 session 间数据污染
@@ -164,6 +170,64 @@ function createAiTodoManager(options) {
     const p = String(priority || 'medium').toLowerCase();
     if (p === 'low' || p === 'high') return p;
     return 'medium';
+  }
+
+  function addTodos(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return {
+        success: false,
+        error: 'Items must be a non-empty array',
+        allTodos: readTodos()
+      };
+    }
+
+    const todos = readTodos();
+    const added = [];
+
+    // 计算当前最大序号（一次性，避免重复调用 readTodos）
+    let maxSeq = 0;
+    for (const t of todos) {
+      const match = t.id && t.id.match(/^todo-(\d+)$/);
+      if (match) {
+        const seq = parseInt(match[1], 10);
+        if (seq > maxSeq) maxSeq = seq;
+      }
+    }
+
+    // 批量添加，使用顺序递增的 ID
+    for (const item of items) {
+      const text = String(item.title || '').trim();
+      if (!text) continue;
+
+      maxSeq++; // 递增序号
+      const todo = {
+        id: `todo-${maxSeq}`,
+        title: text,
+        priority: normalizePriority(item.priority),
+        completed: false,
+        createdAt: Date.now(),
+        completedAt: null
+      };
+      todos.unshift(todo);
+      added.push(todo);
+    }
+
+    if (added.length === 0) {
+      return {
+        success: false,
+        error: 'All titles are empty',
+        allTodos: readTodos()
+      };
+    }
+
+    writeTodos(todos);
+    const updatedTodos = readTodos();
+    return {
+      success: true,
+      added,
+      message: `已批量添加 ${added.length} 个待办项（ID: ${added.map(t => t.id).join(', ')}）`,
+      allTodos: updatedTodos
+    };
   }
 
   function addTodo(title, priority) {
@@ -228,6 +292,58 @@ function createAiTodoManager(options) {
       display: display || '暂无待办项',
       count: filtered.length,
       total: todos.length
+    };
+  }
+
+  function completeTodos(todoIds) {
+    if (!Array.isArray(todoIds) || todoIds.length === 0) {
+      return {
+        success: false,
+        error: 'todoIds must be a non-empty array',
+        allTodos: readTodos()
+      };
+    }
+
+    const todos = readTodos();
+    const completed = [];
+    const notFound = [];
+
+    for (const rawId of todoIds) {
+      const id = String(rawId || '').trim();
+      if (!id) continue;
+      const todo = findTodoById(id);
+      if (!todo) {
+        notFound.push(id);
+        continue;
+      }
+      const idx = todos.findIndex(t => t.id === todo.id);
+      if (!todos[idx].completed) {
+        todos[idx] = {
+          ...todos[idx],
+          completed: true,
+          completedAt: Date.now()
+        };
+        completed.push(todos[idx]);
+      }
+    }
+
+    writeTodos(todos);
+    const updatedTodos = readTodos();
+
+    if (completed.length === 0) {
+      return {
+        success: false,
+        error: notFound.length > 0 ? `未找到待办项: ${notFound.join(', ')}` : '没有可完成的待办项',
+        allTodos: updatedTodos
+      };
+    }
+
+    const notFoundMsg = notFound.length > 0 ? `；未找到: ${notFound.join(', ')}` : '';
+    return {
+      success: true,
+      completed,
+      message: `已批量完成 ${completed.length} 个待办项（ID: ${completed.map(t => t.id).join(', ')}）${notFoundMsg}`,
+      allTodos: updatedTodos
     };
   }
 
@@ -435,7 +551,7 @@ function createAiTodoManager(options) {
     return (
       '\n\n[To Do List - Highest Priority]\n' +
       '以下 To Do 列表为最高优先级指令，必须始终考虑并保持同步。\n' +
-      '你可以使用工具 add_todo / list_todos / complete_todo / remove_todo 来维护此列表。\n\n' +
+      '你可以使用工具 add_todo / add_todos / list_todos / complete_todo / complete_todos / remove_todo 来维护此列表。\n\n' +
       '[Pending]\n' +
       pendingText +
       '\n\n[Completed]\n' +
@@ -502,8 +618,10 @@ function createAiTodoManager(options) {
 
   return {
     addTodo,
+    addTodos,
     listTodos,
     completeTodo,
+    completeTodos,
     removeTodo,
     editTodo,
     getTodoDetails,

@@ -73,6 +73,12 @@
                     <span data-i18n="panels.settings.nav.extensions">扩展</span>
                     <span class="beta-badge" data-tooltip="当前为测试版，无法保证可用性">BETA</span>
                 </button>
+                <button class="settings-nav-item" data-section="experimental">
+                    <div class="cyber-layer"></div>
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M7,2V4H8V18H7V20H10V22H11V20H13V22H14V20H17V18H16V4H17V2H7M14,4V9H10V4H14M10,11H14V18H10V11Z"/></svg>
+                    <span data-i18n="panels.settings.nav.experimental">实验功能</span>
+                    <span class="beta-badge" data-tooltip="实验性功能，可能不稳定">LAB</span>
+                </button>
                 <button class="settings-nav-item" data-section="about">
                     <div class="cyber-layer"></div>
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
@@ -420,6 +426,23 @@
                     <div id="extensions-empty" class="extensions-empty" data-i18n="panels.settings.noExtensions">暂未添加扩展</div>
                     <div id="extensions-list" class="extensions-list" role="list" aria-label="扩展列表"></div>
                     <div class="extensions-hint" data-i18n="panels.settings.extensionsSelectDir">提示：请选择包含 manifest.json 的扩展目录</div>
+                </div>
+                <!-- 实验功能 -->
+                <div id="settings-experimental" class="settings-section">
+                    <h3 class="section-title-with-badge">
+                        <span data-i18n="panels.settings.experimental.title">实验功能</span>
+                        <span class="beta-badge" data-tooltip="实验性功能，可能不稳定">LAB</span>
+                    </h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <label data-i18n="panels.settings.experimental.batchTodo">批量待办操作</label>
+                            <div class="setting-desc" data-i18n="panels.settings.experimental.batchTodoDesc">启用AI工具中的批量添加(add_todos)和批量完成(complete_todos)功能</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="experimental-batch-todo-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
                 <!-- 关于 -->
                 <div id="settings-about" class="settings-section">

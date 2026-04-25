@@ -263,7 +263,16 @@ async function extractPageContent(webview) {
 }
 
 function buildSelectionContext(options) {
-  const { text, getActiveTabId, documentRef, t } = options;
+  const { text, getActiveTabId, documentRef } = options;
+  let { t } = options;
+
+  // 安全检查：确保 t 是函数
+  if (typeof t !== 'function') {
+    console.warn('[buildSelectionContext] t is not a function:', typeof t, t);
+    // 提供一个虚拟的 t 函数作为备用
+    t = key => key;
+  }
+
   const content = String(text || '').trim();
   if (!content) return null;
   const tabId = getActiveTabId();
@@ -285,9 +294,17 @@ function buildSystemPrompt(options) {
     pageList,
     includePageContext = true,
     currentPageInfo,
-    taskState,
-    t
+    taskState
   } = options;
+  let { t } = options;
+
+  // 安全检查：确保 t 是函数
+  if (typeof t !== 'function') {
+    console.warn('[buildSystemPrompt] t is not a function:', typeof t, t);
+    // 提供一个虚拟的 t 函数作为备用
+    t = key => key;
+  }
+
   const base =
     t('ai.systemPrompt') ||
     '你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。';
@@ -353,7 +370,9 @@ function buildSystemPrompt(options) {
       '如果用户提到任务、需要做某事或需要跟踪工作进度，使用以下工具策略：\n' +
       '• 开始任何复杂工作前：调用 list_todos("pending") 查看现有待办\n' +
       '• 识别到新任务：调用 add_todo(title, priority) 添加待办（low/medium/high）\n' +
+      '• 一次添加多个任务：调用 add_todos([{title, priority?}]) 批量添加\n' +
       '• 完成任务步骤：调用 complete_todo(id) 标记完成（必须从 list_todos 提取 ID）\n' +
+      '• 一次完成多个任务：调用 complete_todos([id1, id2, ...]) 批量完成\n' +
       '• 用户取消任务：调用 remove_todo(id) 删除待办（不可恢复，需谨慎）\n' +
       '• 确认状态：完成任务后调用 list_todos("pending") 再次确认\n' +
       '【标题规范】使用清晰的行动词，如「阅读XX文档」「完成XX代码」。\n' +
