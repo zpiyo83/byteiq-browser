@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Byteiq Browser",
-    "version": "Version 0.1.2",
+    "version": "Version 0.1.6",
     "communityDriven": "Community-driven AI Browser",
     "basedOn": "Based on Chromium | Electron"
   },

@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Byteiq Browser",
-    "version": "版本 0.1.2",
+    "version": "版本 0.1.6",
     "communityDriven": "社区驱动的 AI 浏览器",
     "basedOn": "基于 Chromium 内核 | Electron 构建"
   },

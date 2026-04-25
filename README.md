@@ -7,7 +7,7 @@
 基于 Chromium 内核 · Electron 构建 · 开源社区驱动
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.1.3-blue.svg)](https://github.com/zpiyo83/byteiq-browser)
+[![Version](https://img.shields.io/badge/version-0.1.6-blue.svg)](https://github.com/zpiyo83/byteiq-browser)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 </div>

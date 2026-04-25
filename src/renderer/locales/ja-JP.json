@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "Byteiq Browser",
-    "version": "バージョン 0.1.2",
+    "version": "バージョン 0.1.6",
     "communityDriven": "コミュニティ主導の AI ブラウザ",
     "basedOn": "Chromium ベース | Electron で構築"
   },
