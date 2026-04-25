@@ -130,3 +130,6 @@ System Volume Information/
 
 # 网络驱动器
 .fuse_hidden*
+
+# 重构汇报文档
+docs/
