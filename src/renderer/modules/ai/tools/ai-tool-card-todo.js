@@ -17,10 +17,10 @@ function createTodoIcon(num, isCompleted, isFailed) {
       : 'transparent';
 
   if (isCompleted) {
-    // 完成：绿色实心圆带打勾
-    return `<svg width="${size}" height="${size}" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="9" fill="${fillColor}" stroke="#22c55e" stroke-width="2"/>
-      <path d="M6 10l3 3 5-5" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    // 完成：渐进式描边动画
+    return `<svg class="todo-checkmark-svg" width="${size}" height="${size}" viewBox="0 0 20 20">
+      <circle class="todo-checkmark-circle" cx="10" cy="10" r="9" fill="none" stroke="#22c55e" stroke-width="2"/>
+      <path class="todo-checkmark-check" d="M6 10l3 3 5-5" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
   }
   if (isFailed) {

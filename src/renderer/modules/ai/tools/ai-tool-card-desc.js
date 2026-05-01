@@ -55,19 +55,11 @@ function createDescBuilder(deps) {
     if (!toolCall) return '准备执行';
     const args = toolCall.arguments || {};
     switch (toolCall.name) {
-      case 'search_page': {
-        return args.query || '未提供搜索词';
-      }
-      case 'get_page_info': {
-        const pageHint = buildPageHintFromArgs(args);
-        return pageHint === '当前页面' ? '当前页面' : pageHint.replace(/^页面:\s*/, '');
-      }
+      case 'search_page':
+      case 'get_page_info':
       case 'click_element': {
-        const selector = args.selector || '';
-        const pageHint = buildPageHintFromArgs(args);
-        const pageDisplay = pageHint === '当前页面' ? '' : pageHint.replace(/^页面:\s*/, '');
-        const parts = [selector, pageDisplay].filter(Boolean);
-        return parts.join(' · ') || '准备点击';
+        // 仅显示工具标题，不展示参数
+        return '';
       }
       case 'input_text': {
         const selector = args.selector || '';
@@ -113,26 +105,21 @@ function createDescBuilder(deps) {
       if (failed) {
         return { status: 'error', text: toolResult.error || '搜索页面打开失败' };
       }
-      const title = toolResult?.title || '';
       const tabId = toolResult?.tabId || '';
-      // 去掉"页面:"前缀，直接显示页面标题
-      const hint = title || (tabId ? `tab_id: ${tabId}` : '');
       return {
         status: 'success',
-        text: hint || '已打开',
+        text: '',
         tabId
       };
     }
 
     if (toolName === 'get_page_info') {
-      const pageHint = buildPageHintFromResult(toolResult, toolCall);
       const failed = toolResult && toolResult.success === false;
       const errorText = toolResult && toolResult.error ? toolResult.error : '获取失败';
-      // 去掉"页面:"前缀
-      const display = failed ? errorText : pageHint.replace(/^页面:\s*/, '') || '已获取';
+      // 仅显示状态，不展示页面标题
       return {
         status: failed ? 'error' : 'success',
-        text: display
+        text: failed ? errorText : ''
       };
     }
 
@@ -144,17 +131,9 @@ function createDescBuilder(deps) {
     }
 
     if (toolName === 'click_element') {
-      // 去掉"目标:"前缀，直接跟标签名；去掉"页面:"前缀
-      const tagName = toolResult && toolResult.tagName ? toolResult.tagName.toLowerCase() : '';
-      const role = toolResult && toolResult.role ? `role=${toolResult.role}` : '';
-      const type = toolResult && toolResult.type ? `type=${toolResult.type}` : '';
-      const pageHint = buildPageHintFromResult(toolResult, toolCall);
-      const pageDisplay = pageHint.replace(/^页面:\s*/, '');
-      const cancelled = toolResult && toolResult.cancelled ? '事件被取消' : '';
-      const details = [tagName, role, type, cancelled, pageDisplay].filter(Boolean).join('，');
       return {
         status: 'success',
-        text: details || '已完成'
+        text: ''
       };
     }
 

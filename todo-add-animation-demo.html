@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>添加 ToDo 复合生长动画演示</title>
+  <style>
+    :root {
+      --todo-muted: #6b7280;
+      --todo-text: #1e293b;
+      --priority-high: #dc2626;
+      --priority-bg: rgba(239, 68, 68, 0.1);
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: var(--bg-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    .demo-container {
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      text-align: center;
+      width: 450px;
+    }
+
+    h2 {
+      color: #1e293b;
+      margin-bottom: 40px;
+      font-size: 1.5rem;
+    }
+
+    #animation-target {
+      min-height: 60px;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: #fff;
+      border: 1px solid #f1f5f9;
+      border-radius: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* 1. 虚线圆描边动画 */
+    .icon-wrapper {
+      width: 20px;
+      height: 20px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .dashed-circle {
+      fill: none;
+      stroke: var(--todo-muted);
+      stroke-width: 1.5;
+      stroke-dasharray: 3, 2;
+      stroke-dashoffset: 70; /* 初始偏移量 */
+      animation: draw-dashed 0.8s ease-out forwards;
+    }
+
+    /* 2. 序号渐现 */
+    .todo-num {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--todo-muted);
+      opacity: 0;
+      animation: fade-in 0.3s ease-out 0.6s forwards;
+    }
+
+    /* 3. 优先级标签：打字机效果 */
+    .priority-tag {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--priority-high);
+      background: var(--priority-bg);
+      padding: 2px 5px;
+      border-radius: 4px;
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 2px solid transparent;
+      width: 0;
+      flex-shrink: 0;
+      /* 打字机动画 */
+      animation: 
+        typing 0.5s steps(4) 0.9s forwards,
+        blink-caret 0.4s step-end 3 0.9s;
+    }
+
+    /* 4. 标题内容：渐显滑入 */
+    .todo-title {
+      font-size: 13px;
+      color: var(--todo-text);
+      opacity: 0;
+      transform: translateX(-8px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      animation: slide-fade 0.5s ease-out 1.3s forwards;
+    }
+
+    /* 动画 Keyframes */
+    @keyframes draw-dashed {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes fade-in {
+      to { opacity: 1; }
+    }
+
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 35px; } /* 适应 HIGH 的宽度 */
+    }
+
+    @keyframes blink-caret {
+      from, to { border-color: transparent }
+      50% { border-color: var(--priority-high); }
+    }
+
+    @keyframes slide-fade {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    button {
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 10px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    }
+
+    button:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-container">
+    <h2>添加 ToDo 生长动画</h2>
+    
+    <div id="animation-target">
+      <div class="todo-item">
+        <div class="icon-wrapper">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <circle class="dashed-circle" cx="10" cy="10" r="9" />
+          </svg>
+          <span class="todo-num">1</span>
+        </div>
+        <div class="priority-tag">HIGH</div>
+        <div class="todo-title">在小米 MIMO 官网查找 tokens plan</div>
+      </div>
+    </div>
+
+    <button onclick="replay()">模拟添加 ToDo</button>
+  </div>
+
+  <script>
+    function replay() {
+      const target = document.getElementById('animation-target');
+      const content = target.innerHTML;
+      target.innerHTML = '';
+      setTimeout(() => {
+        target.innerHTML = content;
+      }, 50);
+    }
+  </script>
+
+</body>
+</html>

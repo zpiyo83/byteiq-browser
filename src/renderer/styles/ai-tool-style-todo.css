@@ -142,3 +142,34 @@
     background: rgba(34, 197, 94, 0.12);
     color: #16a34a;
 }
+
+/* 待办完成渐进式描边动画 */
+.todo-checkmark-svg {
+    display: block;
+}
+
+.todo-checkmark-circle {
+    stroke-dasharray: 60; /* 2 * PI * 9 ≈ 56.5 */
+    stroke-dashoffset: 60;
+    animation: todo-stroke-circle 0.5s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.todo-checkmark-check {
+    stroke-dasharray: 20;
+    stroke-dashoffset: 20;
+    /* 等圆圈动画快结束时开始勾号动画 */
+    animation: todo-stroke-check 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.4s forwards;
+}
+
+@keyframes todo-stroke-circle {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes todo-stroke-check {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+
