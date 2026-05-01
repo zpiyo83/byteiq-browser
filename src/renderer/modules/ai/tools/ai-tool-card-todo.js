@@ -30,10 +30,10 @@ function createTodoIcon(num, isCompleted, isFailed) {
       <path d="M7 7l6 6M13 7l-6 6" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/>
     </svg>`;
   }
-  // 未完成：虚线圆带序号
-  return `<svg width="${size}" height="${size}" viewBox="0 0 20 20">
-    <circle cx="10" cy="10" r="9" fill="transparent" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,2"/>
-    <text x="10" y="14" text-anchor="middle" font-size="10" fill="#6b7280" font-family="system-ui, -apple-system, sans-serif">${num}</text>
+  // 未完成：虚线圆带序号（带生长动画类名）
+  return `<svg width="${size}" height="${size}" viewBox="0 0 20 20" class="todo-add-svg">
+    <circle class="todo-dashed-circle" cx="10" cy="10" r="9" fill="transparent" stroke="#6b7280" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text class="todo-num-text" x="10" y="14" text-anchor="middle" font-size="10" fill="#6b7280" font-family="system-ui, -apple-system, sans-serif">${num}</text>
   </svg>`;
 }
 
@@ -106,11 +106,13 @@ function createTodoRenderer(deps) {
     const shortDesc = lines[0] || '';
     const listContent = lines.slice(1).join('\n');
 
-    // 简短描述
-    const descEl = documentRef.createElement('div');
-    descEl.className = 'tc-todo-short-desc';
-    descEl.textContent = shortDesc;
-    detail.appendChild(descEl);
+    // 只有在没有列表内容时，才显示简短描述文本（避免冗余）
+    if (!listContent && shortDesc) {
+      const descEl = documentRef.createElement('div');
+      descEl.className = 'tc-todo-short-desc';
+      descEl.textContent = shortDesc;
+      detail.appendChild(descEl);
+    }
 
     // 如果有待办列表，使用美化渲染
     if (listContent) {
@@ -118,9 +120,21 @@ function createTodoRenderer(deps) {
       listContainer.className = 'tc-todo-list-container';
 
       const items = parseTodoList(listContent);
-      items.forEach(item => {
+      items.forEach((item, index) => {
         const itemEl = documentRef.createElement('div');
         itemEl.className = 'tc-todo-item';
+
+        // 识别新旧事项
+        let isNew = false;
+        if (toolName === 'add_todo' && index === items.length - 1) {
+          isNew = true;
+        } else if (toolName === 'add_todos') {
+          // 这里可以更复杂，但通常 add_todos 是在列表末尾添加 N 项
+          // 我们暂且让所有项都播放生长动画，或者通过某种标记识别
+          isNew = true;
+        }
+
+        itemEl.classList.add(isNew ? 'is-new' : 'is-old');
 
         if (item.raw) {
           // 解析失败，直接显示文本
