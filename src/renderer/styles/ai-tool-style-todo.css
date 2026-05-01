@@ -46,6 +46,10 @@
     color: #22c55e;
 }
 
+.tc-todo-status-icon.running {
+    color: #3b82f6;
+}
+
 .tc-todo-status-icon.pending {
     color: #f59e0b;
 }

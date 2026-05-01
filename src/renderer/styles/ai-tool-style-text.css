@@ -22,6 +22,11 @@
     animation: tcDotPulse 1.5s ease-in-out infinite;
 }
 
+.tc-text-dot.running {
+    background: #3b82f6;
+    animation: tcDotPulse 1s ease-in-out infinite;
+}
+
 .tc-text-dot.success {
     background: #3b82f6;
 }
@@ -71,6 +76,11 @@
 }
 
 .tc-text-tag.success {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.tc-text-tag.running {
     background: rgba(59, 130, 246, 0.1);
     color: #2563eb;
 }

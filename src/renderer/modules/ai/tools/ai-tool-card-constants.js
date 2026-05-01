@@ -44,11 +44,13 @@ const TOOL_COLORS = {
 
 const STATUS_ICONS = {
   success:
-    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    '<svg class="tool-checkmark-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path class="tool-checkmark-check" d="M20 6 9 17l-5-5"/></svg>',
   error:
     '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>',
   pending:
-    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>'
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>',
+  running:
+    '<svg class="tool-running-svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10"/></svg>'
 };
 
 // 需要描述文字8字截断+hover完整提示的工具
@@ -147,8 +149,10 @@ function getToolStatusLabel(status) {
       return '已完成';
     case 'error':
       return '失败';
-    case 'pending':
+    case 'running':
       return '执行中';
+    case 'pending':
+      return '等待中';
     default:
       return '状态';
   }

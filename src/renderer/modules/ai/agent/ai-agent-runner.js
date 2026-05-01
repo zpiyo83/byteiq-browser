@@ -392,7 +392,26 @@ function createAiAgentRunner(options) {
             });
           }
 
-          for (const toolCall of result.toolCalls) {
+          for (let ti = 0; ti < result.toolCalls.length; ti++) {
+            const toolCall = result.toolCalls[ti];
+
+            // 工具间间隔 3 秒（首个工具无延迟）
+            if (ti > 0) {
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+
+            // 执行前更新卡片状态为 running（旋转动画）
+            const runningTarget = toolMessages.get(toolCall.id);
+            if (runningTarget && toolCall.name !== 'end_session') {
+              toolCardUI.renderToolCard(runningTarget, {
+                title: toolCardUI.getToolTitle(toolCall.name),
+                description: toolCardUI.buildToolCallDescription(toolCall),
+                status: 'running',
+                toolName: toolCall.name,
+                args: toolCall.arguments
+              });
+            }
+
             const toolResult = await toolsExecutor.execute(toolCall);
 
             // 对于 search_page 工具，将新创建的标签页绑定到当前会话

@@ -53,6 +53,10 @@
     color: #22c55e;
 }
 
+.tc-badge-status-icon.running {
+    color: #3b82f6;
+}
+
 .tc-badge-status-icon.pending {
     color: #f59e0b;
 }
