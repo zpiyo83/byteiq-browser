@@ -1,7 +1,12 @@
 /**
  * AI Agent 工具卡片 UI 渲染器
  * 负责工具卡片渲染、工具描述/摘要构建
+ * 样式渲染器拆分至：ai-tool-style-inline / text / badge
  */
+
+const { createInlineStyleRenderer } = require('./ai-tool-style-inline');
+const { createTextStyleRenderer } = require('./ai-tool-style-text');
+const { createBadgeStyleRenderer } = require('./ai-tool-style-badge');
 
 /**
  * 创建工具卡片 UI 工厂
@@ -338,96 +343,6 @@ function createToolCardUI(options) {
     target.appendChild(detail);
   }
 
-  // V2 极简行内：图标 + 标题 + 分隔符 + 描述 + 状态
-  function renderInlineStyle(target, title, description, status, toolName, color, paramRows) {
-    target.classList.add('tool-card', 'tool-card-style-inline');
-
-    const main = documentRef.createElement('div');
-    main.className = 'tc-inline-main';
-
-    if (status) {
-      const statusEl = documentRef.createElement('span');
-      statusEl.className = `tc-inline-status-icon ${status}`;
-      statusEl.innerHTML = getStatusIcon(status);
-      main.appendChild(statusEl);
-    }
-
-    const icon = documentRef.createElement('div');
-    icon.className = 'tc-inline-icon';
-    icon.style.color = color;
-    icon.innerHTML = getToolIcon(toolName) || '';
-    main.appendChild(icon);
-
-    const titleEl = documentRef.createElement('span');
-    titleEl.className = 'tc-inline-title';
-    titleEl.textContent = title;
-    main.appendChild(titleEl);
-
-    const sep = documentRef.createElement('span');
-    sep.className = 'tc-inline-sep';
-    sep.textContent = '·';
-    main.appendChild(sep);
-
-    const descText = description || buildParamSummary(paramRows);
-    const descEl = createDescElement(descText, toolName);
-    descEl.className = 'tc-inline-desc';
-    main.appendChild(descEl);
-
-    target.appendChild(main);
-  }
-
-  // V3 纯净文本：色点 + 一行文字 + 状态小标签
-  function renderTextStyle(target, title, description, status, toolName, color, paramRows) {
-    target.classList.add('tool-card', 'tool-card-style-text');
-
-    const statusIcon = documentRef.createElement('span');
-    statusIcon.className = `tc-text-status-icon ${status || 'success'}`;
-    statusIcon.innerHTML = getStatusIcon(status || 'success');
-    if ((status || 'success') !== 'pending') statusIcon.style.color = color;
-    target.appendChild(statusIcon);
-
-    const textWrap = documentRef.createElement('div');
-    textWrap.className = 'tc-text-wrap';
-
-    const titleEl = documentRef.createElement('strong');
-    titleEl.textContent = title;
-    textWrap.appendChild(titleEl);
-
-    const detail = description || buildParamSummary(paramRows);
-    if (detail) {
-      textWrap.appendChild(documentRef.createTextNode(' — '));
-      const descEl = createDescElement(detail, toolName);
-      textWrap.appendChild(descEl);
-    }
-
-    target.appendChild(textWrap);
-  }
-
-  // V4 徽章标签：工具名彩色徽章 + 描述文字跟随
-  function renderBadgeStyle(target, title, description, status, toolName, color, paramRows) {
-    target.classList.add('tool-card', 'tool-card-style-badge');
-
-    if (status) {
-      const statusEl = documentRef.createElement('span');
-      statusEl.className = `tc-badge-status-icon ${status}`;
-      statusEl.innerHTML = getStatusIcon(status);
-      target.appendChild(statusEl);
-    }
-
-    const badge = documentRef.createElement('span');
-    badge.className = `tc-badge ${status || 'success'}`;
-    badge.style.color = color;
-    badge.style.background = hexToRgba(color, 0.08);
-    badge.style.borderColor = hexToRgba(color, 0.15);
-    badge.innerHTML = `${getToolIcon(toolName) || ''} <span>${title}</span>`;
-    target.appendChild(badge);
-
-    const descText = description || buildParamSummary(paramRows);
-    const descEl = createDescElement(descText, toolName);
-    descEl.className = 'tc-badge-desc';
-    target.appendChild(descEl);
-  }
-
   function buildParamSummary(paramRows) {
     if (!paramRows || paramRows.length === 0) return '';
     return paramRows.map(r => `${r.label}: ${r.value}`).join(' · ');
@@ -440,6 +355,18 @@ function createToolCardUI(options) {
     const b = parseInt(h.substring(4, 6), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   }
+
+  // 创建样式渲染器实例
+  const styleDeps = {
+    documentRef,
+    getStatusIcon,
+    getToolIcon,
+    createDescElement,
+    buildParamSummary
+  };
+  const { renderInlineStyle } = createInlineStyleRenderer(styleDeps);
+  const { renderTextStyle } = createTextStyleRenderer(styleDeps);
+  const { renderBadgeStyle } = createBadgeStyleRenderer({ ...styleDeps, hexToRgba });
 
   function getToolStatusLabel(status) {
     switch (status) {
