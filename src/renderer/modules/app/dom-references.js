@@ -59,6 +59,7 @@ function getDomReferences(documentRef) {
     aiModelCandidateAddFromListBtn: documentRef.getElementById(
       'ai-model-candidate-add-from-list-btn'
     ),
+    aiModelCandidateClearBtn: documentRef.getElementById('ai-model-candidate-clear-btn'),
     aiModelCandidatesContainer: documentRef.getElementById('ai-model-candidates'),
     aiContextSizeInput: documentRef.getElementById('ai-context-size-input'),
     aiTimeoutInput: documentRef.getElementById('ai-timeout-input'),

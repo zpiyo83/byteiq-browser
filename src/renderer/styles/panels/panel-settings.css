@@ -424,3 +424,62 @@
     color: #5f6368;
 }
 
+/* 模型候选列表标签样式 */
+#ai-model-candidates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    font-size: 12px;
+    color: #5f6368;
+}
+
+.model-candidate-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #e8f0fe;
+    border: 1px solid #d2e3fc;
+    border-radius: 16px;
+    font-size: 12px;
+    color: #1967d2;
+    transition: all 0.2s ease;
+    max-width: 200px;
+}
+
+.model-candidate-tag:hover {
+    background: #d2e3fc;
+    border-color: #aecbfa;
+}
+
+.model-candidate-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+}
+
+.model-candidate-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: #5f6368;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.15s ease;
+}
+
+.model-candidate-delete:hover {
+    background: #ea4335;
+    color: #fff;
+}
+

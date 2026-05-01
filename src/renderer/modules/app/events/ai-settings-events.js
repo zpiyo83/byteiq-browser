@@ -19,6 +19,7 @@ function bindAiSettingsEvents(deps) {
     aiModelCandidateInput,
     aiModelCandidateAddBtn,
     aiModelCandidateAddFromListBtn,
+    aiModelCandidateClearBtn,
     aiModelCandidatesContainer,
     aiRequestTypeSelect,
     aiContextSizeInput,
@@ -57,11 +58,36 @@ function bindAiSettingsEvents(deps) {
   function renderCandidateModels() {
     if (!aiModelCandidatesContainer) return;
     const models = getCandidateModels();
+    aiModelCandidatesContainer.innerHTML = '';
+
     if (models.length === 0) {
       aiModelCandidatesContainer.textContent = '（未添加）';
       return;
     }
-    aiModelCandidatesContainer.textContent = models.join(' , ');
+
+    models.forEach((model, index) => {
+      const tag = document.createElement('span');
+      tag.className = 'model-candidate-tag';
+      tag.title = model;
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'model-candidate-name';
+      nameSpan.textContent = model;
+      tag.appendChild(nameSpan);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'model-candidate-delete';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.title = '删除';
+      deleteBtn.addEventListener('click', () => {
+        const currentModels = getCandidateModels();
+        currentModels.splice(index, 1);
+        setCandidateModels(currentModels);
+      });
+      tag.appendChild(deleteBtn);
+
+      aiModelCandidatesContainer.appendChild(tag);
+    });
   }
 
   function setAiModelStatus(text, state) {
@@ -217,6 +243,12 @@ function bindAiSettingsEvents(deps) {
       const models = getCandidateModels();
       models.push(value);
       setCandidateModels(models);
+    });
+  }
+
+  if (aiModelCandidateClearBtn) {
+    aiModelCandidateClearBtn.addEventListener('click', () => {
+      setCandidateModels([]);
     });
   }
 
