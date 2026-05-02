@@ -106,14 +106,10 @@ function registerAiIpc(options) {
 
     try {
       // 注册到活跃请求 Map，以便支持取消
-      let resolveAgentRequest = null;
-      const agentPromise = new Promise(resolve => {
-        resolveAgentRequest = resolve;
-      });
-      activeAgentRequests.set(resolvedTaskId, {
-        promise: agentPromise,
-        resolve: resolveAgentRequest
-      });
+      // 通过 registerRequest 回调将底层 ClientRequest 引用存入 Map
+      const registerAgentRequest = req => {
+        activeAgentRequests.set(resolvedTaskId, req);
+      };
       const endpoint = store.get('settings.aiEndpoint', '');
       const apiKey = store.get('settings.aiApiKey', '');
       const requestType = store.get('settings.aiRequestType', 'openai-chat');
@@ -161,13 +157,15 @@ function registerAiIpc(options) {
           result = await sendResponsesStreamForAgent(
             messages,
             { endpoint, apiKey, model, timeout, tools },
-            onTextChunk
+            onTextChunk,
+            registerAgentRequest
           );
         } else if (requestType === 'openai-chat' && sendChatCompletionsStreamForAgent) {
           result = await sendChatCompletionsStreamForAgent(
             messages,
             { endpoint, apiKey, model, timeout, tools },
-            onTextChunk
+            onTextChunk,
+            registerAgentRequest
           );
         } else {
           // Anthropic 或其他类型：降级为非流式
@@ -191,13 +189,15 @@ function registerAiIpc(options) {
             result = await sendResponsesStreamForAgent(
               messages,
               { endpoint, apiKey, model, timeout, tools: null },
-              onTextChunk
+              onTextChunk,
+              registerAgentRequest
             );
           } else if (requestType === 'openai-chat' && sendChatCompletionsStreamForAgent) {
             result = await sendChatCompletionsStreamForAgent(
               messages,
               { endpoint, apiKey, model, timeout, tools: null },
-              onTextChunk
+              onTextChunk,
+              registerAgentRequest
             );
           } else {
             result = await sendChatRequest(messages, {

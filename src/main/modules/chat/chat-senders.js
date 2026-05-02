@@ -23,7 +23,7 @@ const {
   normalizeToolsForChatCompletions
 } = require('./stream-parsers');
 
-function sendResponsesStreamForAgent(messages, config, onTextChunk) {
+function sendResponsesStreamForAgent(messages, config, onTextChunk, registerRequest) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, model, timeout, tools } = config;
 
@@ -121,6 +121,10 @@ function sendResponsesStreamForAgent(messages, config, onTextChunk) {
       });
     });
 
+    if (typeof registerRequest === 'function') {
+      registerRequest(req);
+    }
+
     req.on('error', reject);
     req.on('timeout', () => {
       req.destroy();
@@ -132,7 +136,7 @@ function sendResponsesStreamForAgent(messages, config, onTextChunk) {
   });
 }
 
-function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
+function sendChatCompletionsStreamForAgent(messages, config, onTextChunk, registerRequest) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, model, timeout, tools } = config;
 
@@ -262,6 +266,10 @@ function sendChatCompletionsStreamForAgent(messages, config, onTextChunk) {
         }
       });
     });
+
+    if (typeof registerRequest === 'function') {
+      registerRequest(req);
+    }
 
     req.on('error', err => {
       if (throttleTimer) {
