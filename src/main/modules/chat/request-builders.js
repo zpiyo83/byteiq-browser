@@ -50,7 +50,7 @@ function buildAnthropicRequest(messages, model = 'claude-3-sonnet-20240229') {
 
   for (const msg of messages) {
     if (msg.role === 'system') {
-      systemPrompt = msg.content;
+      systemPrompt = systemPrompt ? `${systemPrompt}\n\n${msg.content}` : msg.content;
     } else {
       filteredMessages.push(msg);
     }
