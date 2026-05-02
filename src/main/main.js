@@ -105,9 +105,19 @@ function setupWebviewWindowHandler() {
               console.error('Failed to open popup URL:', url, error);
             });
           }
-        } else {
-          // 使用系统默认应用打开非HTTP链接
+        } else if (parsedUrl.protocol === 'mailto:' || parsedUrl.protocol === 'tel:') {
+          // 仅允许安全的系统协议
           shell.openExternal(url);
+        } else {
+          // 拒绝 file:/javascript:/自定义协议，防止本地程序执行
+          console.warn('[main] Blocked unsafe popup URL protocol:', parsedUrl.protocol, url);
+          const ownerWindow = contents.getOwnerBrowserWindow();
+          if (ownerWindow) {
+            ownerWindow.webContents.send('popup-url-blocked', {
+              url,
+              protocol: parsedUrl.protocol
+            });
+          }
         }
       } catch (error) {
         console.error('Invalid popup URL:', url, error);
