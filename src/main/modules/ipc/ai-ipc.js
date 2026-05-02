@@ -236,20 +236,31 @@ function registerAiIpc(options) {
         '';
 
       if (message?.tool_calls && message.tool_calls.length > 0) {
-        const toolCalls = message.tool_calls.map(tc => ({
-          id: tc.id,
-          name: tc.function?.name,
-          arguments: JSON.parse(tc.function?.arguments || '{}')
-        }));
+        const toolCalls = message.tool_calls
+          .map(tc => {
+            try {
+              return {
+                id: tc.id,
+                name: tc.function?.name,
+                arguments: JSON.parse(tc.function?.arguments || '{}')
+              };
+            } catch {
+              console.warn('[ai-ipc] Failed to parse tool_call arguments, skipping:', tc.id);
+              return null;
+            }
+          })
+          .filter(Boolean);
 
-        return {
-          success: true,
-          type: 'tool_calls',
-          toolCalls,
-          reasoningContent,
-          content: message?.content || '',
-          taskId: resolvedTaskId
-        };
+        if (toolCalls.length > 0) {
+          return {
+            success: true,
+            type: 'tool_calls',
+            toolCalls,
+            reasoningContent,
+            content: message?.content || '',
+            taskId: resolvedTaskId
+          };
+        }
       }
 
       return {
