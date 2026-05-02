@@ -452,7 +452,8 @@ function createAiManager(options) {
     const session = await getCurrentSession();
     if (!session) return;
     await updateSession(session.id, { pageContext: null });
-    await historyStorage.clearAll();
+    await historyStorage.clearMessages(session.id);
+    agentRunner.setMessageHistory([]);
     contextBar.style.display = 'none';
     clearChatArea();
     await renderSessionsList();
