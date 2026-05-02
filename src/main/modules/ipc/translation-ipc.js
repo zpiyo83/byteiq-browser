@@ -3,18 +3,26 @@
  */
 
 function registerTranslationIpc(options) {
-  const {
-    ipcMain,
-    store,
-    translateTexts,
-    translateTextsStreaming,
-    chunkTexts
-  } = options;
+  const { ipcMain, store, translateTexts, translateTextsStreaming, chunkTexts } = options;
 
   const activeTranslationRequests = new Map(); // taskId -> ClientRequest | Set<ClientRequest>
 
   ipcMain.handle('translate-text', async (event, { texts, targetLanguage, taskId }) => {
     const resolvedTaskId = taskId || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    // 安全发送 IPC 消息，避免向已销毁的 webContents 发送导致崩溃
+    const safeSend = (channel, data) => {
+      if (event.sender.isDestroyed()) return;
+      try {
+        event.sender.send(channel, data);
+      } catch (err) {
+        console.warn(
+          '[translation-ipc] Failed to send IPC, webContents may be destroyed:',
+          err.message
+        );
+      }
+    };
+
     try {
       const translationApiEnabled = store.get('settings.translationApiEnabled', false);
       let endpoint, apiKey, requestType, model;
@@ -43,7 +51,10 @@ function registerTranslationIpc(options) {
       const requestTimeout = store.get('settings.translationTimeout', 120);
       const streamingEnabled = store.get('settings.translationStreaming', true);
       const concurrencyEnabled = store.get('settings.translationConcurrencyEnabled', false);
-      const concurrency = Math.max(1, Math.min(10, store.get('settings.translationConcurrency', 2)));
+      const concurrency = Math.max(
+        1,
+        Math.min(10, store.get('settings.translationConcurrency', 2))
+      );
 
       const results = new Array(texts.length);
 
@@ -124,7 +135,7 @@ function registerTranslationIpc(options) {
         for (let i = 0; i < chunks.length; i++) {
           const chunk = chunks[i];
 
-          event.sender.send('translation-progress', {
+          safeSend('translation-progress', {
             taskId: resolvedTaskId,
             current: i + 1,
             total: chunks.length,
@@ -146,7 +157,7 @@ function registerTranslationIpc(options) {
                 }
               },
               (newTexts, allTexts, newTextsStartIndex) => {
-                event.sender.send('translation-streaming', {
+                safeSend('translation-streaming', {
                   taskId: resolvedTaskId,
                   chunkIndex: i,
                   startIndex: chunk.startIndex,
@@ -196,7 +207,7 @@ function registerTranslationIpc(options) {
           }
 
           roundIndex++;
-          event.sender.send('translation-progress', {
+          safeSend('translation-progress', {
             taskId: resolvedTaskId,
             current: roundIndex,
             total: estimatedTotalRounds,
@@ -220,7 +231,7 @@ function registerTranslationIpc(options) {
                     }
                   },
                   (newTexts, allTexts, newTextsStartIndex) => {
-                    event.sender.send('translation-streaming', {
+                    safeSend('translation-streaming', {
                       taskId: resolvedTaskId,
                       chunkIndex: (roundIndex - 1) * concurrency + groupIndex,
                       startIndex: group.startIndex,
@@ -264,7 +275,7 @@ function registerTranslationIpc(options) {
         }
       }
 
-      event.sender.send('translation-progress', {
+      safeSend('translation-progress', {
         taskId: resolvedTaskId,
         status: 'completed'
       });
@@ -278,7 +289,7 @@ function registerTranslationIpc(options) {
       };
     } catch (error) {
       if (error && error.message === 'Cancelled') {
-        event.sender.send('translation-progress', {
+        safeSend('translation-progress', {
           taskId: resolvedTaskId,
           status: 'cancelled'
         });
