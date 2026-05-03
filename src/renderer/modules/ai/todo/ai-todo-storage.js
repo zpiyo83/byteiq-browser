@@ -25,9 +25,8 @@ function createTodoStorage(options) {
 
   function lockSession(sessionId) {
     lockedSessionId = sessionId;
-    // 锁定时同步清空缓存，确保使用新 session 的数据
-    inMemoryCache = null;
-    inMemoryCacheKey = null;
+    // 不无条件清空缓存：如果新sessionId与缓存key对应的sessionId相同，保留缓存可避免不必要的store读取
+    // 如果不同，readTodos中的inMemoryCacheKey===key检查会自然miss，从store读取新session数据
     if (DEBUG) {
       console.log('[ai-todo-storage] Session locked:', sessionId);
     }
