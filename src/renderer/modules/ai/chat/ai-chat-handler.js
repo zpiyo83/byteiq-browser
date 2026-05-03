@@ -25,7 +25,6 @@ function createAiChatHandler(deps) {
     getCurrentPageInfo,
     t,
     agentRunner,
-    todoManager,
     contextIsolation
   } = deps;
 
@@ -200,10 +199,6 @@ function createAiChatHandler(deps) {
         currentPageInfo: getCurrentPageInfo(),
         t
       });
-      const todoPrompt =
-        todoManager && typeof todoManager.buildTodoPrompt === 'function'
-          ? todoManager.buildTodoPrompt()
-          : '';
       // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
       // 关键：恢复 thinking 内容以保持完整的上下文（防止AI遗忘）
       const formattedHistory = historyMessages
@@ -245,7 +240,7 @@ function createAiChatHandler(deps) {
           return { role: m.role, content };
         });
       const messages = [
-        { role: 'system', content: todoPrompt + systemPrompt },
+        { role: 'system', content: systemPrompt },
         ...ensureToolMessagePairing(formattedHistory),
         { role: 'user', content: userText }
       ];
