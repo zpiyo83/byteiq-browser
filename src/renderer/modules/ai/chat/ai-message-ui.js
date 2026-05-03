@@ -438,7 +438,11 @@ function createAiMessageUI(options) {
         renderAiContent(existingContent, finalResult.content);
       }
     } else if (existingContent) {
-      existingContent.remove();
+      // 流式更新中不因暂时无正文就移除已有div，避免思考进行中正文区域闪烁
+      // 只在非streaming状态（finishStreamingMessage调用时）才清理空内容
+      if (!element.classList.contains('streaming')) {
+        existingContent.remove();
+      }
     }
 
     if (hasContent && dropdown) {
@@ -520,6 +524,11 @@ function createAiMessageUI(options) {
     const indicator = element.querySelector('.streaming-indicator');
     if (indicator) {
       indicator.remove();
+    }
+
+    // 清理空的 message-content div（streaming中保留防闪烁，结束后清理）
+    if (contentEl && !hasContent) {
+      contentEl.remove();
     }
 
     // 清理解析器
