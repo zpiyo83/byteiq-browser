@@ -244,10 +244,15 @@ function createAiChatHandler(deps) {
               : m.content;
           return { role: m.role, content };
         });
+      // 在用户消息后追加本轮对话的todo内容
+      const userContent = todoPrompt
+        ? `${userText}\n\n---\n本轮对话待办内容：${todoPrompt}`
+        : userText;
+
       const messages = [
         { role: 'system', content: todoPrompt + systemPrompt },
         ...ensureToolMessagePairing(formattedHistory),
-        { role: 'user', content: userText }
+        { role: 'user', content: userContent }
       ];
 
       await sendChatRequest(messages, session.id, streamingMsg);
