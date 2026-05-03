@@ -217,7 +217,10 @@ function createAiAgentRunner(options) {
 
       return result;
     } finally {
-      agentStreamingElement = null;
+      // 不在此处清空 agentStreamingElement，避免最后几帧流式数据丢失
+      // （rAF回调可能还没执行，清空后会导致updateStreamingMessage被跳过）
+      // agentStreamingElement 会在下一轮迭代 sendAgentRequest 调用时自动覆盖，
+      // 或在 runAgentConversation 循环结束后统一清空
       agentStreamingTaskId = null;
       // 注意：此处不调用 setInputEnabled(true)
       // agent 模式下 while 循环会多次调用 sendAgentRequest，
@@ -620,6 +623,9 @@ function createAiAgentRunner(options) {
         currentOperationGuard.dispose();
       }
       currentOperationGuard = null;
+      // 清理流式渲染状态（sendAgentRequest不再清空agentStreamingElement，此处统一清空）
+      agentStreamingElement = null;
+      agentStreamingTaskId = null;
       // agent 循环整体结束后才启用输入框
       setInputEnabled(true);
     }
@@ -639,6 +645,10 @@ function createAiAgentRunner(options) {
       ipcRenderer.send('cancel-ai-agent', { taskId: agentStreamingTaskId });
     }
     isAgentProcessing = false;
+
+    // 清理流式渲染状态
+    agentStreamingElement = null;
+    agentStreamingTaskId = null;
 
     // 清理操作守卫
     if (currentOperationGuard && typeof currentOperationGuard.dispose === 'function') {
