@@ -64,6 +64,7 @@ function createAgentPromptBuilder(options) {
         ? todoManager.buildTodoPrompt()
         : '';
     const systemPrompt =
+      todoPrompt +
       buildSystemPrompt({
         mode: 'agent',
         pageContext: session.pageContext,
@@ -73,7 +74,6 @@ function createAgentPromptBuilder(options) {
         taskState: typeof getTaskState === 'function' ? getTaskState() : null,
         t
       }) +
-      todoPrompt +
       '\n\n你是Agent模式，可以使用工具来帮助用户完成任务。' +
       '\n\n可用工具：' +
       '\n- search_page(query): 新建标签页搜索关键词，返回页面信息和tab_id。当需要在网上查找信息时使用。' +
