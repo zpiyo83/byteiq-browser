@@ -245,7 +245,7 @@ function createAiChatHandler(deps) {
           return { role: m.role, content };
         });
       const messages = [
-        { role: 'system', content: systemPrompt + todoPrompt },
+        { role: 'system', content: todoPrompt + systemPrompt },
         ...ensureToolMessagePairing(formattedHistory),
         { role: 'user', content: userText }
       ];
