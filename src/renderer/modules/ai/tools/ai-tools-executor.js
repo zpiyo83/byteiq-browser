@@ -24,14 +24,25 @@ function createAiToolsExecutor(options) {
   const CACHE_MAX_SIZE = 50;
 
   function getToolDef(toolName) {
-    // 先从缓存查询
+    // 先从缓存查询，并把访问的键提升为最近使用（实现 LRU）
     if (toolDefCache.has(toolName)) {
-      return toolDefCache.get(toolName);
+      const cached = toolDefCache.get(toolName);
+      // 通过删除后重新插入来更新其插入顺序，使其成为最近使用的条目
+      toolDefCache.delete(toolName);
+      toolDefCache.set(toolName, cached);
+      return cached;
     }
 
     // 从注册表获取，然后缓存
     const def = getAiToolByName(toolName, store);
-    if (def && toolDefCache.size < CACHE_MAX_SIZE) {
+    if (def) {
+      // 缓存满时删除最旧条目（Map 保持插入顺序）
+      if (toolDefCache.size >= CACHE_MAX_SIZE) {
+        const oldestKey = toolDefCache.keys().next().value;
+        if (oldestKey !== undefined) {
+          toolDefCache.delete(oldestKey);
+        }
+      }
       toolDefCache.set(toolName, def);
     }
     return def;

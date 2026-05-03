@@ -72,15 +72,6 @@
 
     if (ext && ext.path) {
       appendExtensionLog(ext.path, level, message, detail || sourceId || '');
-      return;
-    }
-
-    if (sourceId) {
-      const extracted = extractExtensionIdFromSource(sourceId);
-      const extractedExt = extracted ? getExtensionById(extracted) : null;
-      if (extractedExt && extractedExt.path) {
-        appendExtensionLog(extractedExt.path, level, message, detail || sourceId || '');
-      }
     }
   });
 

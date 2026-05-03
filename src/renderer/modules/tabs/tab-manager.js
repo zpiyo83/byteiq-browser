@@ -226,14 +226,30 @@ function createTabManager(options) {
     const tabEl = documentRef.createElement('div');
     tabEl.className = 'tab';
     tabEl.id = `tab-${id}`;
-    tabEl.innerHTML = `
-        <span class="tab-content">
-            <img class="tab-icon" alt="">
-            <span class="tab-spinner"></span>
-            <span class="tab-title">${tab.title}</span>
-        </span>
-        <span class="close-tab">x</span>
-    `;
+
+    const tabContent = documentRef.createElement('span');
+    tabContent.className = 'tab-content';
+
+    const tabIcon = documentRef.createElement('img');
+    tabIcon.className = 'tab-icon';
+    tabIcon.alt = '';
+    tabContent.appendChild(tabIcon);
+
+    const tabSpinner = documentRef.createElement('span');
+    tabSpinner.className = 'tab-spinner';
+    tabContent.appendChild(tabSpinner);
+
+    const tabTitle = documentRef.createElement('span');
+    tabTitle.className = 'tab-title';
+    tabTitle.textContent = tab.title;
+    tabContent.appendChild(tabTitle);
+
+    tabEl.appendChild(tabContent);
+
+    const closeBtn = documentRef.createElement('span');
+    closeBtn.className = 'close-tab';
+    closeBtn.textContent = 'x';
+    tabEl.appendChild(closeBtn);
     tabEl.classList.toggle('pinned', tab.pinned);
     tabEl.addEventListener('click', e => {
       if (e.target.classList.contains('close-tab')) {

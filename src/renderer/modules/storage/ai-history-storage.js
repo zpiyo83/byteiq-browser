@@ -25,7 +25,11 @@ class AIHistoryStorage {
     this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        // 重置 initPromise 允许后续调用重试，避免永久阻塞
+        this.initPromise = null;
+        reject(request.error);
+      };
       request.onsuccess = () => {
         this.db = request.result;
         resolve(this.db);

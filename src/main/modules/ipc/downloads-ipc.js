@@ -7,6 +7,8 @@ function createDownloadsManager(options) {
 
   let downloadSeq = 0;
   const downloadItemsById = new Map();
+  // 记录中断超时计时器，恢复/完成时清除
+  const interruptedTimeoutIds = new Map();
 
   function registerIpc() {
     ipcMain.on('open-download-path', (event, filePath) => {
@@ -114,7 +116,25 @@ function createDownloadsManager(options) {
             mimeType: item.getMimeType(),
             paused: item.isPaused()
           });
+
+          // 超时清理：中断 5 分钟后若仍未恢复，从 Map 中移除以防止内存泄漏
+          const timeoutId = setTimeout(
+            () => {
+              if (downloadItemsById.has(downloadId) && downloadItemsById.get(downloadId) === item) {
+                downloadItemsById.delete(downloadId);
+              }
+              interruptedTimeoutIds.delete(downloadId);
+            },
+            5 * 60 * 1000
+          );
+          interruptedTimeoutIds.set(downloadId, timeoutId);
         } else if (state === 'progressing') {
+          // 恢复后取消超时计时器，防止误删
+          const tid = interruptedTimeoutIds.get(downloadId);
+          if (tid) {
+            clearTimeout(tid);
+            interruptedTimeoutIds.delete(downloadId);
+          }
           ownerWindow.webContents.send('download-progress', {
             id: downloadId,
             fileName,
@@ -172,6 +192,12 @@ function createDownloadsManager(options) {
           }
         }
 
+        // 清理可能残留的中断超时计时器
+        const tid = interruptedTimeoutIds.get(downloadId);
+        if (tid) {
+          clearTimeout(tid);
+          interruptedTimeoutIds.delete(downloadId);
+        }
         downloadItemsById.delete(downloadId);
       });
     });

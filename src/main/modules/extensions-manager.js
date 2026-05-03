@@ -1,5 +1,8 @@
 ﻿const { registerExtensionIpcHandlers } = require('./extensions-ipc-handlers');
 
+// 跟踪已绑定监听器的 session，避免污染 session 对象本身
+const loggingBoundSessions = new WeakSet();
+
 function createExtensionsManager(options) {
   const { BrowserWindow, dialog, fs, ipcMain, path, session, store, getMainWindow } = options;
 
@@ -247,8 +250,8 @@ function createExtensionsManager(options) {
 
   function attachExtensionListeners() {
     const targetSession = getTargetSession();
-    if (!targetSession || targetSession.__extensionLoggingBound) return;
-    targetSession.__extensionLoggingBound = true;
+    if (!targetSession || loggingBoundSessions.has(targetSession)) return;
+    loggingBoundSessions.add(targetSession);
 
     targetSession.on('extension-loaded', (event, extension) => {
       appendExtensionLog(extension.path, 'info', 'extension-loaded', extension.id);

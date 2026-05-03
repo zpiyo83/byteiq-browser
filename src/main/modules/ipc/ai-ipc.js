@@ -169,14 +169,18 @@ function registerAiIpc(options) {
           );
         } else {
           // Anthropic 或其他类型：降级为非流式
-          result = await sendChatRequest(messages, {
-            endpoint,
-            apiKey,
-            requestType,
-            model,
-            timeout,
-            tools
-          });
+          result = await sendChatRequest(
+            messages,
+            {
+              endpoint,
+              apiKey,
+              requestType,
+              model,
+              timeout,
+              tools
+            },
+            registerAgentRequest
+          );
         }
       } catch (primaryError) {
         // 如果是 chat template 不兼容错误，尝试不带 tools 重试
@@ -200,14 +204,18 @@ function registerAiIpc(options) {
               registerAgentRequest
             );
           } else {
-            result = await sendChatRequest(messages, {
-              endpoint,
-              apiKey,
-              requestType,
-              model,
-              timeout,
-              tools: null
-            });
+            result = await sendChatRequest(
+              messages,
+              {
+                endpoint,
+                apiKey,
+                requestType,
+                model,
+                timeout,
+                tools: null
+              },
+              registerAgentRequest
+            );
           }
           usedToolsFallback = true;
         } else {

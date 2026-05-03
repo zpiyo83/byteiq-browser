@@ -22,6 +22,13 @@ function registerDialogIpc(options) {
         return { success: false, canceled: true };
       }
 
+      // 校验 content 为合法 JSON，防止任意内容写入磁盘
+      try {
+        JSON.parse(content);
+      } catch {
+        return { success: false, error: '内容不是合法的 JSON 格式' };
+      }
+
       fs.writeFileSync(result.filePath, content, 'utf-8');
       return { success: true, filePath: result.filePath };
     } catch (error) {

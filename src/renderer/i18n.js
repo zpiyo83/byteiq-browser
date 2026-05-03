@@ -1,9 +1,13 @@
-const Store = require('electron-store');
 const fs = require('fs');
 const path = require('path');
 
-const store = new Store();
-let currentLocale = store.get('settings.language', 'zh-CN');
+let store = null;
+let currentLocale = 'zh-CN';
+
+function initStore(externalStore) {
+  store = externalStore;
+  currentLocale = store.get('settings.language', 'zh-CN');
+}
 let translations = {};
 
 function loadLocale(locale) {
@@ -33,7 +37,8 @@ function t(key, params = {}) {
     return value.replace(/\{(\w+)\}/g, (match, param) => params[param] || match);
   }
 
-  return value;
+  // 确保始终返回字符串，避免 [object Object] 等非预期输出
+  return key;
 }
 
 function setLocale(locale) {
@@ -82,5 +87,6 @@ module.exports = {
   t,
   setLocale,
   getCurrentLocale,
-  initI18n
+  initI18n,
+  initStore
 };

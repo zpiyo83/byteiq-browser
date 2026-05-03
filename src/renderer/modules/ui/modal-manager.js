@@ -63,6 +63,11 @@ function init() {
  */
 function show({ type = 'info', title = '', message = '', buttons = null }) {
   return new Promise(resolve => {
+    // 如果已有可见模态框，先 reject 旧 promise 防止调用方挂起
+    if (modalOverlay && modalOverlay.classList.contains('visible') && resolvePromise) {
+      resolvePromise(false);
+    }
+
     resolvePromise = resolve;
 
     if (!modalOverlay) {

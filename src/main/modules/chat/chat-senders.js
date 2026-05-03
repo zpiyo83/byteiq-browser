@@ -470,7 +470,7 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
 /**
  * 发送非流式对话请求
  */
-function sendChatRequest(messages, config) {
+function sendChatRequest(messages, config, registerRequest) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, requestType, model, timeout, tools } = config;
 
@@ -506,13 +506,11 @@ function sendChatRequest(messages, config) {
     }
 
     // 构建请求体 (非流式)
+    // 注意：openai-response 类型已在上方通过 sendResponsesStreamForAgent 处理
     let requestBody;
     switch (requestType) {
       case 'anthropic':
         requestBody = buildAnthropicRequest(messages, model);
-        break;
-      case 'openai-response':
-        requestBody = buildOpenAIResponseRequest(messages, model, false);
         break;
       case 'openai-chat':
       default:
@@ -553,6 +551,10 @@ function sendChatRequest(messages, config) {
         }
       });
     });
+
+    if (typeof registerRequest === 'function') {
+      registerRequest(req);
+    }
 
     req.on('error', reject);
     req.on('timeout', () => {

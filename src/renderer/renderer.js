@@ -1,7 +1,7 @@
 ﻿// Electron 渲染进程入口文件
 const { ipcRenderer, clipboard } = require('electron');
 const Store = require('electron-store');
-const { initI18n, t, setLocale } = require('./i18n');
+const { initI18n, t, setLocale, initStore } = require('./i18n');
 const { createBrowserManager } = require('./modules/navigation/browser-manager');
 const { createContextMenuManager } = require('./modules/ui/context-menu-manager');
 const { createDownloadsManager } = require('./modules/downloads/downloads-manager');
@@ -16,6 +16,7 @@ const { createExtensionsManager } = require('./modules/extensions/extensions-man
 const { createTranslationManager } = require('./modules/ui/translation-manager');
 const modalManager = require('./modules/ui/modal-manager');
 const store = new Store();
+initStore(store);
 const { getDomReferences } = require('./modules/app/dom-references');
 const { bindSettingsAndPanelEvents } = require('./modules/app/events/settings-and-panels-events');
 const {

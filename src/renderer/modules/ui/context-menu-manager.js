@@ -12,6 +12,24 @@
 
   let tabContextTargetId = null;
 
+  // 将菜单定位到 (x, y)，确保不超出视口边界
+  function positionMenu(menu, x, y) {
+    menu.style.top = `${y}px`;
+    menu.style.left = `${x}px`;
+    menu.style.display = 'block';
+
+    // 显示后检查是否超出视口，超出则调整位置
+    const rect = menu.getBoundingClientRect();
+    const vw = windowRef.innerWidth;
+    const vh = windowRef.innerHeight;
+    if (rect.right > vw) {
+      menu.style.left = `${Math.max(0, x - rect.width)}px`;
+    }
+    if (rect.bottom > vh) {
+      menu.style.top = `${Math.max(0, y - rect.height)}px`;
+    }
+  }
+
   function hideContextMenus() {
     if (contextMenu) {
       contextMenu.style.display = 'none';
@@ -36,9 +54,7 @@
       unpinItem.style.display = tab.pinned ? 'block' : 'none';
     }
 
-    tabContextMenu.style.top = `${y}px`;
-    tabContextMenu.style.left = `${x}px`;
-    tabContextMenu.style.display = 'block';
+    positionMenu(tabContextMenu, x, y);
   }
 
   function bindTabContextActions() {
@@ -207,9 +223,7 @@
       hideContextMenus();
       if (!contextMenu) return;
       const { clientX: x, clientY: y } = e;
-      contextMenu.style.top = `${y}px`;
-      contextMenu.style.left = `${x}px`;
-      contextMenu.style.display = 'block';
+      positionMenu(contextMenu, x, y);
     });
 
     windowRef.addEventListener('click', () => {

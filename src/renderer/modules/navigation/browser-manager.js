@@ -76,6 +76,10 @@ function createBrowserManager(options) {
   }
 
   function formatUrl(url) {
+    // 特殊协议直接返回，不当作搜索词处理
+    if (/^(data|chrome-extension|about|blob|filesystem):/i.test(url)) {
+      return url;
+    }
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
