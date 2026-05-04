@@ -1,0 +1,21 @@
+name: Github Sync To Gitee
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror to Gitee
+        uses: Yikun/hub-mirror-action@master
+        with:
+          src: github
+          dst: gitee
+          dst_gitee_user: 你的Gitee用户名
+          dst_gitee_repo: 你的仓库名
+          static_branch: true
