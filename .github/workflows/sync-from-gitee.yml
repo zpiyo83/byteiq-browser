@@ -38,6 +38,12 @@ jobs:
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Configure git identity
+        if: steps.check.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Merge and push to GitHub
         id: sync
         if: steps.check.outputs.has_changes == 'true'
@@ -48,7 +54,7 @@ jobs:
       - name: Handle merge conflict
         if: failure() && steps.check.outputs.has_changes == 'true'
         run: |
-          git merge --abort
+          git merge --abort 2>/dev/null || true
           echo "⚠️ Merge 冲突，已中止同步，请手动解决"
 
       - name: Create conflict issue

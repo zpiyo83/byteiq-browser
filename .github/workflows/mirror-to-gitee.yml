@@ -23,6 +23,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Push to Gitee
         run: |
           git remote add gitee https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/${{ secrets.GITEE_REPO }}.git
@@ -79,7 +84,7 @@ jobs:
       - name: Handle merge conflict
         if: failure() && steps.sync.outputs.has_changes == 'true'
         run: |
-          git merge --abort
+          git merge --abort 2>/dev/null || true
           echo "⚠️ Merge 冲突，已中止同步，请手动解决"
 
       - name: Create conflict issue
