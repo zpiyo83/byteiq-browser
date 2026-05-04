@@ -1,7 +1,9 @@
-name: Github Sync To Gitee
+name: Sync to Gitee
 on:
   push:
     branches: [ main, master ]
+  repository_dispatch:
+    types: [gitee_sync]
 
 jobs:
   mirror:
@@ -10,12 +12,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Mirror to Gitee
         uses: Yikun/hub-mirror-action@master
         with:
           src: github
           dst: gitee
-          dst_gitee_user: 你的Gitee用户名
-          dst_gitee_repo: 你的仓库名
+          dst_gitee_user: ${{ secrets.GITEE_USERNAME }}
+          dst_gitee_repo: ${{ secrets.GITEE_REPO }}
+          dst_key: ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
+          dst_token: ${{ secrets.GITEE_TOKEN }}
           static_branch: true
