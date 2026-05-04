@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '0 */2 * * *'  # 每2小时检查一次
 
+permissions:
+  contents: write
+  issues: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -12,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Add Gitee remote
         run: |
@@ -24,17 +28,53 @@ jobs:
       - name: Check if Gitee has new commits
         id: check
         run: |
-          GITEE_LATEST=$(git rev-parse gitee/main)
-          GITHUB_LATEST=$(git rev-parse HEAD)
-          if [ "$GITEE_LATEST" != "$GITHUB_LATEST" ]; then
+          NEW_COMMITS=$(git log HEAD..gitee/main --oneline 2>/dev/null || true)
+          if [ -n "$NEW_COMMITS" ]; then
+            echo "Gitee 新提交："
+            echo "$NEW_COMMITS"
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "gitee_commit=$GITEE_LATEST" >> $GITHUB_OUTPUT
           else
+            echo "Gitee 没有新提交，跳过同步"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Sync from Gitee
+      - name: Merge and push to GitHub
+        id: sync
         if: steps.check.outputs.has_changes == 'true'
         run: |
-          git push github $(git rev-parse gitee/main):main --force
-          echo "Synced from Gitee commit: ${{ steps.check.outputs.gitee_commit }}"
+          git merge gitee/main --no-edit --allow-unrelated-histories
+          git push origin main
+
+      - name: Handle merge conflict
+        if: failure() && steps.check.outputs.has_changes == 'true'
+        run: |
+          git merge --abort
+          echo "⚠️ Merge 冲突，已中止同步，请手动解决"
+
+      - name: Create conflict issue
+        if: failure() && steps.check.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '⚠️ Gitee → GitHub 同步冲突';
+            const body = 'Gitee 到 GitHub 的自动同步因合并冲突而失败，请手动解决。\n\n' +
+              '触发时间：' + new Date().toISOString() + '\n\n' +
+              '解决步骤：\n' +
+              '1. 本地拉取 GitHub 和 Gitee 的最新代码\n' +
+              '2. 手动合并解决冲突\n' +
+              '3. 分别推送到 GitHub 和 Gitee';
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'sync-conflict'
+            });
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['sync-conflict']
+              });
+            }
