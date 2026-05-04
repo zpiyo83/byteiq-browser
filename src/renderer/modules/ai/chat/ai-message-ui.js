@@ -10,6 +10,8 @@ function createAiMessageUI(options) {
 
   // 流式思考解析器实例映射
   const streamingParsers = new WeakMap();
+  // 新增：用于缓存流式文本并匀速输出的缓冲区
+  const streamingBuffers = new WeakMap();
   const autoCollapseTimers = new WeakMap();
   const THINK_MAX_LINES = 7;
   const THINK_MIN_EXPANDED_MS = 800;
@@ -252,6 +254,8 @@ function createAiMessageUI(options) {
       // 添加动画圆点指示器
       const indicator = createStreamingDots();
       msg.appendChild(indicator);
+      // 初始化流式缓冲区（用于匀速输出）
+      streamingBuffers.set(msg, { buffer: '', timer: null });
     }
 
     // 解析思考内容
@@ -329,145 +333,139 @@ function createAiMessageUI(options) {
   function updateStreamingMessage(element, text) {
     if (!element) return;
 
-    // 获取或创建解析器
+    // 取得或创建解析器（保持同一实例）
     let parser = streamingParsers.get(element);
     if (!parser) {
       parser = createStreamingThinkParser();
       streamingParsers.set(element, parser);
     }
 
-    // 重置解析器并重新解析完整内容
-    parser.reset();
-    const result = parser.append(text);
-    const finalResult = parser.finish();
+    // 取得或创建缓冲区对象
+    let bufObj = streamingBuffers.get(element);
+    if (!bufObj) {
+      bufObj = { buffer: '', timer: null };
+      streamingBuffers.set(element, bufObj);
+    }
+    // 合并新到来的文本块（若有解析器已经产生内容，则直接使用其 output）
+    bufObj.buffer += text;
 
-    // 检查是否已有思考下拉框
-    const existingDropdown = element.querySelector('.think-dropdown');
-    const existingContent = element.querySelector('.message-content');
-    const indicator = element.querySelector('.streaming-indicator');
+    // 若已有计时器在运行，则直接返回等待其处理
+    if (bufObj.timer) return;
 
-    const isThinking = result.isThinking || !result.thinkingComplete;
-    const hasThinking = Boolean(finalResult.thinking);
-    const hasContent = Boolean(finalResult.content && finalResult.content.trim());
-    const shouldForceExpand = Boolean(hasThinking && isThinking && !hasContent);
-    let dropdown = existingDropdown;
+    // 启动定时器，每 80ms 写入约 10‑12 个字符（保持匀速）
+    const processChunk = () => {
+      if (!bufObj.buffer) {
+        clearInterval(bufObj.timer);
+        bufObj.timer = null;
+        return;
+      }
+      // 取前 12 个字符写入（约 10‑12）
+      const chunk = bufObj.buffer.slice(0, 12);
+      bufObj.buffer = bufObj.buffer.slice(chunk.length);
 
-    // 1. 处理思考部分
-    if (hasThinking) {
-      if (!dropdown) {
-        // 首次创建思考下拉框（先不展开，等插入DOM后再触发过渡动画）
-        const { container, content } = createThinkDropdown({
-          isThinking,
-          expanded: false
-        });
-        content.textContent = cleanContent(finalResult.thinking);
-        dropdown = container;
+      // 使用 parser 继续解析并更新 UI
+      parser.reset();
+      const result = parser.append(chunk);
+      const finalResult = parser.finish();
 
-        container.classList.toggle('thinking', isThinking);
+      // 以下与旧实现保持一致，仅针对本次 chunk 更新 UI
+      const existingDropdown = element.querySelector('.think-dropdown');
+      const existingContent = element.querySelector('.message-content');
+      const indicator = element.querySelector('.streaming-indicator');
 
-        // 插入到最前面，或者在 indicator 之后
-        if (indicator) {
-          indicator.after(container);
-        } else {
-          element.prepend(container);
-        }
+      const isThinking = result.isThinking || !result.thinkingComplete;
+      const hasThinking = Boolean(finalResult.thinking);
+      const hasContent = Boolean(finalResult.content && finalResult.content.trim());
+      const shouldForceExpand = Boolean(hasThinking && isThinking && !hasContent);
+      let dropdown = existingDropdown;
 
-        // 下一帧展开，触发CSS过渡动画
-        if (
-          shouldForceExpand ||
-          (hasContent && !hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown))
-        ) {
-          requestAnimationFrame(() => {
-            dropdown.classList.add('expanded');
-            markAutoExpanded(dropdown);
-            const toggle = dropdown.querySelector('.think-toggle');
-            if (toggle) toggle.textContent = '▲';
-            syncThinkContentHeight(content, true, true);
-            scrollThinkContentToBottom(content);
-          });
-        }
-      } else {
-        // 更新现有思考内容
-        dropdown.classList.toggle('thinking', isThinking);
-        const label = dropdown.querySelector('.think-label');
-        if (label) {
-          label.textContent = isThinking ? 'Thinking' : 'Thoughts';
-        }
-
-        const contentEl = dropdown.querySelector('.think-dropdown-content');
-        if (contentEl) {
-          contentEl.textContent = cleanContent(finalResult.thinking);
-          const isExpanded = dropdown.classList.contains('expanded');
-          if (isExpanded) {
-            const lockToMax = shouldForceExpand && !hasUserToggled(dropdown);
+      // 思考部分处理（同原实现）
+      if (hasThinking) {
+        if (!dropdown) {
+          const { container, content } = createThinkDropdown({ isThinking, expanded: false });
+          content.textContent = cleanContent(finalResult.thinking);
+          dropdown = container;
+          container.classList.toggle('thinking', isThinking);
+          if (indicator) indicator.after(container); else element.prepend(container);
+          if (shouldForceExpand) {
             requestAnimationFrame(() => {
-              syncThinkContentHeight(contentEl, true, lockToMax);
-              if (lockToMax) {
-                scrollThinkContentToBottom(contentEl);
-              }
+              dropdown.classList.add('expanded');
+              markAutoExpanded(dropdown);
+              const toggle = dropdown.querySelector('.think-toggle');
+              if (toggle) toggle.textContent = '▲';
+              syncThinkContentHeight(content, true, true);
+              scrollThinkContentToBottom(content);
             });
           }
-        }
-        // 思考阶段自动展开（尊重用户手动操作；若已自动折叠过则不再自动展开）
-        if (shouldForceExpand && !dropdown.classList.contains('expanded')) {
-          if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
-            dropdown.classList.add('expanded');
-            markAutoExpanded(dropdown);
-            const toggle = dropdown.querySelector('.think-toggle');
-            if (toggle) toggle.textContent = '▲';
-            const contentEl = dropdown.querySelector('.think-dropdown-content');
-            if (contentEl) {
+        } else {
+          dropdown.classList.toggle('thinking', isThinking);
+          const label = dropdown.querySelector('.think-label');
+          if (label) label.textContent = isThinking ? 'Thinking' : 'Thoughts';
+          const contentEl = dropdown.querySelector('.think-dropdown-content');
+          if (contentEl) {
+            contentEl.textContent = cleanContent(finalResult.thinking);
+            if (dropdown.classList.contains('expanded')) {
+              const lockToMax = shouldForceExpand && !hasUserToggled(dropdown);
               requestAnimationFrame(() => {
-                syncThinkContentHeight(contentEl, true, true);
-                scrollThinkContentToBottom(contentEl);
+                syncThinkContentHeight(contentEl, true, lockToMax);
+                if (lockToMax) scrollThinkContentToBottom(contentEl);
               });
+            }
+          }
+          if (shouldForceExpand && !dropdown.classList.contains('expanded')) {
+            if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
+              dropdown.classList.add('expanded');
+              markAutoExpanded(dropdown);
+              const toggle = dropdown.querySelector('.think-toggle');
+              if (toggle) toggle.textContent = '▲';
+              const contentEl = dropdown.querySelector('.think-dropdown-content');
+              if (contentEl) {
+                requestAnimationFrame(() => {
+                  syncThinkContentHeight(contentEl, true, true);
+                  scrollThinkContentToBottom(contentEl);
+                });
+              }
             }
           }
         }
       }
-    }
 
-    // 2. 处理正文部分
-    if (hasContent) {
-      if (!existingContent) {
-        const contentDiv = documentRef.createElement('div');
-        contentDiv.className = 'message-content';
-        renderAiContent(contentDiv, finalResult.content);
-        element.appendChild(contentDiv);
-      } else {
-        renderAiContent(existingContent, finalResult.content);
-      }
-    } else if (existingContent) {
-      // 流式更新中不因暂时无正文就移除已有div，避免思考进行中正文区域闪烁
-      // 只在非streaming状态（finishStreamingMessage调用时）才清理空内容
-      if (!element.classList.contains('streaming')) {
+      // 正文部分处理
+      if (hasContent) {
+        if (!existingContent) {
+          const contentDiv = documentRef.createElement('div');
+          contentDiv.className = 'message-content';
+          renderAiContent(contentDiv, finalResult.content);
+          element.appendChild(contentDiv);
+        } else {
+          renderAiContent(existingContent, finalResult.content);
+        }
+      } else if (existingContent && !element.classList.contains('streaming')) {
         existingContent.remove();
       }
-    }
 
-    if (hasContent && dropdown) {
-      if (!hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
+      // 自动折叠思考框（保持原行为）
+      if (hasContent && dropdown && !hasUserToggled(dropdown) && !hasAutoCollapsed(dropdown)) {
         const contentEl = dropdown.querySelector('.think-dropdown-content');
-        if (contentEl) {
-          scheduleAutoCollapse(dropdown, contentEl);
+        if (contentEl) scheduleAutoCollapse(dropdown, contentEl);
+      }
+
+      // 工作指示器
+      const hasAnyContent = finalResult.thinking || finalResult.content;
+      const shouldShowIndicator = !hasAnyContent;
+      element.classList.add('streaming');
+      if (shouldShowIndicator) {
+        if (!indicator) {
+          const newIndicator = createStreamingDots();
+          element.prepend(newIndicator);
         }
+      } else if (indicator) {
+        indicator.remove();
       }
-    }
 
-    // 3. 处理 working 指示器逻辑
-    const hasAnyContent = finalResult.thinking || finalResult.content;
-    const shouldShowIndicator = !hasAnyContent;
-    element.classList.add('streaming');
-    if (shouldShowIndicator) {
-      if (!indicator) {
-        const newIndicator = createStreamingDots();
-        element.prepend(newIndicator);
-      }
-    } else if (indicator) {
-      indicator.remove();
-    }
-
-    scrollToBottom();
+      scrollToBottom();
+    };
+    bufObj.timer = setInterval(processChunk, 80);
   }
 
   function autoCollapseThinkingDropdown(element) {
