@@ -153,7 +153,7 @@ function createStreamingThinkParser() {
         content: contentBuffer,
         thinkingDelta,
         contentDelta,
-        isThinking: inThinkingBlock,
+        isThinking: inThinkingBlock || !thinkingComplete,
         thinkingComplete
       };
     },
