@@ -1,292 +1,30 @@
 /**
- * AI 上下文与提示词工具
+ * AI 上下文工具 - 兼容性层
+ * 重新导出拆分后的模块，保持向后兼容
  */
 
-// 页面内容提取脚本
-const EXTRACT_PAGE_CONTENT_SCRIPT = `
-(function() {
-  const title = document.title || '';
-  let mainContent = '';
+// 从拆分后的模块重新导出
+const {
+  EXTRACT_PAGE_CONTENT_SCRIPT,
+  extractPageContent,
+  isWebviewNotReadyError
+} = require('./ai-page-extractor');
 
-  const mainSelectors = [
-    'article',
-    '[role="main"]',
-    'main',
-    '.post-content',
-    '.article-content',
-    '.content',
-    '#content',
-    '.post',
-    '.article',
-    '.entry-content'
-  ];
+const { createPromptBuilder, buildSelectionContext } = require('./ai-prompt-builder');
 
-  let mainElement = null;
-  for (const selector of mainSelectors) {
-    const el = document.querySelector(selector);
-    if (el) {
-      mainElement = el;
-      break;
-    }
-  }
+const { extractAndSetPageContext } = require('./ai-context-manager');
 
-  if (!mainElement) {
-    mainElement = document.body;
-  }
+// 为了向后兼容，创建一个默认的 promptBuilder 实例
+// 注意：实际使用中应该通过 createPromptBuilder 创建实例
+const defaultPromptBuilder = createPromptBuilder({
+  todoManager: null,
+  getPageList: () => [],
+  getCurrentPageInfo: () => null,
+  getTaskState: () => null,
+  t: key => key
+});
 
-  function extractText(element) {
-    const walker = document.createTreeWalker(
-      element,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode: function(node) {
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
-          const tagName = parent.tagName.toLowerCase();
-          if (['script', 'style', 'noscript', 'svg', 'iframe', 'code', 'pre'].includes(tagName)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          const style = window.getComputedStyle(parent);
-          if (style.display === 'none' || style.visibility === 'hidden') {
-            return NodeFilter.FILTER_REJECT;
-          }
-          const text = node.textContent.trim();
-          if (text.length === 0) return NodeFilter.FILTER_REJECT;
-          return NodeFilter.FILTER_ACCEPT;
-        }
-      }
-    );
-
-    const texts = [];
-    let node;
-    while (node = walker.nextNode()) {
-      texts.push(node.textContent.trim());
-    }
-    return texts.join('\\n');
-  }
-
-  mainContent = extractText(mainElement);
-
-  const maxLength = 15000;
-  if (mainContent.length > maxLength) {
-    mainContent = mainContent.substring(0, maxLength) + '...';
-  }
-
-  const meta = {
-    description: document.querySelector('meta[name="description"]')?.content || '',
-    keywords: document.querySelector('meta[name="keywords"]')?.content || '',
-    author: document.querySelector('meta[name="author"]')?.content || ''
-  };
-
-  function cssEscape(value) {
-    if (window.CSS && typeof window.CSS.escape === 'function') {
-      return window.CSS.escape(value);
-    }
-    return String(value).replace(/["\\\\]/g, '\\\\$&');
-  }
-
-  function safeText(value, limit) {
-    const text = String(value || '').trim();
-    if (!text) return '';
-    if (!limit || text.length <= limit) return text;
-    return text.substring(0, limit) + '...';
-  }
-
-  function isVisible(el) {
-    const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden') return false;
-    const rect = el.getBoundingClientRect();
-    if (!rect || rect.width === 0 || rect.height === 0) return false;
-    return true;
-  }
-
-  function buildSelector(el) {
-    const tag = el.tagName.toLowerCase();
-    if (el.id) return '#' + cssEscape(el.id);
-
-    const dataTestId = el.getAttribute('data-testid');
-    if (dataTestId) {
-      return tag + '[data-testid="' + cssEscape(dataTestId) + '"]';
-    }
-
-    const ariaLabel = el.getAttribute('aria-label');
-    if (ariaLabel) {
-      return tag + '[aria-label="' + cssEscape(ariaLabel) + '"]';
-    }
-
-    const name = el.getAttribute('name');
-    if (name) {
-      return tag + '[name="' + cssEscape(name) + '"]';
-    }
-
-    const placeholder = el.getAttribute('placeholder');
-    if (placeholder && (tag === 'input' || tag === 'textarea')) {
-      return tag + '[placeholder="' + cssEscape(placeholder) + '"]';
-    }
-
-    const type = el.getAttribute('type');
-    if (type && tag === 'input') {
-      return tag + '[type="' + cssEscape(type) + '"]';
-    }
-
-    return tag;
-  }
-
-  function collectElements(selector, maxCount) {
-    const result = [];
-    const elements = document.querySelectorAll(selector);
-    for (const el of elements) {
-      if (!isVisible(el)) continue;
-      const tag = el.tagName.toLowerCase();
-      const text = safeText(
-        el.innerText || el.value || el.getAttribute('aria-label') || el.getAttribute('title'),
-        80
-      );
-      result.push({
-        tag,
-        type: el.getAttribute('type') || '',
-        text,
-        id: el.id || '',
-        name: el.getAttribute('name') || '',
-        role: el.getAttribute('role') || '',
-        ariaLabel: el.getAttribute('aria-label') || '',
-        title: el.getAttribute('title') || '',
-        placeholder: el.getAttribute('placeholder') || '',
-        selector: buildSelector(el)
-      });
-      if (result.length >= maxCount) break;
-    }
-    return result;
-  }
-
-  const controls = {
-    buttons: collectElements(
-      'button, [role="button"], input[type="button"], input[type="submit"]',
-      30
-    ),
-    inputs: collectElements(
-      'input:not([type="button"]):not([type="submit"]), textarea, select',
-      30
-    ),
-    links: collectElements('a[href]', 30)
-  };
-
-  return {
-    url: window.location.href,
-    title: title,
-    content: mainContent,
-    meta: meta,
-    controls: controls
-  };
-})();
-`;
-
-function isWebviewNotReadyError(error) {
-  const msg = error && error.message ? String(error.message) : '';
-  return (
-    msg.includes('WebView must be attached to the DOM') ||
-    msg.includes('dom-ready event emitted before this method can be called') ||
-    msg.includes('dom-ready')
-  );
-}
-
-async function extractPageContent(webview) {
-  if (!webview || webview.tagName !== 'WEBVIEW') {
-    return null;
-  }
-
-  // 带超时的 Promise 包装，防止 executeJavaScript 永不 resolve 导致 UI 卡死
-  function withTimeout(promise, ms) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms)
-      )
-    ]);
-  }
-
-  try {
-    // 等待 webview 挂载到 DOM（缩短超时避免长时间阻塞）
-    if (!webview.isConnected) {
-      const start = Date.now();
-      await new Promise((resolve, reject) => {
-        const timer = setInterval(() => {
-          if (webview.isConnected) {
-            clearInterval(timer);
-            resolve();
-            return;
-          }
-          if (Date.now() - start > 5000) {
-            clearInterval(timer);
-            reject(new Error('Webview attach timeout'));
-          }
-        }, 50);
-      });
-    }
-
-    // 核心策略：不再试图预测 dom-ready，直接尝试 executeJavaScript，
-    // 如果报 WebView 未就绪错误则延迟重试
-    const maxAttempts = 3;
-    const delays = [300, 800, 1500];
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        const content = await withTimeout(
-          webview.executeJavaScript(EXTRACT_PAGE_CONTENT_SCRIPT),
-          8000
-        );
-        if (webview.dataset) {
-          webview.dataset.domReady = 'true';
-        }
-        return content;
-      } catch (error) {
-        const msg = error && error.message ? String(error.message) : '';
-        if (
-          (isWebviewNotReadyError(error) || msg.includes('timed out')) &&
-          attempt < maxAttempts - 1
-        ) {
-          console.warn(
-            `[ai-context-utils] extractPageContent attempt ${attempt + 1} failed, ` +
-              `retrying in ${delays[attempt]}ms...`
-          );
-          await new Promise(r => setTimeout(r, delays[attempt]));
-          continue;
-        }
-        throw error;
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Failed to extract page content:', error);
-    return null;
-  }
-}
-
-function buildSelectionContext(options) {
-  const { text, getActiveTabId, documentRef } = options;
-  let { t } = options;
-
-  // 安全检查：确保 t 是函数
-  if (typeof t !== 'function') {
-    console.warn('[buildSelectionContext] t is not a function:', typeof t, t);
-    // 提供一个虚拟的 t 函数作为备用
-    t = key => key;
-  }
-
-  const content = String(text || '').trim();
-  if (!content) return null;
-  const tabId = getActiveTabId();
-  const webview = tabId ? documentRef.getElementById(`webview-${tabId}`) : null;
-  return {
-    url: webview && typeof webview.getURL === 'function' ? webview.getURL() : '',
-    title: t('ai.selectionTitle') || '选区内容',
-    content,
-    meta: {
-      description: ''
-    }
-  };
-}
-
+// 兼容旧 API
 function buildSystemPrompt(options) {
   const {
     mode,
@@ -294,236 +32,71 @@ function buildSystemPrompt(options) {
     pageList,
     includePageContext = true,
     currentPageInfo,
-    taskState
+    taskState,
+    t
   } = options;
-  let { t } = options;
+  const safeT = typeof t === 'function' ? t : key => key;
 
-  // 安全检查：确保 t 是函数
-  if (typeof t !== 'function') {
-    console.warn('[buildSystemPrompt] t is not a function:', typeof t, t);
-    // 提供一个虚拟的 t 函数作为备用
-    t = key => key;
-  }
-
-  const base =
-    t('ai.systemPrompt') ||
-    '你是一个有帮助的AI助手。你可以帮助用户总结网页内容、回答问题和提供信息。';
-
-  let modePrompt;
-  switch (mode) {
-    case 'outline':
-      modePrompt = t('ai.modeOutline') || '请输出结构化提纲与关键要点。';
-      break;
-    case 'compare':
-      modePrompt = t('ai.modeCompare') || '请进行对比/聚合分析，并给出结论。';
-      break;
-    case 'translate_page':
-      modePrompt = t('ai.modeTranslatePage') || '请将内容翻译/本地化为中文，保持准确与可读性。';
-      break;
-    case 'code_docs':
-      modePrompt = t('ai.modeCodeDocs') || '请以 API 文档/代码解读风格回答，给出关键接口与示例。';
-      break;
-    case 'qa':
-    default:
-      modePrompt = t('ai.modeQa') || '请结合上下文回答用户问题，必要时引用原文。';
-      break;
-  }
-
-  let systemPrompt = `${base}\n\n${modePrompt}`;
-
-  // 动态注入当前页面信息（优先于缓存的pageContext）
-  if (currentPageInfo) {
-    systemPrompt += '\n\n[当前页面状态]';
-    systemPrompt += `\n标题: ${currentPageInfo.title || '未知'}`;
-    systemPrompt += `\nURL: ${currentPageInfo.url || '未知'}`;
-    if (currentPageInfo.loading) {
-      systemPrompt += '\n状态: 页面加载中...';
-    }
-  } else if (includePageContext && pageContext && pageContext.content) {
-    systemPrompt += '\n\n' + (t('ai.pageContext') || '当前页面信息：');
-    systemPrompt += `\n标题: ${pageContext.title}`;
-    systemPrompt += `\nURL: ${pageContext.url}`;
-    if (pageContext.meta?.description) {
-      systemPrompt += `\n描述: ${pageContext.meta.description}`;
-    }
-    systemPrompt += `\n\n页面内容:\n${pageContext.content}`;
-  }
-
-  if (mode === 'agent' && Array.isArray(pageList)) {
-    const pagesSummary = buildPagesSummary(pageList);
-    if (pagesSummary) {
-      systemPrompt += '\n\n当前可用页面(每次请求更新):\n' + pagesSummary;
-    }
-  }
-
-  if (mode === 'agent' && includePageContext && pageContext?.controls) {
-    const controlsSummary = buildControlsSummary(pageContext.controls);
-    if (controlsSummary) {
-      systemPrompt += '\n\n可交互元素:\n' + controlsSummary;
-    }
-  }
-
-  // Agent 模式核心规则：必须使用 end_session 结束
+  // 根据模式调用对应的构建器
   if (mode === 'agent') {
-    systemPrompt +=
-      '\n\n[待办项管理策略]\n' +
-      '如果用户提到任务、需要做某事或需要跟踪工作进度，使用以下工具策略：\n' +
-      '• 开始任何复杂工作前：调用 list_todos("pending") 查看现有待办\n' +
-      '• 识别到新任务：调用 add_todo(title, priority) 添加待办（low/medium/high）\n' +
-      '• 一次添加多个任务：调用 add_todos([{title, priority?}]) 批量添加\n' +
-      '• 完成任务步骤：调用 complete_todo(id) 标记完成（必须从 list_todos 提取 ID）\n' +
-      '• 一次完成多个任务：调用 complete_todos([id1, id2, ...]) 批量完成\n' +
-      '• 用户取消任务：调用 remove_todo(id) 删除待办（不可恢复，需谨慎）\n' +
-      '• 确认状态：完成任务后调用 list_todos("pending") 再次确认\n' +
-      '【标题规范】使用清晰的行动词，如「阅读XX文档」「完成XX代码」。\n' +
-      '【优先级】high=紧急/有期限，medium=常规任务（默认），low=可选/优化。\n' +
-      '【最佳实践】多步骤任务要逐步添加待办项，每完成一步立即标记，保持列表实时同步。';
+    // Agent 模式使用专门的构建器
+    const mockSession = { mode, pageContext };
+    return defaultPromptBuilder.buildAgentSystemPrompt(mockSession, '');
+  } else {
+    // Ask 模式使用 Ask 构建器
+    const mockSession = { mode, pageContext };
+    let prompt = defaultPromptBuilder.buildAskSystemPrompt(mockSession);
 
-    systemPrompt +=
-      '\n\n[核心规则 - 必须遵守]\n' +
-      '1. 当用户的目标已达成、问题已解答、或所需信息已获取时，你必须立即调用 end_session 工具结束会话，并提供 summary 总结。\n' +
-      '2. 绝对不要在完成任务后继续获取页面信息或执行多余操作，这会浪费资源并打扰用户。\n' +
-      '3. 每次获取页面信息后，先判断是否已足够回答用户问题，如果足够则立即调用 end_session，而非继续获取更多信息。\n' +
-      '4. end_session 是你最重要的工具之一，忘记调用它是最常见的错误。';
-  }
-
-  // Agent任务状态追踪
-  if (mode === 'agent' && taskState) {
-    systemPrompt += '\n\n[任务状态]';
-    if (taskState.goal) {
-      systemPrompt += `\n目标: ${taskState.goal}`;
+    // 如果有页面列表，手动添加（Ask 模式通常不需要）
+    if (Array.isArray(pageList) && pageList.length > 0) {
+      prompt += defaultPromptBuilder.enhanceWithPages('');
     }
-    if (Array.isArray(taskState.completedSteps) && taskState.completedSteps.length > 0) {
-      systemPrompt += `\n已完成步骤:\n${taskState.completedSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
-    }
-    if (taskState.currentPage) {
-      systemPrompt += `\n当前所在页面: ${taskState.currentPage}`;
-    }
-    if (taskState.lastAction) {
-      systemPrompt += `\n上一步操作: ${taskState.lastAction}`;
-    }
-  }
 
-  return systemPrompt;
-}
-
-// P1 优化：对链接进行智能分类，优先返回官网入口
-function classifyAndSortLinks(links) {
-  if (!Array.isArray(links) || links.length === 0) {
-    return { official: [], content: [] };
-  }
-
-  const official = [];
-  const content = [];
-
-  for (const link of links) {
-    try {
-      const url = new URL(link.href || link.selector || '');
-      const pathname = url.pathname;
-
-      // 判断是否为主域名链接（官网入口）
-      // 特征：路径为 / 或很短，没有查询参数
-      if (pathname === '/' && !url.search) {
-        official.push(link);
-      } else {
-        content.push(link);
+    // 如果有任务状态，手动添加（Ask 模式通常不需要）
+    if (taskState) {
+      if (taskState.goal) prompt += `\n\n目标: ${taskState.goal}`;
+      if (Array.isArray(taskState.completedSteps) && taskState.completedSteps.length > 0) {
+        prompt += `\n已完成步骤:\n${taskState.completedSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
       }
-    } catch {
-      content.push(link);
+      if (taskState.currentPage) prompt += `\n当前所在页面: ${taskState.currentPage}`;
+      if (taskState.lastAction) prompt += `\n上一步操作: ${taskState.lastAction}`;
     }
-  }
 
-  return { official, content };
+    return prompt;
+  }
 }
 
-function buildControlsSummary(controls) {
-  if (!controls) return '';
-  const limit = 8;
-  const lines = [];
-
-  // P1 优化：链接优先级处理
-  let linksToShow = controls.links || [];
-  if (Array.isArray(linksToShow) && linksToShow.length > 0) {
-    const { official, content } = classifyAndSortLinks(linksToShow);
-    // 优先展示官网入口，然后是内容页
-    linksToShow = [...official, ...content];
-  }
-
-  const sections = [
-    { label: '按钮', items: controls.buttons },
-    { label: '输入框', items: controls.inputs },
-    { label: '链接（官网优先）', items: linksToShow }
-  ];
-
-  for (const section of sections) {
-    const items = Array.isArray(section.items) ? section.items.slice(0, limit) : [];
-    if (items.length === 0) continue;
-    lines.push(section.label + ':');
-    for (const item of items) {
-      const parts = [];
-      if (item.text) parts.push('text=' + item.text);
-      if (item.ariaLabel) parts.push('aria=' + item.ariaLabel);
-      if (item.id) parts.push('id=' + item.id);
-      if (item.name) parts.push('name=' + item.name);
-      if (item.placeholder) parts.push('placeholder=' + item.placeholder);
-      if (item.selector) parts.push('selector=' + item.selector);
-      if (parts.length > 0) {
-        lines.push(parts.join(' | '));
-      }
-    }
-  }
-
-  return lines.join('\n');
-}
-
+// 兼容旧 API - 从 promptBuilder 中提取
 function buildPagesSummary(pages) {
+  // 使用 promptBuilder 的内部函数（通过重新实现保持兼容）
   if (!Array.isArray(pages) || pages.length === 0) return '';
   const limit = 10;
-  const lines = [];
-  const slice = pages.slice(0, limit);
-
-  for (const page of slice) {
-    const title = String(page.title || page.url || '未命名页面');
-    const url = page.url ? ` | ${page.url}` : '';
-    const active = page.active ? ' [当前]' : '';
-    const id = page.id ? ` | tab_id=${page.id}` : '';
-    lines.push(`${title}${active}${url}${id}`);
-  }
-
-  if (pages.length > limit) {
-    lines.push(`...还有${pages.length - limit}个页面`);
-  }
-
+  const lines = pages.slice(0, limit).map((p, i) => {
+    const title = String(p.title || p.url || '未命名页面');
+    const url = p.url ? ` | ${p.url}` : '';
+    const active = p.active ? ' [当前]' : '';
+    const id = p.id ? ` | tab_id=${p.id}` : '';
+    return `${i + 1}. ${title}${active}${url}${id}`;
+  });
+  if (pages.length > limit) lines.push(`...还有${pages.length - limit}个页面`);
   return lines.join('\n');
 }
 
-async function extractAndSetPageContext(options) {
-  const {
-    webview,
-    getCurrentSession,
-    updateSession,
-    updateContextBar,
-    renderSessionsList,
-    extractPageContentFn,
-    force = false
-  } = options;
-
-  const session = await getCurrentSession();
-  const previousUrl = session?.pageContext?.url;
-  const pageContext = await extractPageContentFn(webview);
-
-  if (pageContext && session && (force || pageContext.url !== previousUrl)) {
-    await updateSession(session.id, { pageContext });
-    updateContextBar(pageContext);
-    await renderSessionsList();
-  }
-}
-
+// 重新导出所有旧 API 以保持兼容
 module.exports = {
+  // 页面提取相关
   EXTRACT_PAGE_CONTENT_SCRIPT,
   extractPageContent,
-  buildSelectionContext,
+  isWebviewNotReadyError,
+
+  // Prompt 构建相关
   buildSystemPrompt,
+  buildSelectionContext,
   buildPagesSummary,
-  extractAndSetPageContext
+
+  // 上下文管理相关
+  extractAndSetPageContext,
+
+  // 新的构建器（供新代码使用）
+  createPromptBuilder
 };

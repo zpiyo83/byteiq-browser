@@ -22,7 +22,7 @@ const { createAiContextIsolation } = require('../ai/context/ai-context-isolation
 const { createAiTodoManager } = require('../ai/todo/ai-todo-manager');
 const { createAiToolbar } = require('../ai/chat/ai-toolbar');
 const { createContextMenu } = require('./ai-context-pie');
-const { createContextCompress } = require('./ai-context-compress');
+const { createContextCompress } = require('../ai/context/ai-context-compress');
 const { createEventManager } = require('./ai-manager-events');
 
 const path = require('path');

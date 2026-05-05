@@ -10,6 +10,7 @@ const {
 } = require('../tools/ai-tool-call-parser');
 const { createToolCardUI } = require('../tools/ai-tool-card-ui');
 const { createAgentPromptBuilder } = require('./ai-agent-prompt-builder');
+const { formatHistoryMessages } = require('../context/ai-history-formatter');
 
 function createAiAgentRunner(options) {
   const {
@@ -260,7 +261,7 @@ function createAiAgentRunner(options) {
 
     // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
     const rawHistory = await historyStorage.getMessages(session.id, { limit: 50 });
-    const formattedHistory = promptBuilder.formatHistoryMessages(rawHistory);
+    const formattedHistory = formatHistoryMessages(rawHistory);
 
     // 截断历史消息，保留最近的消息防止 token 超限
     const contextSize = store ? store.get('settings.aiContextSize', 8192) : 8192;

@@ -4,7 +4,10 @@
  */
 
 const { buildSystemPrompt } = require('../context/ai-context-utils');
-const { ensureToolMessagePairing } = require('../agent/ai-agent-prompt-builder');
+const {
+  formatHistoryMessages,
+  ensureToolMessagePairing
+} = require('../context/ai-history-formatter');
 
 /**
  * 创建聊天处理器
@@ -201,44 +204,7 @@ function createAiChatHandler(deps) {
       });
       // 还原历史消息格式，确保tool和assistant(tool_calls)字段正确
       // 关键：恢复 thinking 内容以保持完整的上下文（防止AI遗忘）
-      const formattedHistory = historyMessages
-        .filter(m => m.role !== 'system')
-        .map(m => {
-          if (m.role === 'tool') {
-            return {
-              role: 'tool',
-              tool_call_id: m.metadata?.toolCallId || '',
-              content: m.content || ''
-            };
-          }
-          if (m.role === 'assistant' && m.metadata?.toolCalls) {
-            // 修复：恢复 thinking 内容到消息中，防止上下文丢失
-            const thinkingContent = m.metadata?.thinkingContent || '';
-            const actionContent = m.metadata?.actionContent || '';
-            const recoveredContent = thinkingContent
-              ? `<!--think-->${thinkingContent}<!--endthink-->${actionContent}`
-              : actionContent;
-
-            return {
-              role: 'assistant',
-              content: recoveredContent || null,
-              tool_calls: m.metadata.toolCalls.map(call => ({
-                id: call.id,
-                type: 'function',
-                function: {
-                  name: call.name,
-                  arguments: JSON.stringify(call.arguments || {})
-                }
-              }))
-            };
-          }
-          // 普通消息：去除思考标记（仅用于UI显示，API不需要）
-          const content =
-            typeof m.content === 'string'
-              ? m.content.replace(/<!--think-->[\s\S]*?<!--endthink-->/g, '').trim()
-              : m.content;
-          return { role: m.role, content };
-        });
+      const formattedHistory = formatHistoryMessages(historyMessages);
       const messages = [
         { role: 'system', content: systemPrompt },
         ...ensureToolMessagePairing(formattedHistory),

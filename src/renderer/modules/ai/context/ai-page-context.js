@@ -3,7 +3,8 @@
  * 负责页面信息获取、状态指示器、上下文栏、标签页变化处理
  */
 
-const { extractPageContent, extractAndSetPageContext } = require('./ai-context-utils');
+const { extractPageContent } = require('./ai-page-extractor');
+const { extractAndSetPageContext } = require('./ai-context-manager');
 const sidebarEvents = require('../chat/ai-sidebar-events');
 
 /**
