@@ -37,7 +37,11 @@ function t(key, params = {}) {
     return value.replace(/\{(\w+)\}/g, (match, param) => params[param] || match);
   }
 
-  // 确保始终返回字符串，避免 [object Object] 等非预期输出
+  // 数组或对象类型直接返回，供调用方处理（如 pickRandomInviteText 需要数组）
+  if (value !== undefined) {
+    return value;
+  }
+
   return key;
 }
 
