@@ -265,7 +265,7 @@
     "modeAsk": "Вопрос",
     "modeAgent": "Агент",
     "searchHistory": "Поиск сеансов...",
-    "closeHistory": "Закрыть панель истории"
+    "backToChat": "Вернуться к чату"
   },
   "newTab": {
     "searchPlaceholder": "Поиск или ввод URL...",

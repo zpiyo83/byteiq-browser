@@ -53,9 +53,10 @@ function createAiManager(options) {
   // 工具栏与历史面板
   const newSessionBtn = documentRef.getElementById('ai-new-session-btn');
   const historyBtn = documentRef.getElementById('ai-history-btn');
-  const historyPopup = documentRef.getElementById('ai-history-popup');
+  const historyPanel = documentRef.getElementById('ai-history-panel');
   const historyListEl = documentRef.getElementById('ai-history-list');
-  const closeHistoryBtn = documentRef.getElementById('ai-close-history-btn');
+  const backHistoryBtn = documentRef.getElementById('ai-history-back-btn');
+  const newHistoryBtn = documentRef.getElementById('ai-history-new-btn');
   const resizeHandle = documentRef.getElementById('ai-resize-handle');
   const webviewsContainer = documentRef.getElementById('webviews-container');
 
@@ -417,9 +418,10 @@ function createAiManager(options) {
   const historyUI = createAiHistoryUI({
     documentRef,
     historyListEl,
-    historyPopup,
+    historyPanel,
     historyBtn,
-    closeHistoryBtn,
+    backHistoryBtn,
+    newHistoryBtn,
     historyStorage,
     t,
     renderEmptyState: () => renderAgentEmptyState(),
@@ -434,6 +436,8 @@ function createAiManager(options) {
     onSelectSession: switchToSession,
     addChatMessage,
     aiChatArea,
+    createSession,
+    bindSessionToCurrentTab,
     store
   });
   renderSessionsList = historyUI.renderSessionsList;

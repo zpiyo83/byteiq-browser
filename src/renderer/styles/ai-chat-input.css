@@ -6,7 +6,6 @@
     display: flex;
     gap: 10px;
     background: var(--ai-surface);
-    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.05);
     position: relative;
     z-index: 40;
 }
@@ -14,20 +13,20 @@
 .ai-input-area input {
     flex: 1;
     height: 40px;
-    padding: 0 12px;
-    border: 1px solid var(--ai-border);
-    border-radius: 6px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 24px;
     font-size: 14px;
+    font-weight: 500;
     outline: none;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-    background: var(--ai-surface-alt);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+    background: var(--ai-surface-soft);
     color: var(--ai-text);
 }
 
 .ai-input-area input:focus {
-    border-color: var(--ai-accent);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
     background: var(--ai-surface);
+    box-shadow: 0 0 0 2px var(--ai-surface-soft), 0 0 0 4px var(--ai-border);
 }
 
 .ai-input-area input:disabled {
@@ -40,32 +39,30 @@
     width: 40px;
     height: 40px;
     padding: 0;
-    background: linear-gradient(135deg, var(--ai-accent), var(--ai-accent-strong));
-    color: #ffffff;
+    background: var(--ai-text);
+    color: var(--ai-bubble-user-text);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     pointer-events: auto;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .ai-input-area button:hover:not(:disabled) {
-    transform: translateY(-1px) scale(1.05);
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+    opacity: 0.85;
 }
 
 .ai-input-area button:active:not(:disabled) {
-    transform: translateY(0) scale(0.95);
+    transform: scale(0.92);
 }
 
 .ai-input-area button:disabled {
     background: var(--ai-surface-soft);
     cursor: not-allowed;
     transform: none;
-    box-shadow: none;
     color: var(--ai-muted);
 }
 
@@ -86,8 +83,7 @@
     margin-bottom: 4px;
     background: var(--ai-surface);
     border: 1px solid var(--ai-border);
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+    border-radius: 24px;
     z-index: 1000;
     min-width: 180px;
     overflow: hidden;
@@ -323,7 +319,7 @@
 #ai-send-btn {
     width: 28px;
     height: 28px;
-    border-radius: 10px;
+    border-radius: 50%;
     border: none;
     background: var(--ai-surface-soft);
     color: var(--ai-text);
@@ -332,25 +328,22 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.15s ease;
 }
 
 #ai-send-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    background: var(--ai-accent-soft, rgba(59, 130, 246, 0.15));
-    color: var(--ai-accent);
-    box-shadow: none;
+    background: var(--ai-border);
+    color: var(--ai-text);
 }
 
 #ai-send-btn:active:not(:disabled) {
-    transform: translateY(0);
+    transform: scale(0.92);
 }
 
 #ai-send-btn:disabled {
     background: transparent;
     color: var(--ai-muted);
     cursor: not-allowed;
-    box-shadow: none;
 }
 
 #ai-send-btn svg {

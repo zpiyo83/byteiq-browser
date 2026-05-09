@@ -265,7 +265,7 @@
     "modeAsk": "질문",
     "modeAgent": "에이전트",
     "searchHistory": "세션 검색...",
-    "closeHistory": "기록 패널 닫기"
+    "backToChat": "채팅으로 돌아가기"
   },
   "newTab": {
     "searchPlaceholder": "검색 또는 URL 입력...",

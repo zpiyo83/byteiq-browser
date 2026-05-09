@@ -308,7 +308,7 @@
     "modeAsk": "询问",
     "modeAgent": "代理",
     "searchHistory": "搜索会话...",
-    "closeHistory": "关闭历史面板"
+    "backToChat": "返回对话"
   },
   "newTab": {
     "searchPlaceholder": "搜索或输入 URL...",

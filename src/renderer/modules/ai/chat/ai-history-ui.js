@@ -9,9 +9,10 @@ function createAiHistoryUI(options) {
   const {
     documentRef,
     historyListEl,
-    historyPopup,
+    historyPanel,
     historyBtn,
-    closeHistoryBtn,
+    backHistoryBtn,
+    newHistoryBtn,
     historyStorage,
     t,
     renderEmptyState,
@@ -25,7 +26,9 @@ function createAiHistoryUI(options) {
     setActiveSessionId,
     onSelectSession,
     addChatMessage,
-    aiChatArea
+    aiChatArea,
+    createSession,
+    bindSessionToCurrentTab
   } = options;
 
   // 搜索框
@@ -219,7 +222,7 @@ function createAiHistoryUI(options) {
         item.addEventListener('click', async () => {
           if (session.deleted) return;
           await onSelectSession(session.id);
-          historyPopup?.classList.remove('visible');
+          historyPanel?.classList.remove('visible');
         });
 
         // 双击重命名
@@ -345,23 +348,37 @@ function createAiHistoryUI(options) {
   }
 
   function bindHistoryPanelEvents() {
-    // 历史按钮点击显示/隐藏历史面板
+    // 历史按钮点击显示历史面板
     if (historyBtn) {
       historyBtn.addEventListener('click', async e => {
         if (e && typeof e.stopPropagation === 'function') {
           e.stopPropagation();
         }
-        historyPopup?.classList.toggle('visible');
-        if (historyPopup?.classList.contains('visible')) {
+        historyPanel?.classList.add('visible');
+        if (historyPanel?.classList.contains('visible')) {
           await renderSessionsList();
         }
       });
     }
 
-    // 关闭历史面板按钮
-    if (closeHistoryBtn) {
-      closeHistoryBtn.addEventListener('click', () => {
-        historyPopup?.classList.remove('visible');
+    // 返回按钮关闭历史面板
+    if (backHistoryBtn) {
+      backHistoryBtn.addEventListener('click', () => {
+        historyPanel?.classList.remove('visible');
+      });
+    }
+
+    // 历史面板内新建会话按钮
+    if (newHistoryBtn) {
+      newHistoryBtn.addEventListener('click', async () => {
+        if (typeof createSession === 'function') {
+          const sessionId = await createSession();
+          if (sessionId) {
+            bindSessionToCurrentTab(sessionId);
+            await onSelectSession(sessionId);
+          }
+        }
+        historyPanel?.classList.remove('visible');
       });
     }
 
@@ -375,15 +392,6 @@ function createAiHistoryUI(options) {
         }, 300);
       });
     }
-
-    // 点击历史面板外部关闭
-    documentRef.addEventListener('click', e => {
-      if (historyPopup?.classList.contains('visible')) {
-        if (!historyPopup.contains(e.target) && !historyBtn?.contains(e.target)) {
-          historyPopup.classList.remove('visible');
-        }
-      }
-    });
   }
 
   return {

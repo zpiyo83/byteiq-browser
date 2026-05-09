@@ -265,7 +265,7 @@
     "modeAsk": "質問",
     "modeAgent": "エージェント",
     "searchHistory": "セッションを検索...",
-    "closeHistory": "履歴パネルを閉じる"
+    "backToChat": "チャットに戻る"
   },
   "newTab": {
     "searchPlaceholder": "検索または URL を入力...",

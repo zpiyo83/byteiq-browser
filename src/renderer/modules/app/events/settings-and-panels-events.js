@@ -149,8 +149,12 @@ function bindSettingsAndPanelEvents(options) {
         moreMenuDropdown.classList.remove('show');
         // 加载设置值
         const langSelect = document.getElementById('lang-select');
-        options.searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
-        options.startupUrlInput.value = store.get('settings.startupUrl', '');
+        if (options.searchEngineSelect) {
+          options.searchEngineSelect.value = store.get('settings.searchEngine', 'bing');
+        }
+        if (options.startupUrlInput) {
+          options.startupUrlInput.value = store.get('settings.startupUrl', '');
+        }
         if (options.restoreSessionToggle) {
           options.restoreSessionToggle.checked = store.get('settings.restoreSession', false);
         }
@@ -159,9 +163,15 @@ function bindSettingsAndPanelEvents(options) {
         }
         // 加载 AI 设置（先迁移旧格式数据）
         migrateCandidateModels(store);
-        options.aiEndpointInput.value = store.get('settings.aiEndpoint', '');
-        options.aiApiKeyInput.value = store.get('settings.aiApiKey', '');
-        options.aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
+        if (options.aiEndpointInput) {
+          options.aiEndpointInput.value = store.get('settings.aiEndpoint', '');
+        }
+        if (options.aiApiKeyInput) {
+          options.aiApiKeyInput.value = store.get('settings.aiApiKey', '');
+        }
+        if (options.aiRequestTypeSelect) {
+          options.aiRequestTypeSelect.value = store.get('settings.aiRequestType', 'openai-chat');
+        }
         if (options.aiModelIdInput) {
           options.aiModelIdInput.value = store.get('settings.aiModelId', 'gpt-3.5-turbo');
         }

@@ -279,7 +279,7 @@
     "modeAsk": "詢問",
     "modeAgent": "代理",
     "searchHistory": "搜尋工作階段...",
-    "closeHistory": "關閉歷史面板"
+    "backToChat": "返回對話"
   },
   "newTab": {
     "searchPlaceholder": "搜尋或輸入 URL...",

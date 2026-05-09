@@ -104,10 +104,11 @@ function getDomReferences(documentRef) {
     moreMenuBtn: documentRef.getElementById('more-menu-btn'),
     moreMenuDropdown: documentRef.getElementById('more-menu-dropdown'),
     // AI 历史面板元素
-    aiHistoryPopup: documentRef.getElementById('ai-history-popup'),
+    aiHistoryPanel: documentRef.getElementById('ai-history-panel'),
     aiHistoryList: documentRef.getElementById('ai-history-list'),
     aiHistorySearchInput: documentRef.getElementById('ai-history-search-input'),
-    aiCloseHistoryBtn: documentRef.getElementById('ai-close-history-btn'),
+    aiHistoryBackBtn: documentRef.getElementById('ai-history-back-btn'),
+    aiHistoryNewBtn: documentRef.getElementById('ai-history-new-btn'),
     aiNewSessionBtn: documentRef.getElementById('ai-new-session-btn'),
     aiModeSelect: documentRef.getElementById('ai-mode-select'),
     aiPageStatus: documentRef.getElementById('ai-page-status'),

@@ -2,21 +2,21 @@
 
 /* 深色模式适配 */
 .dark-mode .ai-sidebar {
-    --ai-surface: #1f2328;
-    --ai-surface-alt: #252a31;
-    --ai-surface-soft: #2b3138;
-    --ai-border: #333a43;
-    --ai-text: #e8eaed;
-    --ai-muted: #9aa0a6;
-    --ai-accent: #8ab4f8;
-    --ai-accent-strong: #6d9cf5;
-    --ai-accent-soft: rgba(138, 180, 248, 0.2);
-    --ai-bubble-ai: #2f3640;
-    --ai-bubble-user: #4a7ff0;
+    --ai-surface: #111111;
+    --ai-surface-alt: #1a1a1a;
+    --ai-surface-soft: #2a2a2a;
+    --ai-border: #333333;
+    --ai-border-strong: #444444;
+    --ai-text: #ffffff;
+    --ai-muted: #9e9ea0;
+    --ai-accent: #1151ff;
+    --ai-accent-strong: #3b6fff;
+    --ai-accent-soft: rgba(17, 81, 255, 0.15);
+    --ai-bubble-ai: #2a2a2a;
+    --ai-bubble-user: #111111;
     --ai-bubble-user-text: #ffffff;
-    background: linear-gradient(180deg, var(--ai-surface-alt), var(--ai-surface) 140px);
+    background: var(--ai-surface);
     border-left-color: var(--ai-border);
-    box-shadow: -6px 0 18px rgba(0,0,0,0.45);
 }
 
 .dark-mode .ai-header {
@@ -77,17 +77,15 @@
 .dark-mode .chat-message.ai {
     background: var(--ai-bubble-ai);
     color: var(--ai-text);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .dark-mode .chat-message.user {
-    background: linear-gradient(135deg, var(--ai-accent), var(--ai-accent-strong));
-    box-shadow: 0 2px 10px rgba(138, 180, 248, 0.2);
+    background: var(--ai-bubble-user);
+    color: var(--ai-bubble-user-text);
 }
 
 .dark-mode .chat-message.welcome-message {
     background: var(--ai-bubble-ai);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .dark-mode .welcome-text {
@@ -95,13 +93,13 @@
 }
 
 .dark-mode .chat-message.page-info {
-    background: rgba(138, 180, 248, 0.12);
-    color: #a5c5fb;
-    border-color: rgba(138, 180, 248, 0.2);
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent);
+    border-color: rgba(17, 81, 255, 0.2);
 }
 
 .dark-mode .chat-message.page-info strong {
-    color: #c5dbff;
+    color: var(--ai-accent-strong);
 }
 
 .dark-mode .chat-message.streaming .streaming-label::before {
@@ -122,9 +120,9 @@
 }
 
 .dark-mode .chat-message.error {
-    background: rgba(248, 113, 113, 0.12);
-    color: #fca5a5;
-    border-color: rgba(248, 113, 113, 0.25);
+    background: rgba(211, 0, 5, 0.12);
+    color: #ff6b6b;
+    border-color: rgba(211, 0, 5, 0.25);
 }
 
 .dark-mode .ai-input-area {
@@ -139,8 +137,8 @@
 }
 
 .dark-mode .ai-input-area input:focus {
-    border-color: var(--ai-accent);
-    box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.15);
+    border-color: var(--ai-border-strong);
+    box-shadow: 0 0 0 2px var(--ai-surface-soft), 0 0 0 4px var(--ai-border);
 }
 
 .dark-mode .ai-input-area input:disabled {
@@ -149,7 +147,8 @@
 }
 
 .dark-mode .ai-input-area button {
-    background: linear-gradient(135deg, var(--ai-accent), var(--ai-accent-strong));
+    background: var(--ai-text);
+    color: var(--ai-surface);
 }
 
 .dark-mode .ai-input-area button:disabled {
@@ -169,13 +168,32 @@
 .dark-mode .ai-context-tooltip {
     background: var(--ai-surface-alt);
     border-color: var(--ai-border);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Dark mode - History popup */
-.dark-mode .ai-history-popup {
+/* Dark mode - History panel */
+.dark-mode .ai-history-panel {
     background: var(--ai-surface);
-    border-color: var(--ai-border);
+}
+
+.dark-mode .ai-history-panel-header {
+    background: var(--ai-surface);
+    border-bottom-color: var(--ai-border);
+}
+
+.dark-mode .ai-history-back-btn,
+.dark-mode .ai-history-new-btn {
+    background: var(--ai-surface-soft);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-history-back-btn:hover,
+.dark-mode .ai-history-new-btn:hover {
+    background: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.dark-mode .ai-history-panel-title {
+    color: var(--ai-text);
 }
 
 .dark-mode .ai-history-search input {
@@ -185,8 +203,12 @@
 }
 
 .dark-mode .ai-history-search input:focus {
-    border-color: var(--ai-accent);
-    box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.15);
+    background: var(--ai-surface);
+    box-shadow: 0 0 0 2px var(--ai-surface-soft), 0 0 0 4px var(--ai-border);
+}
+
+.dark-mode .ai-history-group-label {
+    color: var(--ai-muted);
 }
 
 .dark-mode .ai-history-item:hover {
@@ -194,7 +216,16 @@
 }
 
 .dark-mode .ai-history-item.active {
-    background: rgba(138, 180, 248, 0.15);
+    background: var(--ai-text);
+}
+
+.dark-mode .ai-history-item.active .ai-history-item-title {
+    color: var(--ai-surface);
+}
+
+.dark-mode .ai-history-item-action.delete:hover {
+    background: rgba(211, 0, 5, 0.15);
+    color: #ff6b6b;
 }
 
 .dark-mode .ai-history-empty {

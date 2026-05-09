@@ -1,54 +1,98 @@
-/* AI 历史记录弹窗样式 */
+/* AI 历史会话面板 - 全高滑入式 */
 
-.ai-history-popup {
+/* ai-body 需要相对定位作为面板的定位上下文 */
+.ai-body {
+    position: relative;
+}
+
+.ai-history-panel {
     position: absolute;
-    top: 50px;
-    left: 10px;
-    width: 260px;
-    max-height: 400px;
+    inset: 0;
     background: var(--ai-surface);
-    border: 1px solid var(--ai-border);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    display: none;
-    flex-direction: column;
-    z-index: 30;
-    overflow: hidden;
-}
-
-.ai-history-popup.visible {
     display: flex;
+    flex-direction: column;
+    z-index: 25;
+    overflow: hidden;
+    transform: translateX(-30%);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.25s ease;
 }
 
-.ai-history-header {
+.ai-history-panel.visible {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ai-history-panel-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 12px 12px;
     border-bottom: 1px solid var(--ai-border);
-    background: var(--ai-surface-alt);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--ai-text);
+    background: var(--ai-surface);
+    min-height: 48px;
 }
 
-.ai-history-header .icon-btn {
-    width: 24px;
-    height: 24px;
+.ai-history-back-btn {
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: transparent;
+    background: var(--ai-surface-soft);
     border: none;
     cursor: pointer;
-    color: #5f6368;
-    transition: all 0.2s ease;
+    color: var(--ai-text);
+    flex-shrink: 0;
+    transition: all 0.15s ease;
 }
 
-.ai-history-header .icon-btn:hover {
-    background: #e0e0e0;
-    color: #202124;
+.ai-history-back-btn:hover {
+    background: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.ai-history-back-btn:active {
+    transform: scale(0.92);
+}
+
+.ai-history-panel-title {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ai-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ai-history-new-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--ai-surface-soft);
+    border: none;
+    cursor: pointer;
+    color: var(--ai-text);
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.ai-history-new-btn:hover {
+    background: var(--ai-border);
+    color: var(--ai-text);
+}
+
+.ai-history-new-btn:active {
+    transform: scale(0.92);
 }
 
 .ai-history-search {
@@ -58,20 +102,21 @@
 
 .ai-history-search input {
     width: 100%;
-    height: 30px;
-    border-radius: 6px;
-    border: 1px solid var(--ai-border);
+    height: 40px;
+    border-radius: 24px;
+    border: none;
     background: var(--ai-surface-soft);
-    padding: 0 10px;
-    font-size: 12px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 500;
     outline: none;
     color: var(--ai-text);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .ai-history-search input:focus {
-    border-color: var(--ai-accent);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    background: var(--ai-surface);
+    box-shadow: 0 0 0 2px var(--ai-surface-soft), 0 0 0 4px var(--ai-border);
 }
 
 .ai-history-list {
@@ -95,11 +140,11 @@
 .ai-history-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 10px;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 30px;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.15s ease;
 }
 
 .ai-history-item:hover {
@@ -107,7 +152,20 @@
 }
 
 .ai-history-item.active {
-    background: var(--ai-accent-soft);
+    background: var(--ai-text);
+    color: var(--ai-bubble-user-text);
+}
+
+.ai-history-item.active .ai-history-item-title {
+    color: var(--ai-bubble-user-text);
+}
+
+.ai-history-item.active .ai-history-item-time {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.ai-history-item.active .ai-history-item-preview {
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .ai-history-item.deleted {
@@ -127,7 +185,8 @@
 }
 
 .ai-history-item-title {
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--ai-text);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -164,8 +223,8 @@
 }
 
 .ai-history-item-action {
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -175,17 +234,17 @@
     cursor: pointer;
     color: var(--ai-muted);
     font-size: 12px;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .ai-history-item-action.delete:hover {
-    background: #fce8e6;
-    color: #d93025;
+    background: rgba(211, 0, 5, 0.08);
+    color: var(--ai-sale);
 }
 
 .ai-history-item-action.restore:hover {
-    background: #e8f5e9;
-    color: #1e8e3e;
+    background: rgba(0, 125, 72, 0.08);
+    color: var(--ai-success);
 }
 
 .ai-history-empty {
