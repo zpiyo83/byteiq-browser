@@ -214,11 +214,52 @@
   color: #f59e0b;
 }
 
-/* 任务时间 */
+/* 时间 + 删除按钮容器 */
+.bg-task-time-wrap {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .bg-task-time {
   font-size: 11px;
   color: var(--text-secondary, #999);
-  flex-shrink: 0;
+}
+
+.bg-task-delete-btn {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-task-time-wrap:hover .bg-task-time {
+  visibility: hidden;
+}
+
+.bg-task-time-wrap:hover .bg-task-delete-btn {
+  display: flex;
+}
+
+.bg-task-delete-btn:hover {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.bg-task-delete-btn:active {
+  transform: translateY(-50%) scale(0.9);
 }
 
 /* 取消按钮 */

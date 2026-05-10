@@ -151,10 +151,31 @@ function createBgTaskPanelUI(options) {
         renderToolBadgeContent(toolBadgeEl, task.latestToolCall);
       }
 
-      // 时间
+      // 时间 + 删除按钮容器
+      const timeWrap = documentRef.createElement('span');
+      timeWrap.className = 'bg-task-time-wrap';
+
       const timeEl = documentRef.createElement('span');
       timeEl.className = 'bg-task-time';
       timeEl.textContent = formatTime(task.createdAt);
+      timeWrap.appendChild(timeEl);
+
+      // 已完成/失败任务：添加删除按钮（hover 时显示）
+      if (task.status !== 'running') {
+        const deleteBtn = documentRef.createElement('button');
+        deleteBtn.className = 'bg-task-delete-btn';
+        deleteBtn.innerHTML =
+          '<svg viewBox="0 0 24 24" width="12" height="12">' +
+          '<path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>' +
+          '</svg>';
+        deleteBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          taskManager.cleanupTask(task.id, documentRef);
+          taskManager.removeTask(task.id);
+          renderTaskList();
+        });
+        timeWrap.appendChild(deleteBtn);
+      }
 
       // 取消按钮（仅运行中）
       if (task.status === 'running') {
@@ -173,7 +194,7 @@ function createBgTaskPanelUI(options) {
       itemEl.appendChild(statusIcon);
       itemEl.appendChild(nameEl);
       itemEl.appendChild(toolBadgeEl);
-      itemEl.appendChild(timeEl);
+      itemEl.appendChild(timeWrap);
 
       // 点击查看结果（已完成/失败）
       if (task.status !== 'running') {
