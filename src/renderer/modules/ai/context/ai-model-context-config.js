@@ -174,6 +174,29 @@ function addAiProfile(store, partialProfile) {
   return defaultProfile;
 }
 
+function deleteAiProfile(store, profileId) {
+  if (!store || !profileId) return null;
+  const profiles = ensureAiProfiles(store);
+  if (profiles.length <= 1) return null; // 至少保留一个配置
+
+  const idx = profiles.findIndex(p => p.id === profileId);
+  if (idx < 0) return null;
+
+  const removed = profiles[idx];
+  const next = profiles.filter(p => p.id !== profileId);
+  store.set('settings.aiProfiles', next);
+
+  // 如果删除的是当前激活的配置，自动切换到第一个并应用
+  const activeId = store.get('settings.activeAiProfileId', '');
+  if (activeId === profileId) {
+    const fallback = next[0];
+    store.set('settings.activeAiProfileId', fallback.id);
+    applyAiProfile(store, fallback.id);
+  }
+
+  return removed;
+}
+
 function applyAiProfile(store, profileId) {
   if (!store || !profileId) return null;
   const profiles = ensureAiProfiles(store);
@@ -186,6 +209,18 @@ function applyAiProfile(store, profileId) {
   store.set('settings.aiRequestType', profile.requestType || 'openai-chat');
   store.set('settings.aiModelId', profile.modelId || 'gpt-3.5-turbo');
   store.set('settings.aiModelCandidates', profile.modelCandidates || []);
+
+  // 同步 aiContextSize：优先使用当前模型的独立配置，否则回退到全局默认
+  const candidates = Array.isArray(profile.modelCandidates) ? profile.modelCandidates : [];
+  const match = candidates.find(c => c.id === profile.modelId);
+  const globalSize = store.get('settings.aiContextSize', DEFAULT_CONTEXT_SIZE);
+  const ctxSize =
+    match && typeof match.contextSize === 'number' && match.contextSize >= 1024
+      ? match.contextSize
+      : typeof globalSize === 'number' && globalSize >= 1024
+        ? globalSize
+        : DEFAULT_CONTEXT_SIZE;
+  store.set('settings.aiContextSize', ctxSize);
 
   return profile;
 }
@@ -281,6 +316,7 @@ module.exports = {
   getAiProfiles,
   upsertAiProfile,
   addAiProfile,
+  deleteAiProfile,
   applyAiProfile,
   migrateCandidateModels,
   getCandidateModelList,
