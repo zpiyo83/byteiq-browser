@@ -7,7 +7,7 @@
 基于 Chromium 内核 · Electron 构建 · 开源社区驱动
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-0.1.6-blue.svg)](https://github.com/MICTCWM/byteiq-browser)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/MICTCWM/byteiq-browser)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
 </div>
@@ -21,8 +21,11 @@ Byteiq Browser 是一款由社区驱动的 AI 浏览器，基于 Chromium 内核
 - **Chromium 内核**：使用成熟的 Chromium 渲染引擎，提供出色的网页兼容性
 - **Electron 28 框架**：现代化跨平台支持
 - **社区驱动**：由开源社区共同开发和维护
-- **AI 智能助手**：集成 AI 对话功能，提供智能浏览体验
-- **多语言支持**：支持中文、繁体中文等多语言界面
+- **AI 智能助手**：集成 AI 对话功能，支持 Agent 模式自动执行工具调用
+- **后台任务**：AI 任务可发送到后台静默执行，完成后通知查看结果
+- **工具调用可视化**：实时显示工具执行状态，带切换动画效果
+- **多语言支持**：支持中文、繁体中文、英语、日语、韩语、俄语等 6 种语言
+- **深色模式**：完整的深色模式支持，基于品牌设计语言
 - **模块化架构**：主进程与渲染进程分离，代码结构清晰
 - **开源透明**：MIT 许可证，代码完全开放
 
@@ -32,6 +35,16 @@ Byteiq Browser 是一款由社区驱动的 AI 浏览器，基于 Chromium 内核
 - 提供透明、可信赖的浏览体验
 - 集成 AI 技术，提升浏览效率
 - 建立活跃的开源社区
+
+## 🆕 v0.2.0 新功能
+
+- **后台任务系统**：AI 对话可发送到后台静默执行，支持多任务并行，完成后桌面通知提醒
+- **工具调用实时展示**：后台任务面板实时显示当前工具调用状态（运行中/成功/失败），工具切换带渐隐渐显动画
+- **任务持久化**：已完成的任务在重启应用后仍然保留，可随时查看结果
+- **任务管理**：支持取消运行中任务、删除已完成任务
+- **品牌配色统一**：全局统一使用品牌蓝 (#3464ff) 配色方案，深色模式完整适配
+- **6 种语言支持**：新增日语、韩语、俄语界面翻译
+- **后台发送按钮优化**：降低视觉权重，图标更直观表达"后台/异步"含义
 
 ## 🚀 快速开始
 
