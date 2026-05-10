@@ -11,6 +11,21 @@
   z-index: 10;
   display: flex;
   flex-direction: column;
+  transform: translateX(100%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              visibility 0s 0.35s;
+}
+
+.bg-task-panel.bg-panel-visible {
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              visibility 0s 0s;
 }
 
 .bg-task-panel-header {
@@ -118,7 +133,8 @@
 
 /* 任务名称 */
 .bg-task-name {
-  flex: 1;
+  flex: 0 1 auto;
+  max-width: 50%;
   font-size: 13px;
   color: var(--text-primary, #333);
   overflow: hidden;
@@ -128,6 +144,41 @@
 
 .bg-task-error .bg-task-name {
   color: #f44336;
+}
+
+/* 工具调用标签 */
+.bg-task-tool-badge {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.bg-task-tool-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.bg-task-tool-icon.bg-tool-running {
+  animation: bg-task-spin 0.8s linear infinite;
+}
+
+.bg-task-tool-label {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bg-task-tool-status {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 /* 任务时间 */
@@ -161,11 +212,19 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  visibility: hidden;
+  transition: background 0.3s ease, visibility 0s 0.3s;
+}
+
+.bg-task-result-overlay.bg-result-visible {
+  background: rgba(0, 0, 0, 0.5);
+  visibility: visible;
+  transition: background 0.3s ease, visibility 0s 0s;
 }
 
 .bg-task-result-dialog {
@@ -177,6 +236,15 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease;
+}
+
+.bg-result-visible .bg-task-result-dialog {
+  transform: scale(1) translateY(0);
+  opacity: 1;
 }
 
 .bg-task-result-header {

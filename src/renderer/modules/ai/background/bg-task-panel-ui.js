@@ -4,6 +4,12 @@
  */
 
 const { renderMarkdownToElement } = require('../chat/ai-markdown-renderer');
+const {
+  getToolIcon,
+  getToolColor,
+  getStatusIcon,
+  getToolTitle
+} = require('../tools/ai-tool-card-constants');
 
 /**
  * 创建后台任务面板 UI
@@ -40,12 +46,12 @@ function createBgTaskPanelUI(options) {
       const closeResultBtn = documentRef.getElementById('bg-task-result-close-btn');
       if (closeResultBtn) {
         closeResultBtn.addEventListener('click', () => {
-          resultOverlayEl.style.display = 'none';
+          hideResultOverlay();
         });
       }
       resultOverlayEl.addEventListener('click', e => {
         if (e.target === resultOverlayEl) {
-          resultOverlayEl.style.display = 'none';
+          hideResultOverlay();
         }
       });
     }
@@ -56,7 +62,7 @@ function createBgTaskPanelUI(options) {
    */
   function showPanel() {
     if (!panelEl) return;
-    panelEl.style.display = 'flex';
+    panelEl.classList.add('bg-panel-visible');
     renderTaskList();
   }
 
@@ -65,7 +71,7 @@ function createBgTaskPanelUI(options) {
    */
   function hidePanel() {
     if (!panelEl) return;
-    panelEl.style.display = 'none';
+    panelEl.classList.remove('bg-panel-visible');
   }
 
   /**
@@ -73,12 +79,19 @@ function createBgTaskPanelUI(options) {
    */
   function togglePanel() {
     if (!panelEl) return;
-    const isVisible = panelEl.style.display !== 'none';
-    if (isVisible) {
+    if (panelEl.classList.contains('bg-panel-visible')) {
       hidePanel();
     } else {
       showPanel();
     }
+  }
+
+  /**
+   * 隐藏结果弹窗
+   */
+  function hideResultOverlay() {
+    if (!resultOverlayEl) return;
+    resultOverlayEl.classList.remove('bg-result-visible');
   }
 
   /**
@@ -130,6 +143,13 @@ function createBgTaskPanelUI(options) {
       nameEl.className = 'bg-task-name';
       nameEl.textContent = task.name;
 
+      // 工具调用标签
+      const toolBadgeEl = documentRef.createElement('span');
+      toolBadgeEl.className = 'bg-task-tool-badge';
+      if (task.latestToolCall) {
+        renderToolBadgeContent(toolBadgeEl, task.latestToolCall);
+      }
+
       // 时间
       const timeEl = documentRef.createElement('span');
       timeEl.className = 'bg-task-time';
@@ -151,6 +171,7 @@ function createBgTaskPanelUI(options) {
 
       itemEl.appendChild(statusIcon);
       itemEl.appendChild(nameEl);
+      itemEl.appendChild(toolBadgeEl);
       itemEl.appendChild(timeEl);
 
       // 点击查看结果（已完成/失败）
@@ -190,7 +211,7 @@ function createBgTaskPanelUI(options) {
       }
     }
 
-    resultOverlayEl.style.display = 'flex';
+    resultOverlayEl.classList.add('bg-result-visible');
   }
 
   /**
@@ -220,12 +241,87 @@ function createBgTaskPanelUI(options) {
     }
   }
 
+  /**
+   * 渲染工具标签内容
+   * @param {HTMLElement} badgeEl - 标签容器
+   * @param {Object} toolCallInfo - 工具调用信息 { toolName, status, title }
+   */
+  function renderToolBadgeContent(badgeEl, toolCallInfo) {
+    badgeEl.innerHTML = '';
+    if (!toolCallInfo || !toolCallInfo.toolName) return;
+
+    const color = getToolColor(toolCallInfo.toolName);
+    const title = toolCallInfo.title || getToolTitle(toolCallInfo.toolName);
+    const status = toolCallInfo.status || 'running';
+
+    // 工具图标
+    const iconEl = documentRef.createElement('span');
+    iconEl.className = 'bg-task-tool-icon' + (status === 'running' ? ' bg-tool-running' : '');
+    iconEl.style.color = color;
+    const iconSvg = getToolIcon(toolCallInfo.toolName);
+    if (iconSvg) {
+      // 缩小图标尺寸适配标签
+      iconEl.innerHTML = iconSvg
+        .replace(/width="18"/g, 'width="12"')
+        .replace(/height="18"/g, 'height="12"');
+    }
+    badgeEl.appendChild(iconEl);
+
+    // 工具标题
+    const labelEl = documentRef.createElement('span');
+    labelEl.className = 'bg-task-tool-label';
+    labelEl.style.color = color;
+    labelEl.textContent = title;
+    badgeEl.appendChild(labelEl);
+
+    // 状态图标（非 running 时显示）
+    if (status !== 'running') {
+      const statusEl = documentRef.createElement('span');
+      statusEl.className = 'bg-task-tool-status';
+      statusEl.style.color = status === 'error' ? '#f44336' : '#4caf50';
+      const statusSvg = getStatusIcon(status);
+      if (statusSvg) {
+        statusEl.innerHTML = statusSvg
+          .replace(/width="14"/g, 'width="10"')
+          .replace(/height="14"/g, 'height="10"');
+      }
+      badgeEl.appendChild(statusEl);
+    }
+  }
+
+  /**
+   * 更新单个任务的工具标签（增量更新，避免全量重渲染）
+   * @param {string} taskId - 任务 ID
+   * @param {Object} toolCallInfo - 工具调用信息
+   */
+  function updateTaskToolBadge(taskId, toolCallInfo) {
+    if (!taskListEl) return;
+    const itemEl = taskListEl.querySelector(`[data-task-id="${taskId}"]`);
+    if (!itemEl) return;
+
+    let badgeEl = itemEl.querySelector('.bg-task-tool-badge');
+    if (!badgeEl) {
+      // 如果标签元素不存在（可能在 nameEl 和 timeEl 之间插入）
+      badgeEl = documentRef.createElement('span');
+      badgeEl.className = 'bg-task-tool-badge';
+      const nameEl = itemEl.querySelector('.bg-task-name');
+      if (nameEl && nameEl.nextSibling) {
+        itemEl.insertBefore(badgeEl, nameEl.nextSibling);
+      } else if (nameEl) {
+        itemEl.appendChild(badgeEl);
+      }
+    }
+
+    renderToolBadgeContent(badgeEl, toolCallInfo);
+  }
+
   return {
     init,
     showPanel,
     hidePanel,
     togglePanel,
     renderTaskList,
+    updateTaskToolBadge,
     updateHeaderIcon
   };
 }

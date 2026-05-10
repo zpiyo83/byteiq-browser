@@ -9,7 +9,7 @@
  * @returns {Object} 任务管理器实例
  */
 function createBgTaskManager(options = {}) {
-  const { onTaskStatusChange } = options;
+  const { onTaskStatusChange, onToolCallUpdate } = options;
 
   // 任务列表
   const tasks = new Map();
@@ -41,7 +41,8 @@ function createBgTaskManager(options = {}) {
       createdAt: Date.now(),
       completedAt: null,
       hiddenWebviewIds: [],
-      abortController: null
+      abortController: null,
+      latestToolCall: null
     };
     tasks.set(id, task);
     if (typeof onTaskStatusChange === 'function') {
@@ -95,6 +96,7 @@ function createBgTaskManager(options = {}) {
     }
     task.status = 'error';
     task.result = '已取消';
+    task.latestToolCall = null;
     task.completedAt = Date.now();
     if (typeof onTaskStatusChange === 'function') {
       onTaskStatusChange(task);
@@ -158,6 +160,20 @@ function createBgTaskManager(options = {}) {
   }
 
   /**
+   * 更新任务最新工具调用信息
+   * @param {string} taskId - 任务 ID
+   * @param {Object|null} toolCallInfo - 工具调用信息
+   */
+  function updateLatestToolCall(taskId, toolCallInfo) {
+    const task = tasks.get(taskId);
+    if (!task) return;
+    task.latestToolCall = toolCallInfo;
+    if (typeof onToolCallUpdate === 'function') {
+      onToolCallUpdate(taskId, toolCallInfo);
+    }
+  }
+
+  /**
    * 获取所有任务列表（按时间倒序）
    * @returns {Array<Object>}
    */
@@ -199,6 +215,7 @@ function createBgTaskManager(options = {}) {
     completeTask,
     failTask,
     cancelTask,
+    updateLatestToolCall,
     registerHiddenWebview,
     getHiddenWebviewIds,
     cleanupTask,

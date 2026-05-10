@@ -4,6 +4,7 @@
  */
 
 const { getAiToolsSchema, buildToolsSystemPrompt } = require('../tools/ai-tools-registry');
+const { getToolTitle } = require('../tools/ai-tool-card-constants');
 const {
   parseToolCallsFromText,
   removeToolCallTextFromContent
@@ -491,8 +492,23 @@ function createBgTaskRunner(options) {
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
 
+      // 更新工具标签为 running 状态
+      taskManager.updateLatestToolCall(task.id, {
+        toolName: toolCall.name,
+        status: 'running',
+        title: getToolTitle(toolCall.name)
+      });
+
       // 静默执行工具
       const toolResult = await executeToolSilent(toolCall, task.id);
+
+      // 更新工具标签为完成/失败状态
+      const toolStatus = toolResult && toolResult.success === false ? 'error' : 'success';
+      taskManager.updateLatestToolCall(task.id, {
+        toolName: toolCall.name,
+        status: toolStatus,
+        title: getToolTitle(toolCall.name)
+      });
 
       if (toolCall.name === 'end_session') {
         const summaryText = toolCall.arguments?.summary || toolResult?.summary || '';

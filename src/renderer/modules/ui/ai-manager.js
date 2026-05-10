@@ -477,6 +477,9 @@ function createAiManager(options) {
     onTaskStatusChange: () => {
       if (bgTaskPanelUI) bgTaskPanelUI.renderTaskList();
       if (bgTaskPanelUI) bgTaskPanelUI.updateHeaderIcon();
+    },
+    onToolCallUpdate: (taskId, toolCallInfo) => {
+      if (bgTaskPanelUI) bgTaskPanelUI.updateTaskToolBadge(taskId, toolCallInfo);
     }
   });
 
