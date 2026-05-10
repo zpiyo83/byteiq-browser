@@ -385,8 +385,8 @@
 
         </div>
 
-        <!-- 后台任务隐藏 webview 容器（离屏定位+实际尺寸确保渲染进程正常工作，opacity:0 不可见） -->
-        <div id="bg-webviews-container" style="position:fixed;left:-9999px;top:0;width:1280px;height:800px;opacity:0;pointer-events:none;z-index:-1;" aria-hidden="true" tabindex="-1"></div>
+        <!-- 后台任务隐藏 webview 容器（离屏定位隐藏，不使用 opacity:0 以免 Chromium 合成器跳过渲染导致页面无法加载） -->
+        <div id="bg-webviews-container" style="position:fixed;left:-9999px;top:0;width:1280px;height:800px;overflow:hidden;pointer-events:none;z-index:-1;" aria-hidden="true" tabindex="-1"></div>
 
         <!-- 后台任务通知容器 -->
         <div id="bg-notification-container" class="bg-notification-container"></div>

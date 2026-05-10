@@ -102,19 +102,26 @@ function createBgTaskRunner(options) {
 
       function cleanup() {
         clearTimeout(timer);
-        webview.removeEventListener('did-stop-loading', onDone);
-        webview.removeEventListener('did-fail-load', onDone);
+        webview.removeEventListener('did-stop-loading', onLoaded);
+        webview.removeEventListener('did-fail-load', onFailed);
       }
 
-      function onDone() {
+      function onLoaded() {
         if (settled) return;
         settled = true;
         cleanup();
         resolve(true);
       }
 
-      webview.addEventListener('did-stop-loading', onDone);
-      webview.addEventListener('did-fail-load', onDone);
+      function onFailed() {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(false);
+      }
+
+      webview.addEventListener('did-stop-loading', onLoaded);
+      webview.addEventListener('did-fail-load', onFailed);
     });
   }
 
@@ -141,7 +148,18 @@ function createBgTaskRunner(options) {
           return { success: false, error: 'Failed to create hidden webview' };
         }
 
-        const loaded = await waitForWebviewLoad(webview);
+        let loaded = await waitForWebviewLoad(webview);
+        // 首次加载失败时重试一次（重新加载）
+        if (!loaded) {
+          try {
+            if (typeof webview.reload === 'function') {
+              webview.reload();
+              loaded = await waitForWebviewLoad(webview);
+            }
+          } catch {
+            // 忽略重试错误
+          }
+        }
         if (!loaded) {
           return { success: false, error: 'Hidden webview failed to load' };
         }
