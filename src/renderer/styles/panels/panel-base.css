@@ -7,11 +7,10 @@
     background: rgba(255, 255, 255, 0.98);
     z-index: 1000;
     visibility: hidden;
-    padding: 12px;
+    padding: var(--brand-spacing-md);
     overflow-y: auto;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: var(--brand-rounded-sm);
+    border: 1px solid var(--brand-hairline-soft);
     transform: translateY(-8px) scale(0.98);
     opacity: 0;
     transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -51,14 +50,14 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--brand-hairline-soft);
     padding-bottom: 10px;
 }
 
 .overlay-header h2 {
     font-size: 15px;
     font-weight: 600;
-    color: #333;
+    color: var(--brand-ink);
 }
 
 .panel-search {
@@ -69,7 +68,7 @@
     width: 100%;
     padding: 6px 10px;
     border-radius: 14px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--brand-hairline);
     font-size: 12px;
     outline: none;
 }
@@ -82,8 +81,8 @@
 }
 
 .panel-actions button {
-    background: #f1f3f4;
-    border: 1px solid #e0e0e0;
+    background: var(--brand-soft-cloud);
+    border: 1px solid var(--brand-hairline-soft);
     padding: 5px;
     border-radius: 10px;
     cursor: pointer;
@@ -94,11 +93,11 @@
 }
 
 .panel-actions button:hover {
-    background: #e8eaed;
+    background: var(--brand-hairline-soft);
 }
 
 .panel-actions button:active {
-    background: #dadce0;
+    background: var(--brand-stone);
     transform: scale(0.95);
 }
 
@@ -120,24 +119,24 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: #f5f5f5;
-    border: 1px solid #e0e0e0;
-    padding: 4px 8px;
-    border-radius: 14px;
+    background: var(--brand-soft-cloud);
+    border: 1px solid var(--brand-hairline-soft);
+    padding: var(--brand-spacing-xs) var(--brand-spacing-sm);
+    border-radius: var(--brand-rounded-md);
     cursor: pointer;
     font-size: 12px;
-    color: #555;
+    color: var(--brand-charcoal);
     transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .downloads-filters .filter-btn:hover {
-    background: #e8eaed;
+    background: var(--brand-hairline-soft);
 }
 
 .downloads-filters .filter-btn.active {
-    background: #e3f2fd;
-    border-color: #90caf9;
-    color: #1976d2;
+    background: var(--brand-ink);
+    border-color: var(--brand-ink);
+    color: var(--brand-on-primary);
 }
 
 .downloads-filters .filter-btn svg {
@@ -170,7 +169,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: var(--brand-hairline);
     transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 24px;
 }
@@ -194,7 +193,7 @@
 }
 
 .toggle-switch input:checked + .toggle-slider {
-    background-color: #4285f4;
+    background-color: var(--brand-ink);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {

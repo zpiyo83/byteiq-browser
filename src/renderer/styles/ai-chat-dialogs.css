@@ -26,13 +26,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--ai-border, #e0e0e0);
+    border-bottom: 1px solid var(--ai-border);
 }
 
 .export-ai-dialog-header h3 {
     margin: 0;
     font-size: 15px;
-    color: var(--ai-text, #333);
+    color: var(--ai-text);
 }
 
 .export-ai-dialog-body {
@@ -43,7 +43,7 @@
 
 .export-ai-dialog-select-all {
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--ai-border, #e0e0e0);
+    border-bottom: 1px solid var(--ai-border);
     margin-bottom: 8px;
 }
 
@@ -52,7 +52,7 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: var(--ai-text, #333);
+    color: var(--ai-text);
     cursor: pointer;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .export-ai-dialog-item:hover {
-    background: var(--ai-hover, rgba(0, 0, 0, 0.04));
+    background: var(--ai-surface-soft);
 }
 
 .export-ai-dialog-item input[type="checkbox"] {
@@ -90,7 +90,7 @@
 
 .export-ai-dialog-item-title {
     font-size: 13px;
-    color: var(--ai-text, #333);
+    color: var(--ai-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -98,7 +98,7 @@
 
 .export-ai-dialog-item-meta {
     font-size: 11px;
-    color: var(--ai-muted, #999);
+    color: var(--ai-muted);
     margin-top: 2px;
 }
 
@@ -107,5 +107,5 @@
     justify-content: flex-end;
     gap: 8px;
     padding: 12px 20px;
-    border-top: 1px solid var(--ai-border, #e0e0e0);
+    border-top: 1px solid var(--ai-border);
 }

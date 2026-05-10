@@ -13,7 +13,7 @@
     position: fixed;
     top: 80px;
     right: 20px;
-    background: var(--bg, #fff);
+    background: var(--bg, var(--brand-canvas));
     padding: 8px 12px;
     border-radius: 6px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -28,19 +28,19 @@
 }
 
 #find-box input {
-    border: 1px solid var(--border, #ddd);
+    border: 1px solid var(--border, var(--brand-hairline));
     padding: 4px 8px;
     border-radius: 4px;
-    background: var(--bg, #fff);
-    color: var(--text, #333);
+    background: var(--bg, var(--brand-canvas));
+    color: var(--text, var(--brand-ink));
 }
 
 /* Context Menu 样式 */
 .custom-context-menu,
 .tab-context-menu {
     position: fixed;
-    background: var(--bg, #fff);
-    border: 1px solid var(--border, #e0e0e0);
+    background: var(--bg, var(--brand-canvas));
+    border: 1px solid var(--border, var(--brand-hairline-soft));
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     padding: 4px 0;
@@ -63,12 +63,12 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--text, #333);
+    color: var(--text, var(--brand-ink));
 }
 
 .custom-context-menu button:hover,
 .tab-context-menu button:hover {
-    background: var(--hover-bg, #f1f3f4);
+    background: var(--hover-bg, var(--brand-soft-cloud));
 }
 
 /* 开发者工具侧边栏 */
@@ -78,8 +78,8 @@
     right: 0;
     width: 0;
     height: 100%;
-    background: #fff;
-    border-left: 1px solid #e0e0e0;
+    background: var(--brand-canvas);
+    border-left: 1px solid var(--brand-hairline-soft);
     display: flex;
     flex-direction: column;
     z-index: 100;
@@ -104,11 +104,11 @@
 }
 
 .devtools-resize-handle:hover {
-    background: rgba(66, 133, 244, 0.3);
+    background: rgba(17, 17, 17, 0.3);
 }
 
 .devtools-resize-handle:active {
-    background: rgba(66, 133, 244, 0.5);
+    background: rgba(17, 17, 17, 0.5);
 }
 
 .devtools-header {
@@ -116,11 +116,11 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
+    background: var(--brand-soft-cloud);
+    border-bottom: 1px solid var(--brand-hairline-soft);
     font-size: 12px;
     font-weight: 500;
-    color: #202124;
+    color: var(--brand-ink);
     opacity: 0;
     transform: translateY(-10px);
     transition: opacity 0.25s ease 0.1s, transform 0.25s ease 0.1s;
@@ -137,7 +137,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #5f6368;
+    color: var(--brand-mute);
     font-size: 13px;
     opacity: 0;
     transform: translateY(10px);
@@ -155,25 +155,25 @@
 
 .devtools-hint {
     font-size: 11px;
-    color: #9aa0a6;
+    color: var(--brand-stone);
 }
 
 /* 深色模式 */
 body.dark-mode .devtools-sidebar {
-    background: #202124;
-    border-left-color: #3c4043;
+    background: var(--brand-ink);
+    border-left-color: #333333;
 }
 
 body.dark-mode .devtools-header {
-    background: #2d2e31;
-    border-bottom-color: #3c4043;
-    color: #e8eaed;
+    background: #1a1a1a;
+    border-bottom-color: #333333;
+    color: var(--brand-hairline-soft);
 }
 
 body.dark-mode .devtools-placeholder {
-    color: #9aa0a6;
+    color: var(--brand-stone);
 }
 
 body.dark-mode .devtools-hint {
-    color: #5f6368;
+    color: var(--brand-mute);
 }

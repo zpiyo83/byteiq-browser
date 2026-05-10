@@ -1,25 +1,23 @@
 .custom-context-menu {
     position: fixed;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    background: var(--brand-canvas);
+    border: 1px solid var(--brand-hairline-soft);
     padding: 6px 0;
     z-index: 10000;
     display: none;
     min-width: 160px;
-    border-radius: 8px;
+    border-radius: var(--brand-rounded-sm);
 }
 
 .tab-context-menu {
     position: fixed;
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    background: var(--brand-canvas);
+    border: 1px solid var(--brand-hairline-soft);
     padding: 6px 0;
     z-index: 10001;
     display: none;
     min-width: 180px;
-    border-radius: 8px;
+    border-radius: var(--brand-rounded-sm);
 }
 
 .context-menu-item {
@@ -32,7 +30,7 @@
 }
 
 .context-menu-item:hover {
-    background: #f1f3f4;
+    background: var(--brand-soft-cloud);
 }
 
 .context-menu-item:active {
@@ -43,26 +41,26 @@
 .icon-btn {
     width: 28px;
     height: 28px;
-    padding: 4px;
+    padding: var(--brand-spacing-xs);
     border: none;
     background: transparent;
-    border-radius: 50%;
+    border-radius: var(--brand-rounded-full);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #5f6368;
+    color: var(--brand-charcoal);
     position: relative;
     transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .icon-btn:hover {
-    background: #e8eaed;
+    background: var(--brand-soft-cloud);
     transform: scale(1.05);
 }
 
 .icon-btn:active {
-    background: #dadce0;
+    background: var(--brand-stone);
     transform: scale(0.95);
 }
 
@@ -87,119 +85,119 @@
 
 /* 发送按钮特殊样式 */
 .icon-btn.send-btn {
-    background: #4285f4;
-    color: #ffffff;
+    background: var(--brand-ink);
+    color: var(--brand-on-primary);
 }
 
 .icon-btn.send-btn:hover {
-    background: #3367d6;
+    background: var(--brand-charcoal);
 }
 
 .icon-btn.send-btn:active {
-    background: #2756b5;
+    background: var(--brand-ash);
 }
 
 /* 中断按钮样式 */
 .icon-btn.stop-btn {
-    background: #ef4444;
-    color: #ffffff;
+    background: var(--brand-sale);
+    color: var(--brand-on-primary);
 }
 
 .icon-btn.stop-btn:hover {
-    background: #dc2626;
+    background: var(--brand-sale-deep);
 }
 
 .icon-btn.stop-btn:active {
-    background: #b91c1c;
+    background: #5a0504;
 }
 
 /* 过滤器按钮样式 */
 .filter-btn {
     padding: 5px 10px;
-    border: 1px solid #e0e0e0;
-    background: #ffffff;
-    border-radius: 999px;
+    border: 1px solid var(--brand-hairline-soft);
+    background: var(--brand-canvas);
+    border-radius: var(--brand-rounded-full);
     cursor: pointer;
     font-size: 11px;
-    color: #333;
+    color: var(--brand-ink);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: var(--brand-spacing-xs);
     transition: all 0.15s ease;
 }
 
 .filter-btn.active {
-    background: #4285f4;
-    border-color: #4285f4;
-    color: #ffffff;
+    background: var(--brand-ink);
+    border-color: var(--brand-ink);
+    color: var(--brand-on-primary);
 }
 
 .filter-btn:hover {
-    background: #f1f3f4;
+    background: var(--brand-soft-cloud);
 }
 
 .filter-btn.active:hover {
-    background: #3367d6;
+    background: var(--brand-charcoal);
 }
 
 /* 缩放按钮样式 */
 .zoom-btn {
     width: 28px;
     height: 28px;
-    padding: 4px;
-    border: 1px solid #e0e0e0;
-    background: #ffffff;
-    border-radius: 5px;
+    padding: var(--brand-spacing-xs);
+    border: 1px solid var(--brand-hairline-soft);
+    background: var(--brand-canvas);
+    border-radius: var(--brand-spacing-xs);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.15s ease;
-    color: #333;
+    color: var(--brand-ink);
 }
 
 .zoom-btn:hover {
-    background: #f1f3f4;
+    background: var(--brand-soft-cloud);
 }
 
 .zoom-btn:active {
-    background: #e8eaed;
+    background: var(--brand-hairline-soft);
 }
 
 .find-in-page-box {
     position: absolute;
     top: 10px;
     right: 20px;
-    background: #ffffff;
-    padding: 8px 12px;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    background: var(--brand-soft-cloud);
+    padding: var(--brand-spacing-sm) var(--brand-spacing-md);
+    border-radius: var(--brand-rounded-sm);
+    border: 1px solid var(--brand-hairline);
     display: none;
     align-items: center;
-    gap: 8px;
+    gap: var(--brand-spacing-sm);
     z-index: 1000;
 }
 
 .find-in-page-box input {
-    border: 1px solid #ddd;
-    padding: 4px 8px;
-    border-radius: 6px;
+    border: 1px solid var(--brand-hairline);
+    padding: var(--brand-spacing-xs) var(--brand-spacing-sm);
+    border-radius: var(--brand-spacing-xs);
     outline: none;
 }
 
 .find-in-page-box span {
     font-size: 12px;
-    color: #666;
+    color: var(--brand-mute);
     min-width: 40px;
 }
 
 .status-bar {
-    background: #f0f0f0;
-    padding: 4px 12px;
+    background: var(--brand-soft-cloud);
+    padding: var(--brand-spacing-xs) var(--brand-spacing-md);
     font-size: 12px;
-    color: #666;
-    border-top: 1px solid #e0e0e0;
+    color: var(--brand-mute);
+    border-top: 1px solid var(--brand-hairline-soft);
 }
 
 /* Toast 通知样式 */
@@ -214,11 +212,10 @@
 }
 
 .toast {
-    padding: 12px 16px;
-    border-radius: 8px;
-    background: var(--bg, #ffffff);
-    border: 1px solid var(--border, #e0e0e0);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: var(--brand-spacing-md) 16px;
+    border-radius: var(--brand-rounded-sm);
+    background: var(--brand-canvas);
+    border: 1px solid var(--brand-hairline-soft);
     animation: toastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     max-width: 300px;
     font-size: 14px;
@@ -226,58 +223,58 @@
 }
 
 .toast.error {
-    border-left: 3px solid #ea4335;
+    border-left: 3px solid var(--brand-sale);
     background: #fef1f1;
-    color: #c5221f;
+    color: var(--brand-sale-deep);
 }
 
 .toast.success {
-    border-left: 3px solid #34a853;
+    border-left: 3px solid var(--brand-success);
     background: #f0f9f0;
-    color: #137333;
+    color: var(--brand-success);
 }
 
 .toast.warning {
-    border-left: 3px solid #fbbc04;
+    border-left: 3px solid var(--brand-charcoal);
     background: #fff9e6;
-    color: #e37400;
+    color: var(--brand-charcoal);
 }
 
 .toast.info {
-    border-left: 3px solid #4285f4;
-    background: #e8f0fe;
-    color: #1967d2;
+    border-left: 3px solid var(--brand-info);
+    background: var(--brand-soft-cloud);
+    color: var(--brand-info-deep);
 }
 
 /* Toast 动画已移至 animations.css 统一管理 */
 
 /* 暗色模式下的 toast 样式 */
 .dark-mode .toast {
-    background: #2d2d2d;
-    border-color: #444;
-    color: #e0e0e0;
+    background: var(--brand-ink);
+    border-color: var(--brand-ash);
+    color: var(--brand-hairline-soft);
 }
 
 .dark-mode .toast.error {
     background: #3d2020;
-    border-left-color: #ea4335;
-    color: #f28b82;
+    border-left-color: var(--brand-sale);
+    color: var(--brand-sale);
 }
 
 .dark-mode .toast.success {
     background: #1e3a29;
-    border-left-color: #34a853;
-    color: #81c995;
+    border-left-color: var(--brand-success);
+    color: var(--brand-success-bright);
 }
 
 .dark-mode .toast.warning {
     background: #3d3520;
-    border-left-color: #fbbc04;
-    color: #fdd663;
+    border-left-color: var(--brand-charcoal);
+    color: var(--brand-mute);
 }
 
 .dark-mode .toast.info {
     background: #1e3a5f;
-    border-left-color: #4285f4;
-    color: #8ab4f8;
+    border-left-color: var(--brand-info);
+    color: var(--brand-info);
 }

@@ -149,7 +149,7 @@
     align-items: center;
     justify-content: center;
     margin-top: 2px;
-    color: var(--ai-text-secondary, #94a3b8);
+    color: var(--ai-muted);
 }
 
 .ai-menu-item-icon svg {
@@ -173,7 +173,7 @@
 
 .ai-menu-item-desc {
     font-size: 11px;
-    color: var(--ai-text-secondary, #94a3b8);
+    color: var(--ai-muted);
     white-space: normal;
     line-height: 1.4;
 }
@@ -233,7 +233,7 @@
 }
 
 .ai-model-item.active {
-    background: rgba(59, 130, 246, 0.12);
+    background: var(--ai-accent-soft);
     color: var(--ai-accent);
     font-weight: 600;
 }

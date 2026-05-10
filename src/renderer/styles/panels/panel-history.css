@@ -7,9 +7,9 @@
   padding: 12px 16px 8px;
   font-size: 12px;
   font-weight: 500;
-  color: #5f6368;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e8eaed;
+  color: var(--brand-charcoal);
+  background: var(--brand-soft-cloud);
+  border-bottom: 1px solid var(--brand-hairline-soft);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -21,11 +21,11 @@
   padding: 10px 16px;
   cursor: pointer;
   transition: background 0.15s ease;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--brand-hairline-soft);
 }
 
 .history-item:hover {
-  background: #f1f3f4;
+  background: var(--brand-soft-cloud);
 }
 
 .history-item:last-child {
@@ -39,14 +39,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e8f0fe;
+  background: var(--brand-soft-cloud);
   border-radius: 50%;
   margin-right: 12px;
   flex-shrink: 0;
 }
 
 .history-item-icon svg {
-  color: #1a73e8;
+  color: var(--brand-info);
 }
 
 /* 历史记录内容 */
@@ -58,7 +58,7 @@
 
 .history-item-title {
   font-size: 14px;
-  color: #202124;
+  color: var(--brand-ink);
   font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -67,7 +67,7 @@
 
 .history-item-url {
   font-size: 12px;
-  color: #5f6368;
+  color: var(--brand-charcoal);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -77,7 +77,7 @@
 /* 历史记录时间 */
 .history-item-time {
   font-size: 12px;
-  color: #80868b;
+  color: var(--brand-mute);
   margin-left: 12px;
   flex-shrink: 0;
 }
@@ -93,7 +93,7 @@
   background: transparent;
   border-radius: 50%;
   cursor: pointer;
-  color: #5f6368;
+  color: var(--brand-charcoal);
   opacity: 0;
   transition: all 0.15s ease;
   margin-left: 8px;
@@ -105,8 +105,8 @@
 }
 
 .history-item-delete:hover {
-  background: #fce8e6;
-  color: #d93025;
+  background: rgba(211, 0, 5, 0.1);
+  color: var(--brand-sale);
 }
 
 /* 历史记录空状态 */
@@ -116,11 +116,11 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #80868b;
+  color: var(--brand-mute);
 }
 
 .history-empty svg {
-  color: #dadce0;
+  color: var(--brand-hairline);
   margin-bottom: 16px;
 }
 
@@ -131,52 +131,52 @@
 
 /* 深色模式适配 */
 .dark-mode .history-group-header {
-  background: #292a2d;
-  color: #9aa0a6;
-  border-bottom-color: #3c4043;
+  background: #1a1a1a;
+  color: var(--brand-stone);
+  border-bottom-color: #333333;
 }
 
 .dark-mode .history-item {
-  border-bottom-color: #3c4043;
+  border-bottom-color: #333333;
 }
 
 .dark-mode .history-item:hover {
-  background: #3c4043;
+  background: #333333;
 }
 
 .dark-mode .history-item-icon {
-  background: #1a3a5c;
+  background: #1a1a1a;
 }
 
 .dark-mode .history-item-icon svg {
-  color: #8ab4f8;
+  color: var(--brand-info);
 }
 
 .dark-mode .history-item-title {
-  color: #e8eaed;
+  color: var(--brand-hairline-soft);
 }
 
 .dark-mode .history-item-url {
-  color: #9aa0a6;
+  color: var(--brand-stone);
 }
 
 .dark-mode .history-item-time {
-  color: #80868b;
+  color: var(--brand-mute);
 }
 
 .dark-mode .history-item-delete {
-  color: #9aa0a6;
+  color: var(--brand-stone);
 }
 
 .dark-mode .history-item-delete:hover {
-  background: #5c2626;
-  color: #f28b82;
+  background: rgba(211, 0, 5, 0.2);
+  color: var(--brand-sale);
 }
 
 .dark-mode .history-empty {
-  color: #9aa0a6;
+  color: var(--brand-stone);
 }
 
 .dark-mode .history-empty svg {
-  color: #5f6368;
+  color: var(--brand-charcoal);
 }

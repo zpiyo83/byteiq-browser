@@ -58,8 +58,8 @@
  }
 
  .dark-mode .ai-session-item.active {
-    background: #1d2b3d;
-    border-color: #2d4969;
+    background: var(--ai-accent-soft);
+    border-color: var(--ai-border);
  }
 
  .dark-mode .ai-session-item.deleted {
@@ -121,7 +121,7 @@
 
 .dark-mode .chat-message.error {
     background: rgba(211, 0, 5, 0.12);
-    color: #ff6b6b;
+    color: var(--ai-sale);
     border-color: rgba(211, 0, 5, 0.25);
 }
 
@@ -158,7 +158,7 @@
 
 /* Dark mode - Context pie chart */
 .dark-mode .ai-context-pie .pie-bg {
-    stroke: #5f6368;
+    stroke: var(--ai-muted);
 }
 
 .dark-mode .ai-context-pie .pie-used {
@@ -225,7 +225,7 @@
 
 .dark-mode .ai-history-item-action.delete:hover {
     background: rgba(211, 0, 5, 0.15);
-    color: #ff6b6b;
+    color: var(--ai-sale);
 }
 
 .dark-mode .ai-history-empty {

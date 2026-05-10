@@ -108,15 +108,15 @@
 
 /* 页面信息消息样式 */
 .chat-message.page-info {
-    background: rgba(59, 130, 246, 0.08);
-    color: #1967d2;
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent-strong);
     font-size: 13px;
     border-radius: 4px 12px 12px 12px;
-    border-color: rgba(59, 130, 246, 0.15);
+    border-color: rgba(17, 81, 255, 0.15);
 }
 
 .chat-message.page-info strong {
-    color: #1a73e8;
+    color: var(--ai-accent);
 }
 
 /* 欢迎消息样式 */
@@ -262,8 +262,8 @@ body.dark-mode .ai-agent-empty-logo,
 
 /* 错误状态样式 */
 .chat-message.error {
-    background: rgba(239, 68, 68, 0.08);
-    color: #d93025;
-    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(211, 0, 5, 0.08);
+    color: var(--ai-sale);
+    border-color: rgba(211, 0, 5, 0.2);
 }
 

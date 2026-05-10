@@ -2,17 +2,17 @@
     display: flex;
     justify-content: space-between;
     padding: 8px 10px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--brand-hairline-soft);
     align-items: flex-start;
 }
 
 .list-item:hover {
-    background: #f9f9f9;
+    background: var(--brand-soft-cloud);
 }
 
 .list-item a {
     text-decoration: none;
-    color: #4285f4;
+    color: var(--brand-info);
     flex: 1;
     white-space: nowrap;
     overflow: hidden;
@@ -41,7 +41,7 @@
 
 .download-filename {
     font-weight: 500;
-    color: #333;
+    color: var(--brand-ink);
     font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
@@ -50,7 +50,7 @@
 
 .download-path {
     font-size: 10px;
-    color: #999;
+    color: var(--brand-stone);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -64,13 +64,13 @@
 
 .download-detail {
     font-size: 11px;
-    color: #555;
+    color: var(--brand-charcoal);
     margin-bottom: 1px;
 }
 
 .download-meta {
     font-size: 10px;
-    color: #888;
+    color: var(--brand-mute);
     margin-bottom: 1px;
 }
 
@@ -80,29 +80,29 @@
 }
 
 .download-state-info.state-completed {
-    color: #28a745;
+    color: var(--brand-success);
 }
 
 .download-state-info.state-cancelled {
-    color: #6c757d;
+    color: var(--brand-mute);
 }
 
 .download-state-info.state-interrupted {
-    color: #fd7e14;
+    color: var(--brand-charcoal);
 }
 
 .download-state-info.state-failed {
-    color: #dc3545;
+    color: var(--brand-sale);
 }
 
 .download-time {
     font-size: 10px;
-    color: #888;
+    color: var(--brand-mute);
 }
 
 .download-url {
     font-size: 9px;
-    color: #aaa;
+    color: var(--brand-hairline);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -117,8 +117,8 @@
 }
 
 .download-actions button {
-    background: #f5f5f5;
-    border: 1px solid #e0e0e0;
+    background: var(--brand-soft-cloud);
+    border: 1px solid var(--brand-hairline-soft);
     padding: 3px 6px;
     border-radius: 10px;
     cursor: pointer;
@@ -128,11 +128,11 @@
 }
 
 .download-actions button:hover {
-    background: #e8eaed;
+    background: var(--brand-hairline-soft);
 }
 
 .download-actions button:active {
-    background: #dadce0;
+    background: var(--brand-stone);
 }
 
 /* 图标按钮样式 */
@@ -152,11 +152,11 @@
 }
 
 .download-actions button.icon-btn:hover {
-    background: #e8eaed;
+    background: var(--brand-hairline-soft);
     transform: scale(1.05);
 }
 
 .download-actions button.icon-btn:active {
-    background: #dadce0;
+    background: var(--brand-stone);
     transform: scale(0.95);
 }

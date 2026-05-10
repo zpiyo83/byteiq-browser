@@ -2,17 +2,17 @@
 
  .ai-sessions {
     width: 140px;
-    border-right: 1px solid #e8eaed;
+    border-right: 1px solid var(--ai-border);
     display: flex;
     flex-direction: column;
-    background: #fafafa;
+    background: var(--ai-surface-soft);
  }
 
  .ai-sessions-toolbar {
     display: flex;
     gap: 8px;
     padding: 10px;
-    border-bottom: 1px solid #e8eaed;
+    border-bottom: 1px solid var(--ai-border);
     align-items: center;
  }
 
@@ -20,10 +20,10 @@
     width: 28px;
     height: 28px;
     border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    background: #ffffff;
+    border: 1px solid var(--ai-border);
+    background: var(--ai-surface);
     cursor: pointer;
-    color: #202124;
+    color: var(--ai-text);
     font-size: 18px;
     line-height: 1;
  }
@@ -32,8 +32,8 @@
     flex: 1;
     height: 28px;
     border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    background: #ffffff;
+    border: 1px solid var(--ai-border);
+    background: var(--ai-surface);
     font-size: 12px;
     padding: 0 8px;
     outline: none;
@@ -60,12 +60,12 @@
  }
 
  .ai-session-item:hover {
-    background: #f1f3f4;
+    background: var(--ai-surface-soft);
  }
 
  .ai-session-item.active {
-    background: #e8f0fe;
-    border-color: #d2e3fc;
+    background: var(--ai-accent-soft);
+    border-color: var(--ai-border);
  }
 
  .ai-session-item.deleted {
@@ -79,7 +79,7 @@
 
  .ai-session-title {
     font-size: 12px;
-    color: #202124;
+    color: var(--ai-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -87,7 +87,7 @@
 
  .ai-session-meta {
     font-size: 11px;
-    color: #5f6368;
+    color: var(--ai-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

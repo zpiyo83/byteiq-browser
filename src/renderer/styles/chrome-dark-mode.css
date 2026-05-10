@@ -1,4 +1,4 @@
-/* 浏览器深色模式覆盖样式 */
+/* 浏览器深色模式覆盖样式 - 品牌暗色体系 */
 
 body.dark-mode .close-tab:hover {
     background: rgba(255, 255, 255, 0.1);
@@ -6,42 +6,42 @@ body.dark-mode .close-tab:hover {
 
 /* 深色模式下的高级选项 */
 .dark-mode .advanced-options {
-    border-color: #3c4043;
+    border-color: #333333;
 }
 
 .dark-mode .advanced-options summary {
-    background: #2d2e30;
+    background: #1a1a1a;
 }
 
 .dark-mode .advanced-options summary:hover,
 .dark-mode .advanced-options[open] summary {
-    background: #35363a;
+    background: #222222;
 }
 
 .dark-mode .advanced-options .setting-item {
-    border-bottom-color: #3c4043;
+    border-bottom-color: #333333;
 }
 
 /* 深色模式下的更多按钮下拉菜单 */
 .dark-mode .more-menu-dropdown {
-    background: #2d2e30;
-    border-color: #3c4043;
+    background: #1a1a1a;
+    border-color: #333333;
 }
 
 .dark-mode .more-menu-dropdown button {
-    color: #e8eaed;
+    color: var(--brand-hairline-soft);
 }
 
 .dark-mode .more-menu-dropdown button:hover {
-    background: #3c4043;
+    background: #333333;
 }
 
 .dark-mode .more-menu-dropdown button:active {
-    background: #44474b;
+    background: #444444;
 }
 
 .dark-mode .advanced-options input[type="number"] {
-    background: #2d2e30;
-    border-color: #3c4043;
-    color: #e8eaed;
+    background: #1a1a1a;
+    border-color: #333333;
+    color: var(--brand-hairline-soft);
 }

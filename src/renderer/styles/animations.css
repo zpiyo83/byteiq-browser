@@ -424,8 +424,8 @@ body.dark-mode .list-item-hover:hover {
 
 /* 适配设置面板侧边栏活动项 */
 .settings-nav-item.active {
-    background: var(--ai-accent, #1967d2) !important;
-    color: #fff !important;
+    background: var(--brand-ink) !important;
+    color: var(--brand-on-primary) !important;
     position: relative;
     z-index: 1;
 }

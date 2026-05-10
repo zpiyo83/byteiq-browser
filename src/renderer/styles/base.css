@@ -1,3 +1,41 @@
+/* Design Token - CSS自定义属性 */
+:root {
+    /* 颜色 */
+    --brand-ink: #111111;
+    --brand-on-primary: #ffffff;
+    --brand-canvas: #ffffff;
+    --brand-soft-cloud: #f5f5f5;
+    --brand-charcoal: #39393b;
+    --brand-ash: #4b4b4d;
+    --brand-mute: #707072;
+    --brand-stone: #9e9ea0;
+    --brand-hairline: #cacacb;
+    --brand-hairline-soft: #e5e5e5;
+    --brand-sale: #d30005;
+    --brand-sale-deep: #780700;
+    --brand-success: #007d48;
+    --brand-success-bright: #1eaa52;
+    --brand-info: #1151ff;
+    --brand-info-deep: #0034e3;
+
+    /* 圆角 */
+    --brand-rounded-none: 0px;
+    --brand-rounded-sm: 18px;
+    --brand-rounded-md: 24px;
+    --brand-rounded-lg: 30px;
+    --brand-rounded-full: 9999px;
+
+    /* 间距 */
+    --brand-spacing-xxs: 2px;
+    --brand-spacing-xs: 4px;
+    --brand-spacing-sm: 8px;
+    --brand-spacing-md: 12px;
+    --brand-spacing-lg: 18px;
+    --brand-spacing-xl: 24px;
+    --brand-spacing-xxl: 30px;
+    --brand-spacing-section: 48px;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -13,10 +51,12 @@ html, body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-        Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue',
+        'PingFang SC', 'Microsoft YaHei', 'SimHei', sans-serif;
     /* 纯白背景，避免外壳与网页之间出现明显色块差异 */
-    background: #ffffff;
+    background: var(--brand-canvas);
+    color: var(--brand-ink);
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -38,7 +78,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 a:focus-visible {
-    outline: 2px solid #4285f4;
+    outline: 2px solid var(--brand-ink);
     outline-offset: 2px;
 }
 
@@ -46,5 +86,5 @@ body.dark-mode button:focus-visible,
 body.dark-mode input:focus-visible,
 body.dark-mode select:focus-visible,
 body.dark-mode a:focus-visible {
-    outline-color: #6aa0ff;
+    outline-color: var(--brand-canvas);
 }
