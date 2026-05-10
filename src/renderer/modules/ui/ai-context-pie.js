@@ -78,9 +78,7 @@ function createContextMenu(options) {
     const ttUsed = documentRef.getElementById('tt-used');
     const ttUsedK = documentRef.getElementById('tt-used-k');
     const ttTotalK = documentRef.getElementById('tt-total-k');
-    const ttRemainK = documentRef
-      .getElementById('ai-context-tooltip')
-      ?.querySelector('.tooltip-row span:last-child'); // remainK
+    const ttRemainK = documentRef.getElementById('tt-remain-k');
     const ttSystem = documentRef.getElementById('tt-system');
     const ttHistory = documentRef.getElementById('tt-history');
     if (ttUsed) ttUsed.textContent = `${pct}%`;
