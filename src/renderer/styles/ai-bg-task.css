@@ -121,6 +121,19 @@
   color: var(--brand-primary);
 }
 
+.bg-task-running .bg-task-status-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bg-task-running .bg-task-status-icon .tool-running-svg {
+  animation: tool-running-spin 1s linear infinite;
+}
+
+@keyframes tool-running-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* 旋转动画 */
 .bg-task-spinning {
   animation: bg-task-spin 0.8s linear infinite;

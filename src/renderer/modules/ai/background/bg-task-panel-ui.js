@@ -117,15 +117,11 @@ function createBgTaskPanelUI(options) {
       itemEl.className = `bg-task-item bg-task-${task.status}`;
       itemEl.dataset.taskId = task.id;
 
-      // 状态图标
+      // 状态图标（复用工具卡片的状态图标）
       const statusIcon = documentRef.createElement('span');
       statusIcon.className = 'bg-task-status-icon';
       if (task.status === 'running') {
-        statusIcon.innerHTML =
-          '<svg viewBox="0 0 24 24" width="16" height="16" class="bg-task-spinning">' +
-          '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-linecap="round" opacity="0.25"></circle>' +
-          '<path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="31.4" d="M12 2 A10 10 0 0 1 22 12"></path>' +
-          '</svg>';
+        statusIcon.innerHTML = getStatusIcon('running');
       } else if (task.status === 'completed') {
         statusIcon.innerHTML =
           '<svg viewBox="0 0 24 24" width="16" height="16">' +
