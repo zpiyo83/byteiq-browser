@@ -283,7 +283,7 @@ body.dark-mode .modal-btn-default:hover {
     font-weight: 600;
     letter-spacing: 0.5px;
     color: #fff;
-    background: linear-gradient(135deg, var(--brand-charcoal) 0%, var(--brand-ash) 100%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     border-radius: 4px;
     text-transform: uppercase;
     cursor: help;
@@ -366,8 +366,8 @@ body.dark-mode .modal-btn-default:hover {
 
 /* 深色模式 - Beta 标签 */
 body.dark-mode .beta-badge {
-    background: linear-gradient(135deg, var(--brand-stone) 0%, var(--brand-charcoal) 100%);
-    color: var(--brand-ink);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #fff;
 }
 
 body.dark-mode .beta-badge::before {
