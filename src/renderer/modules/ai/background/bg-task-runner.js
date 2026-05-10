@@ -140,9 +140,16 @@ function createBgTaskRunner(options) {
         if (!query) return { success: false, error: 'Missing search query' };
 
         // 创建隐藏 webview 而非标签页
-        const searchUrl = query.startsWith('http')
-          ? query
-          : `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        let searchUrl;
+        if (query.startsWith('http')) {
+          searchUrl = query;
+        } else {
+          const engine = store.get('settings.searchEngine', 'bing');
+          let searchBase = 'https://www.bing.com/search?q=';
+          if (engine === 'google') searchBase = 'https://www.google.com/search?q=';
+          if (engine === 'baidu') searchBase = 'https://www.baidu.com/s?wd=';
+          searchUrl = searchBase + encodeURIComponent(query);
+        }
         const { webviewId, webview } = createHiddenWebview(searchUrl, taskId);
         if (!webview) {
           return { success: false, error: 'Failed to create hidden webview' };
