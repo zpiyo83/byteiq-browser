@@ -56,7 +56,7 @@ function createBgTaskRunner(options) {
     const webview = documentRef.createElement('webview');
     webview.id = webviewId;
     webview.setAttribute('src', url);
-    webview.setAttribute('partition', 'persist:background');
+    webview.setAttribute('allowpopups', '');
     webview.style.width = '1280px';
     webview.style.height = '800px';
     container.appendChild(webview);
@@ -75,27 +75,16 @@ function createBgTaskRunner(options) {
    * @param {number} timeout - 超时毫秒
    * @returns {Promise<boolean>}
    */
-  function waitForWebviewLoad(webview, timeout = 15000) {
+  function waitForWebviewLoad(webview, timeout = 30000) {
     return new Promise(resolve => {
       if (!webview) {
         resolve(false);
         return;
       }
 
-      const timer = setTimeout(() => {
-        resolve(false);
-      }, timeout);
-
-      const onDomReady = () => {
-        clearTimeout(timer);
-        webview.removeEventListener('dom-ready', onDomReady);
-        resolve(true);
-      };
-
-      // 可能已经加载完成
+      // 如果已经加载完成
       try {
-        if (!webview.isLoading()) {
-          clearTimeout(timer);
+        if (typeof webview.isLoading === 'function' && !webview.isLoading()) {
           resolve(true);
           return;
         }
@@ -103,7 +92,29 @@ function createBgTaskRunner(options) {
         // webview 尚未初始化
       }
 
-      webview.addEventListener('dom-ready', onDomReady);
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(false);
+      }, timeout);
+
+      function cleanup() {
+        clearTimeout(timer);
+        webview.removeEventListener('did-stop-loading', onDone);
+        webview.removeEventListener('did-fail-load', onDone);
+      }
+
+      function onDone() {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(true);
+      }
+
+      webview.addEventListener('did-stop-loading', onDone);
+      webview.addEventListener('did-fail-load', onDone);
     });
   }
 

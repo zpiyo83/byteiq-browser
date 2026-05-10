@@ -164,8 +164,11 @@
                 </button>
                 <button id="ai-bg-task-btn" class="icon-btn ai-header-bg-task-btn" data-i18n-title="ai.bgTask" role="button" aria-label="后台任务">
                     <svg viewBox="0 0 24 24" width="18" height="18" role="img" aria-hidden="true">
-                        <path fill="currentColor" d="M16,6L18.29,8.29L13.7,13.88L9.71,9.89L2,17.59L3.41,19L9.71,12.71L13.7,16.7L19.71,10.71L22,13V6H16Z"/>
+                        <!-- 任务列表图标 -->
+                        <path fill="currentColor" d="M3,5H21V7H3V5M3,11H21V13H3V11M3,17H21V19H3V17Z"/>
                     </svg>
+                    <!-- 状态指示点 -->
+                    <span class="bg-task-status-dot"></span>
                 </button>
                 <h3 data-i18n="ai.title">Byteiq AI Assistant</h3>
                 <button id="close-ai-btn" class="icon-btn" data-i18n-title="ai.close" role="button" aria-label="关闭AI助手">
@@ -369,7 +372,8 @@
                             </button>
                             <button id="ai-bg-send-btn" class="icon-btn ai-bg-send-btn" data-i18n-title="ai.bgSend" role="button" aria-label="后台发送">
                                 <svg viewBox="0 0 24 24" width="16" height="16" role="img" aria-hidden="true">
-                                    <path fill="currentColor" d="M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12H4A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z"/>
+                                    <!-- 发送至后台图标：纸飞机 + 下方同步弧线 -->
+                                    <path fill="currentColor" d="M2,21L23,12L2,3V10L17,12L2,14V21M12,18A6,6 0 0,1 7,16H5A8,8 0 0,0 13,20V18H12Z"/>
                                 </svg>
                             </button>
                         </div>
@@ -381,8 +385,8 @@
 
         </div>
 
-        <!-- 后台任务隐藏 webview 容器（offscreen 定位，确保 webview 能正常加载） -->
-        <div id="bg-webviews-container" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;"></div>
+        <!-- 后台任务隐藏 webview 容器（opacity:0 确保渲染进程正常工作但不可见） -->
+        <div id="bg-webviews-container" style="position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;"></div>
 
         <!-- 后台任务通知容器 -->
         <div id="bg-notification-container" class="bg-notification-container"></div>

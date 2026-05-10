@@ -102,9 +102,13 @@
   color: #f44336;
 }
 
+.bg-task-running .bg-task-status-icon {
+  color: #1976d2;
+}
+
 /* 旋转动画 */
 .bg-task-spinning {
-  animation: bg-task-spin 1s linear infinite;
+  animation: bg-task-spin 0.8s linear infinite;
 }
 
 @keyframes bg-task-spin {
@@ -232,9 +236,36 @@
   position: relative;
 }
 
-.ai-header-bg-task-btn.has-running-tasks svg {
-  animation: bg-task-spin 1.5s linear infinite;
-  color: var(--accent-color, #1976d2);
+.bg-task-status-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #1976d2;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary, #fff);
+  display: none;
+}
+
+.ai-header-bg-task-btn.has-running-tasks .bg-task-status-dot {
+  display: block;
+  animation: bg-task-pulse 2s infinite;
+}
+
+@keyframes bg-task-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(25, 118, 210, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
 }
 
 /* 后台发送按钮 */

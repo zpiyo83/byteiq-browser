@@ -109,8 +109,8 @@ function createBgTaskPanelUI(options) {
       if (task.status === 'running') {
         statusIcon.innerHTML =
           '<svg viewBox="0 0 24 24" width="16" height="16" class="bg-task-spinning">' +
-          '<path fill="currentColor" d="M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18' +
-          'A6,6 0 0,1 6,12H4A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4Z"/>' +
+          '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4" stroke-linecap="round" opacity="0.25"></circle>' +
+          '<path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="31.4" d="M12 2 A10 10 0 0 1 22 12"></path>' +
           '</svg>';
       } else if (task.status === 'completed') {
         statusIcon.innerHTML =
@@ -212,18 +212,11 @@ function createBgTaskPanelUI(options) {
     if (!iconBtn) return;
 
     const runningCount = taskManager.getRunningCount();
-    const svgEl = iconBtn.querySelector('svg');
 
     if (runningCount > 0) {
       iconBtn.classList.add('has-running-tasks');
-      if (svgEl) {
-        svgEl.classList.add('bg-task-spinning');
-      }
     } else {
       iconBtn.classList.remove('has-running-tasks');
-      if (svgEl) {
-        svgEl.classList.remove('bg-task-spinning');
-      }
     }
   }
 
