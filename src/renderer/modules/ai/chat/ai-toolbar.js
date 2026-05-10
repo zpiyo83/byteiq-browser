@@ -138,11 +138,6 @@ function createAiToolbar(options) {
     }
 
     updateModeButton();
-
-    if (showToast) {
-      const modeText = mode === 'ask' ? '普通对话' : '自动执行';
-      showToast(`已切换为 ${modeText} 模式`, 'info');
-    }
   }
 
   /**
