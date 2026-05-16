@@ -109,8 +109,13 @@ function createAiAgentRunner(options) {
       if (frameScheduled) return;
 
       frameScheduled = true;
+      const capturedTaskId = agentStreamingTaskId;
       requestAnimationFrame(() => {
-        if (pendingUpdate !== null && agentStreamingElement) {
+        if (
+          pendingUpdate !== null &&
+          agentStreamingElement &&
+          agentStreamingTaskId === capturedTaskId
+        ) {
           updateStreamingMessage(agentStreamingElement, pendingUpdate);
         }
         frameScheduled = false;

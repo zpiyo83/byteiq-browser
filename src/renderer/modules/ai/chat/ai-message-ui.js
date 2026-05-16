@@ -328,6 +328,7 @@ function createAiMessageUI(options) {
 
   function updateStreamingMessage(element, text) {
     if (!element) return;
+    if (element.dataset.streamingFinished === 'true') return;
 
     // 取得或创建解析器（保持同一实例）
     let parser = streamingParsers.get(element);
@@ -455,6 +456,7 @@ function createAiMessageUI(options) {
    */
   function finishStreamingMessage(element) {
     if (!element) return;
+    element.dataset.streamingFinished = 'true';
 
     const dropdown = element.querySelector('.think-dropdown');
     const contentEl = element.querySelector('.message-content');

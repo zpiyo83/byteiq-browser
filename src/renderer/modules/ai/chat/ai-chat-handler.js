@@ -46,11 +46,17 @@ function createAiChatHandler(deps) {
    */
   function scheduleStreamingUpdate(fullText) {
     pendingUpdate = fullText;
-    if (frameScheduled) return; // 已经调度了，不需要重复调度
+    if (frameScheduled) return;
 
     frameScheduled = true;
+    const capturedTaskId = currentTaskId;
     requestAnimationFrame(() => {
-      if (pendingUpdate !== null && currentStreamingElement && isStreaming) {
+      if (
+        pendingUpdate !== null &&
+        currentStreamingElement &&
+        isStreaming &&
+        currentTaskId === capturedTaskId
+      ) {
         updateStreamingMessage(currentStreamingElement, pendingUpdate);
       }
       frameScheduled = false;
