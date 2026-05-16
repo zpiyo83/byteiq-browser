@@ -136,3 +136,5 @@ byteiq-browser/
 ## 🌟 致谢
 
 感谢所有为 Byteiq Browser 做出贡献的开发者！
+
+特别感谢 [Playwright](https://github.com/microsoft/playwright) 项目。本项目的 AI 网页操作工具（`get_page_info`、`click_element`、`input_text`）在设计上深受 Playwright 的启发，包括：可见性与可操作性检查、稳定性等待、真实鼠标事件派发、React 受控组件兼容、contenteditable 支持、选择器构建策略等。Playwright 是微软开源的 Web 端到端测试框架，其严谨的自动化设计理念对本项目影响深远。
