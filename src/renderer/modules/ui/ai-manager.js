@@ -110,6 +110,60 @@ function createAiManager(options) {
     getActiveSessionId
   });
 
+  // 创建后台任务管理器
+  const bgTaskManager = createBgTaskManager({
+    onTaskStatusChange: () => {
+      if (bgTaskPanelUI) bgTaskPanelUI.renderTaskList();
+      if (bgTaskPanelUI) bgTaskPanelUI.updateHeaderIcon();
+    },
+    onToolCallUpdate: (taskId, toolCallInfo) => {
+      if (bgTaskPanelUI) bgTaskPanelUI.updateTaskToolBadge(taskId, toolCallInfo);
+    },
+    store
+  });
+
+  // 创建后台任务面板 UI
+  const bgTaskPanelUI = createBgTaskPanelUI({
+    documentRef,
+    taskManager: bgTaskManager,
+    t,
+    onResumeTask: task => {
+      if (bgTaskResumeHandler) {
+        bgTaskResumeHandler.resumeTaskToFrontend(task);
+      }
+    }
+  });
+
+  // 创建后台任务通知组件
+  const bgTaskNotification = createBgTaskNotification({
+    documentRef,
+    onNotificationClick: _task => {
+      if (bgTaskPanelUI) bgTaskPanelUI.showPanel();
+    },
+    t
+  });
+
+  // 创建后台任务执行器
+  const bgTaskRunner = createBgTaskRunner({
+    ipcRenderer,
+    store,
+    taskManager: bgTaskManager,
+    documentRef,
+    t,
+    buildSystemPrompt,
+    onTaskComplete: task => {
+      bgTaskNotification.showTaskCompleteNotification(task);
+      bgTaskPanelUI.renderTaskList();
+      bgTaskPanelUI.updateHeaderIcon();
+    },
+    onTaskError: (task, error) => {
+      bgTaskNotification.showTaskErrorNotification(task, error);
+      bgTaskPanelUI.renderTaskList();
+      bgTaskPanelUI.updateHeaderIcon();
+    },
+    onTaskResultReady: null // 稍后由 agentRunner 注入
+  });
+
   const toolsExecutor = createAiToolsExecutor({
     documentRef,
     getActiveTabId,
@@ -121,7 +175,8 @@ function createAiManager(options) {
     getTodoManager: () => todoManager,
     closeTab: tabManager ? tabManager.closeTab : null,
     getTabById: tabManager ? tabManager.getTabById : null,
-    store
+    store,
+    getBgTaskRunner: () => bgTaskRunner // 传递后台任务执行器
   });
 
   const BYTEIQ_LOGO_SRC = `file://${path.join(__dirname, '../../../../assets/img/byteiq.png')}`;
@@ -316,7 +371,12 @@ function createAiManager(options) {
     getTaskState: () => taskState,
     bindTabToSession: sessionService.bindTabToSession,
     externalTodoManager: todoManager,
-    contextIsolation
+    contextIsolation,
+    getBgTaskRunner: () => bgTaskRunner, // 传递后台任务执行器
+    onBgTaskResultReady: handler => {
+      // 注册后台任务结果准备就绪回调
+      bgTaskRunner.onTaskResultReady = handler;
+    }
   });
 
   const contextMenu = createContextMenu({ store, documentRef, agentRunner });
@@ -473,39 +533,6 @@ function createAiManager(options) {
     await renderSessionsList();
   }
 
-  // 创建后台任务管理器
-  const bgTaskManager = createBgTaskManager({
-    onTaskStatusChange: () => {
-      if (bgTaskPanelUI) bgTaskPanelUI.renderTaskList();
-      if (bgTaskPanelUI) bgTaskPanelUI.updateHeaderIcon();
-    },
-    onToolCallUpdate: (taskId, toolCallInfo) => {
-      if (bgTaskPanelUI) bgTaskPanelUI.updateTaskToolBadge(taskId, toolCallInfo);
-    },
-    store
-  });
-
-  // 创建后台任务通知组件
-  const bgTaskNotification = createBgTaskNotification({
-    documentRef,
-    onNotificationClick: _task => {
-      if (bgTaskPanelUI) bgTaskPanelUI.showPanel();
-    },
-    t
-  });
-
-  // 创建后台任务面板 UI
-  const bgTaskPanelUI = createBgTaskPanelUI({
-    documentRef,
-    taskManager: bgTaskManager,
-    t,
-    onResumeTask: task => {
-      if (bgTaskResumeHandler) {
-        bgTaskResumeHandler.resumeTaskToFrontend(task);
-      }
-    }
-  });
-
   // 创建后台任务恢复处理器
   const bgTaskResumeHandler = createBgTaskResumeHandler({
     documentRef,
@@ -522,26 +549,6 @@ function createAiManager(options) {
     store,
     t,
     contextIsolation
-  });
-
-  // 创建后台任务执行器
-  const bgTaskRunner = createBgTaskRunner({
-    ipcRenderer,
-    store,
-    taskManager: bgTaskManager,
-    documentRef,
-    t,
-    buildSystemPrompt,
-    onTaskComplete: task => {
-      bgTaskNotification.showTaskCompleteNotification(task);
-      bgTaskPanelUI.renderTaskList();
-      bgTaskPanelUI.updateHeaderIcon();
-    },
-    onTaskError: (task, error) => {
-      bgTaskNotification.showTaskErrorNotification(task, error);
-      bgTaskPanelUI.renderTaskList();
-      bgTaskPanelUI.updateHeaderIcon();
-    }
   });
 
   // 创建事件管理器

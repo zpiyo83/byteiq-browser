@@ -200,6 +200,84 @@ const webToolDefs = [
         message: '已关闭标签页'
       };
     }
+  },
+  {
+    name: 'dispatch_background_task',
+    description:
+      '派发任务给后台模型执行。后台模型会独立处理任务,前台会等待任务完成(最多5分钟)后继续。',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_query: {
+          type: 'string',
+          description: '要发给后台模型执行的任务描述或问题'
+        }
+      },
+      required: ['task_query']
+    },
+    async execute(context, args) {
+      const taskQuery = args?.task_query;
+
+      if (!taskQuery) {
+        return { success: false, error: 'Missing task_query' };
+      }
+
+      // 检查是否有后台任务管理器
+      const bgTaskRunner = context.getBgTaskRunner?.();
+      if (!bgTaskRunner || typeof bgTaskRunner.runBackgroundTask !== 'function') {
+        return { success: false, error: 'Background task runner not available' };
+      }
+
+      // 派发后台任务(强制等待模式)
+      try {
+        const result = await bgTaskRunner.runBackgroundTask(taskQuery, true);
+
+        // 等待模式：runBackgroundTask 返回的是 Promise，resolve 后包含完整结果
+        // 直接返回结果给前台模型
+        return {
+          success: true,
+          taskId: result.taskId,
+          result: result.result || '',
+          toolCallHistory: result.toolCallHistory || [],
+          status: result.status,
+          message: result.message || '后台任务已完成'
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error?.message || 'Failed to dispatch background task'
+        };
+      }
+    }
+  },
+  {
+    name: 'wait_seconds',
+    description: '暂停指定秒数后再继续处理。用于等待外部操作完成或延迟执行。',
+    parameters: {
+      type: 'object',
+      properties: {
+        seconds: {
+          type: 'number',
+          description: '要等待的秒数,范围: 1-300秒'
+        }
+      },
+      required: ['seconds']
+    },
+    async execute(context, args) {
+      const seconds = args?.seconds;
+
+      if (!seconds || typeof seconds !== 'number' || seconds < 1 || seconds > 300) {
+        return { success: false, error: 'Invalid seconds, must be between 1 and 300' };
+      }
+
+      // 返回等待标记,由 agent-runner 处理实际等待
+      return {
+        success: true,
+        waitMode: true,
+        waitSeconds: seconds,
+        message: `等待 ${seconds} 秒后继续...`
+      };
+    }
   }
 ];
 

@@ -25,7 +25,9 @@ function createToolLoopHandler(deps) {
     getTaskState,
     getCurrentPageInfo,
     bindTabToSession,
-    documentRef
+    documentRef,
+    handleBgTaskResult, // 新增: 处理后台任务结果回调
+    handleWaitSeconds // 新增: 处理等待秒数回调
   } = deps;
 
   /**
@@ -136,6 +138,14 @@ function createToolLoopHandler(deps) {
 
       const toolResult = await toolsExecutor.execute(toolCall);
 
+      // 特殊处理: 等待秒数
+      if (toolCall.name === 'wait_seconds' && toolResult?.success && toolResult.waitMode) {
+        const seconds = toolResult.waitSeconds;
+        if (typeof handleWaitSeconds === 'function') {
+          await handleWaitSeconds(seconds);
+        }
+      }
+
       // 对于 search_page 工具，将新创建的标签页绑定到当前会话
       if (
         toolCall.name === 'search_page' &&
@@ -181,11 +191,20 @@ function createToolLoopHandler(deps) {
       }
 
       const truncated = truncateToolResult(toolCall.name, toolResult);
-      agentMessageHistory.push({
-        role: 'tool',
-        tool_call_id: toolCall.id,
-        content: truncated.content
-      });
+
+      // 查找并更新 agentMessageHistory 中对应的 tool 消息
+      const toolMsgIndex = agentMessageHistory.findIndex(
+        msg => msg.role === 'tool' && msg.tool_call_id === toolCall.id
+      );
+      if (toolMsgIndex !== -1) {
+        agentMessageHistory[toolMsgIndex].content = truncated.content;
+      } else {
+        agentMessageHistory.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: truncated.content
+        });
+      }
 
       const summary = toolCardUI.buildToolResultSummary(toolCall, toolResult);
       toolCardUI.renderToolCard(target, {

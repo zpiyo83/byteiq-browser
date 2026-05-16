@@ -27,7 +27,8 @@ function createBgTaskRunner(options) {
     t,
     buildSystemPrompt,
     onTaskComplete,
-    onTaskError
+    onTaskError,
+    onTaskResultReady // 新增: 后台任务结果准备好回调
   } = options;
 
   // 创建提示词构建器（复用 agent 的逻辑）
@@ -317,16 +318,98 @@ function createBgTaskRunner(options) {
     }
   }
 
+  // 等待队列: 存储前台模型等待的后台任务
+  const waitingTasks = new Map(); // taskId -> { resolve, timeout, timer }
+
+  /**
+   * 注册等待任务
+   * @param {string} taskId - 任务 ID
+   * @param {number} timeout - 超时毫秒数
+   * @returns {Promise<Object>} 返回任务结果
+   */
+  function registerWaitingTask(taskId, timeout = 300000) {
+    return new Promise((resolve, _reject) => {
+      const timer = setTimeout(() => {
+        // 超时自动继续
+        waitingTasks.delete(taskId);
+        resolve({
+          success: true,
+          timedOut: true,
+          message: `后台任务 #${taskId} 执行超过 ${Math.floor(timeout / 1000)} 秒,已自动转为继续模式`
+        });
+      }, timeout);
+
+      waitingTasks.set(taskId, {
+        resolve,
+        timeout,
+        timer
+      });
+    });
+  }
+
+  /**
+   * 处理等待任务完成
+   * @param {Object} task - 完成的任务对象
+   */
+  function handleWaitingTaskComplete(task) {
+    const waiting = waitingTasks.get(task.id);
+    if (waiting) {
+      // 清除超时定时器
+      if (waiting.timer) {
+        clearTimeout(waiting.timer);
+      }
+      waitingTasks.delete(task.id);
+
+      // 立即 resolve 等待的 Promise，返回完整的任务结果
+      waiting.resolve({
+        success: true,
+        taskId: task.id,
+        result: task.result || '',
+        status: task.status,
+        toolCallHistory: task.toolCallHistory || [],
+        resumeMetadata: task.resumeMetadata || null,
+        timedOut: false,
+        message: `后台任务 #${task.id} 已完成: ${task.result || '无结果'}`
+      });
+    }
+  }
+
   /**
    * 运行后台任务（含自动重试）
    * 重试策略：第1次5s，第2次10s，每次+5s，最多5次
    * @param {string} userText - 用户输入文本
-   * @returns {Promise<void>}
+   * @param {boolean} isWaiting - 是否为前台模型等待的任务
+   * @returns {Promise<Object>} 任务对象或等待结果
    */
-  async function runBackgroundTask(userText) {
+  async function runBackgroundTask(userText, isWaiting = false) {
     // 创建任务记录
     const task = taskManager.createTask(userText);
 
+    // 如果是等待模式,注册等待 Promise
+    if (isWaiting) {
+      // 异步启动后台任务,不阻塞等待 Promise
+      executeBackgroundTaskInternal(task, userText).catch(error => {
+        console.error('[bg-task-runner] Background task error:', error);
+      });
+
+      // 返回等待 Promise (超时5分钟)
+      return registerWaitingTask(task.id, 300000);
+    }
+
+    // 继续模式: 直接返回任务对象
+    executeBackgroundTaskInternal(task, userText).catch(error => {
+      console.error('[bg-task-runner] Background task error:', error);
+    });
+
+    return task;
+  }
+
+  /**
+   * 后台任务内部执行逻辑（原 runBackgroundTask 的实现）
+   * @param {Object} task - 任务对象
+   * @param {string} userText - 用户输入文本
+   */
+  async function executeBackgroundTaskInternal(task, userText) {
     // 创建 abort controller
     const abortController = {
       aborted: false,
@@ -532,8 +615,20 @@ function createBgTaskRunner(options) {
       taskManager.completeTask(task.id, task.result || '');
     }
 
+    // 刷新任务对象
+    const finalTask = taskManager.getTaskById(task.id);
+
+    // 触发结果准备就绪回调（用于通知前台模型，注入结果到历史）
+    if (typeof onTaskResultReady === 'function') {
+      onTaskResultReady(finalTask);
+    }
+
+    // 检查是否是前台模型等待的任务（在结果注入后再解除等待）
+    handleWaitingTaskComplete(finalTask);
+
+    // 触发任务完成回调
     if (typeof onTaskComplete === 'function') {
-      onTaskComplete(task);
+      onTaskComplete(finalTask);
     }
   }
 
@@ -622,7 +717,10 @@ function createBgTaskRunner(options) {
   }
 
   return {
-    runBackgroundTask
+    runBackgroundTask,
+    executeBackgroundTaskInternal,
+    handleWaitingTaskComplete,
+    getWaitingTaskCount: () => waitingTasks.size
   };
 }
 

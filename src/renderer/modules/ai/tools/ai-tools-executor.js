@@ -18,7 +18,8 @@ function createAiToolsExecutor(options) {
     getTodoManager,
     closeTab,
     getTabById,
-    store
+    store,
+    getBgTaskRunner // 新增: 获取后台任务执行器
   } = options;
 
   // 性能优化：工具定义缓存（LRU，最多缓存 50 个工具）
@@ -202,7 +203,8 @@ function createAiToolsExecutor(options) {
           getTodoManager,
           closeTab,
           getTabById,
-          getActiveTabId
+          getActiveTabId,
+          getBgTaskRunner // 传递后台任务执行器
         },
         args
       );

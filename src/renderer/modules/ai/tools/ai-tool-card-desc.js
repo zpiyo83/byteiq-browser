@@ -206,6 +206,24 @@ function createDescBuilder(deps) {
       return { status: 'success', text: '' };
     }
 
+    if (toolName === 'dispatch_background_task') {
+      const failed = toolResult && toolResult.success === false;
+      if (failed) {
+        return { status: 'error', text: toolResult.error || '后台任务派发失败' };
+      }
+      // 显示任务结果
+      const resultPreview = toolResult?.result ? toolResult.result.substring(0, 100) : '任务已完成';
+      const timedOut = toolResult?.timedOut;
+      return {
+        status: timedOut ? 'error' : 'success',
+        text: timedOut
+          ? '后台任务超时,已自动继续'
+          : resultPreview.length > 100
+            ? resultPreview + '...'
+            : resultPreview
+      };
+    }
+
     return {
       status: 'success',
       text: '已完成'

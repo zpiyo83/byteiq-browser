@@ -18,6 +18,7 @@ const {
   sendResponsesStreamForAgent,
   sendChatCompletionsStreamForAgent
 } = require('./chat-agent-senders');
+const aiLogger = require('./ai-logger');
 
 /**
  * 发送流式对话请求
@@ -30,8 +31,13 @@ const {
 function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, requestType, model, timeout } = config;
+    const startTime = Date.now();
+    const requestId = aiLogger.generateRequestId();
+
+    aiLogger.logRequestStart(config, messages, null);
 
     if (!endpoint || !apiKey) {
+      aiLogger.logError(requestId, new Error('AI endpoint and API key are required'));
       reject(new Error('AI endpoint and API key are required'));
       return;
     }
@@ -50,6 +56,8 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
       default:
         requestBody = buildOpenAIChatRequest(messages, model, true);
     }
+
+    aiLogger.logRequestBody(requestId, requestBody);
 
     const url = new URL(endpoint);
     const isHttps = url.protocol === 'https:';
@@ -161,10 +169,19 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
               }
             }
           }
+          aiLogger.logResponse(
+            requestId,
+            { content: fullContent, reasoningContent: fullReasoningContent },
+            null
+          );
+          aiLogger.logRequestEnd(requestId, Date.now() - startTime);
           resolve({ content: fullContent, reasoningContent: fullReasoningContent });
         } else {
           const message = errorData || buffer;
-          reject(new Error(`HTTP ${res.statusCode}: ${message}`));
+          const error = new Error(`HTTP ${res.statusCode}: ${message}`);
+          aiLogger.logError(requestId, error);
+          aiLogger.logRequestEnd(requestId, Date.now() - startTime);
+          reject(error);
         }
       });
     });
@@ -178,6 +195,8 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
         clearTimeout(throttleTimer);
         throttleTimer = null;
       }
+      aiLogger.logError(requestId, err);
+      aiLogger.logRequestEnd(requestId, Date.now() - startTime);
       reject(err);
     });
     req.on('timeout', () => {
@@ -186,7 +205,10 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
         throttleTimer = null;
       }
       req.destroy();
-      reject(new Error('Request timeout'));
+      const error = new Error('Request timeout');
+      aiLogger.logError(requestId, error);
+      aiLogger.logRequestEnd(requestId, Date.now() - startTime);
+      reject(error);
     });
 
     req.write(JSON.stringify(requestBody));
@@ -200,8 +222,13 @@ function sendStreamingChatRequest(messages, config, onChunk, registerRequest) {
 function sendChatRequest(messages, config, registerRequest) {
   return new Promise((resolve, reject) => {
     const { endpoint, apiKey, requestType, model, timeout, tools } = config;
+    const startTime = Date.now();
+    const requestId = aiLogger.generateRequestId();
+
+    aiLogger.logRequestStart(config, messages, tools);
 
     if (!endpoint || !apiKey) {
+      aiLogger.logError(requestId, new Error('AI endpoint and API key are required'));
       reject(new Error('AI endpoint and API key are required'));
       return;
     }
@@ -251,6 +278,8 @@ function sendChatRequest(messages, config, registerRequest) {
       requestBody.tool_choice = 'auto';
     }
 
+    aiLogger.logRequestBody(requestId, requestBody);
+
     const url = new URL(endpoint);
     const isHttps = url.protocol === 'https:';
     const httpModule = isHttps ? https : http;
@@ -271,10 +300,15 @@ function sendChatRequest(messages, config, registerRequest) {
       });
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
+          aiLogger.logResponse(requestId, data, null);
+          aiLogger.logRequestEnd(requestId, Date.now() - startTime);
           // 返回完整响应数据，让调用者解析工具调用
           resolve(data);
         } else {
-          reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+          const error = new Error(`HTTP ${res.statusCode}: ${data}`);
+          aiLogger.logError(requestId, error);
+          aiLogger.logRequestEnd(requestId, Date.now() - startTime);
+          reject(error);
         }
       });
     });
@@ -283,10 +317,17 @@ function sendChatRequest(messages, config, registerRequest) {
       registerRequest(req);
     }
 
-    req.on('error', reject);
+    req.on('error', err => {
+      aiLogger.logError(requestId, err);
+      aiLogger.logRequestEnd(requestId, Date.now() - startTime);
+      reject(err);
+    });
     req.on('timeout', () => {
       req.destroy();
-      reject(new Error('Request timeout'));
+      const error = new Error('Request timeout');
+      aiLogger.logError(requestId, error);
+      aiLogger.logRequestEnd(requestId, Date.now() - startTime);
+      reject(error);
     });
 
     req.write(JSON.stringify(requestBody));

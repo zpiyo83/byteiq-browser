@@ -38,7 +38,9 @@ function createAiAgentRunner(options) {
     getTaskState,
     bindTabToSession,
     externalTodoManager,
-    contextIsolation
+    contextIsolation,
+    getBgTaskRunner, // 新增: 获取后台任务执行器
+    onBgTaskResultReady // 新增: 后台任务结果准备就绪回调
   } = options;
 
   let isAgentProcessing = false;
@@ -46,6 +48,12 @@ function createAiAgentRunner(options) {
 
   // 当前 Agent 操作的守卫（用于会话隔离）
   let currentOperationGuard = null;
+
+  // 后台任务结果队列: 存储已完成但未注入的后台任务结果
+  const pendingBgTaskResults = [];
+
+  // 当前是否有正在输出的请求
+  let isStreamingActive = false;
 
   // Todo 管理器
   const todoManager = externalTodoManager;
@@ -81,8 +89,141 @@ function createAiAgentRunner(options) {
     getTaskState,
     getCurrentPageInfo,
     bindTabToSession,
-    documentRef
+    documentRef,
+    handleBgTaskResult, // 新增: 处理后台任务结果的回调
+    handleWaitSeconds // 新增: 处理等待秒数的回调
   });
+
+  /**
+   * 处理后台任务结果注入
+   * @param {Object} task - 后台任务对象
+   */
+  function handleBgTaskResult(task) {
+    if (!task || task.status !== 'completed') return;
+
+    // 无论是否正在输出,都立即注入结果到历史消息
+    // 这样确保下一轮请求时AI能看到后台任务结果
+    injectBgTaskResultToHistory(task);
+
+    // 如果当前正在输出,将渲染加入队列,等请求结束后处理
+    if (isStreamingActive) {
+      pendingBgTaskResults.push(task);
+    } else {
+      // 当前没有输出,立即渲染完成卡片
+      renderBgTaskCompleteCard(task);
+    }
+  }
+
+  /**
+   * 渲染后台任务完成卡片
+   * @param {Object} task - 后台任务对象
+   */
+  function renderBgTaskCompleteCard(task) {
+    const target = addChatMessage('', 'ai');
+    toolCardUI.renderToolCard(target, {
+      title: '后台任务已完成',
+      description: `任务 #${task.id}: ${task.name}`,
+      status: 'success',
+      toolName: 'background_task_complete',
+      result: task.result,
+      taskId: task.id
+    });
+  }
+
+  /**
+   * 将后台任务结果注入到消息历史
+   * @param {Object} task - 后台任务对象
+   */
+  function injectBgTaskResultToHistory(task) {
+    if (!agentMessageHistory || agentMessageHistory.length === 0) return;
+
+    // 构建完整的系统通知,包含任务结果详情
+    const resultContent = task.result || '无结果';
+
+    // 如果有工具调用历史,提取关键信息
+    let toolSummary = '';
+    if (task.toolCallHistory && task.toolCallHistory.length > 0) {
+      const toolNames = task.toolCallHistory
+        .map(tc => tc.title || tc.toolName)
+        .filter(name => name)
+        .join(' → ');
+      if (toolNames) {
+        toolSummary = `\n执行步骤: ${toolNames}`;
+      }
+    }
+
+    // 添加系统消息提示后台任务已完成
+    const systemNotice = {
+      role: 'system',
+      content: `[系统通知] 后台任务 #${task.id} 已完成。
+任务: ${task.name}
+结果: ${resultContent}${toolSummary}
+
+请根据任务结果继续处理。`
+    };
+
+    // 在最后的用户消息前插入系统通知
+    const lastUserMsgIndex = agentMessageHistory.findIndex(
+      (msg, idx) => msg.role === 'user' && idx === agentMessageHistory.length - 1
+    );
+
+    if (lastUserMsgIndex !== -1) {
+      agentMessageHistory.splice(lastUserMsgIndex, 0, systemNotice);
+    } else {
+      agentMessageHistory.push(systemNotice);
+    }
+  }
+
+  /**
+   * 处理等待秒数
+   * @param {number} seconds - 等待秒数
+   */
+  async function handleWaitSeconds(seconds) {
+    if (!seconds || seconds < 1 || seconds > 300) return;
+
+    // 渲染等待卡片
+    const target = addChatMessage('', 'ai');
+    toolCardUI.renderToolCard(target, {
+      title: '等待',
+      description: `等待 ${seconds} 秒后继续`,
+      status: 'running',
+      toolName: 'wait_seconds'
+    });
+
+    // 等待指定秒数
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
+    // 更新卡片状态为完成
+    toolCardUI.renderToolCard(target, {
+      title: '等待',
+      description: `已等待 ${seconds} 秒`,
+      status: 'success',
+      toolName: 'wait_seconds'
+    });
+  }
+
+  /**
+   * 处理所有待注入的后台任务结果
+   */
+  function processPendingBgTaskResults() {
+    if (pendingBgTaskResults.length === 0) return;
+
+    // 按任务完成时间排序
+    pendingBgTaskResults.sort((a, b) => a.completedAt - b.completedAt);
+
+    // 渲染所有完成卡片（结果已在 handleBgTaskResult 中注入）
+    pendingBgTaskResults.forEach(task => {
+      renderBgTaskCompleteCard(task);
+    });
+
+    // 清空队列
+    pendingBgTaskResults.length = 0;
+  }
+
+  // 注册后台任务结果回调
+  if (typeof onBgTaskResultReady === 'function') {
+    onBgTaskResultReady(handleBgTaskResult);
+  }
 
   /**
    * 监听 Agent 流式响应
@@ -124,11 +265,12 @@ function createAiAgentRunner(options) {
   }
 
   async function sendAgentRequest(messages, streamingElement) {
-    // 注册请求操作守卫，用于会话隔离
+    // 注册请求操作守卫,用于会话隔离
     const operationGuard = contextIsolation?.registerOperation?.('agent-request');
 
     agentStreamingTaskId = `agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     agentStreamingElement = streamingElement;
+    isStreamingActive = true; // 标记流式输出开始
     setInputEnabled(false);
     try {
       // 检查会话是否仍然活跃
@@ -169,6 +311,9 @@ function createAiAgentRunner(options) {
       // agentStreamingElement 会在下一轮迭代 sendAgentRequest 调用时自动覆盖，
       // 或在 runAgentConversation 循环结束后统一清空
       agentStreamingTaskId = null;
+      isStreamingActive = false; // 标记流式输出结束
+      // 处理待注入的后台任务结果
+      processPendingBgTaskResults();
       // 注意：此处不调用 setInputEnabled(true)
       // agent 模式下 while 循环会多次调用 sendAgentRequest，
       // 输入框应在 runAgentConversation 整体结束时才启用

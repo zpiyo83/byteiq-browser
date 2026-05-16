@@ -27,7 +27,13 @@ const TOOL_ICONS = {
   close_tab:
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
   end_session:
-    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>'
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>',
+  dispatch_background_task:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>',
+  wait_seconds:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  background_task_complete:
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
 };
 
 const TOOL_COLORS = {
@@ -42,7 +48,10 @@ const TOOL_COLORS = {
   complete_todos: '#22c55e',
   remove_todo: '#ef4444',
   close_tab: '#ef4444',
-  end_session: '#64748b'
+  end_session: '#64748b',
+  dispatch_background_task: '#3b82f6',
+  wait_seconds: '#f59e0b',
+  background_task_complete: '#10b981'
 };
 
 const STATUS_ICONS = {
@@ -127,6 +136,20 @@ function buildToolParamRows(toolName, args) {
       // 关闭标签页和结束工具：description 已包含关键信息，不再重复参数行
       break;
     }
+    case 'dispatch_background_task': {
+      if (a.task_query)
+        rows.push({
+          label: '任务内容',
+          value: truncateText(a.task_query, 50),
+          icon: 'task'
+        });
+      if (a.wait_mode) rows.push({ label: '等待模式', value: a.wait_mode, icon: 'mode' });
+      break;
+    }
+    case 'wait_seconds': {
+      if (a.seconds) rows.push({ label: '等待时间', value: `${a.seconds}秒`, icon: 'time' });
+      break;
+    }
     default:
       break;
   }
@@ -189,6 +212,12 @@ function getToolTitle(toolName) {
       return '关闭标签页';
     case 'end_session':
       return '结束会话';
+    case 'dispatch_background_task':
+      return '派发后台任务';
+    case 'wait_seconds':
+      return '等待';
+    case 'background_task_complete':
+      return '后台任务已完成';
     default:
       return toolName || '工具';
   }
